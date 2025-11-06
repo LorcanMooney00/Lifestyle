@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { getTopics, createTopic } from '../lib/api'
 import type { Topic } from '../types'
-import { signOut } from '../lib/auth'
 
 export default function TopicsListPage() {
   const { user } = useAuth()

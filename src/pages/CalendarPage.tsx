@@ -10,7 +10,6 @@ export default function CalendarPage() {
   const navigate = useNavigate()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [events, setEvents] = useState<Event[]>([])
-  const [loading, setLoading] = useState(true)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [showEventForm, setShowEventForm] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
@@ -38,13 +37,11 @@ export default function CalendarPage() {
 
   const loadEvents = async () => {
     if (!user) return
-    setLoading(true)
-    const { daysInMonth, startingDayOfWeek, year, month } = getDaysInMonth(currentDate)
+    const { year, month } = getDaysInMonth(currentDate)
     const firstDay = new Date(year, month, 1)
     const lastDay = new Date(year, month + 1, 0)
     const data = await getEvents(firstDay, lastDay)
     setEvents(data)
-    setLoading(false)
   }
 
   const getDaysInMonth = (date: Date) => {
@@ -164,7 +161,6 @@ export default function CalendarPage() {
     for (let day = 1; day <= daysInMonth; day++) {
       const isToday = isCurrentMonth && day === today.getDate()
       const dayEvents = getEventsForDay(day)
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
       
       days.push(
         <div

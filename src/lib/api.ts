@@ -29,10 +29,12 @@ export async function getTopics(userId: string): Promise<Topic[]> {
   }
 
   if (memberTopics) {
-    memberTopics.forEach((member: { topic_id: string; topics: Topic }) => {
+    memberTopics.forEach((member: { topic_id: string; topics: Topic | Topic[] | null }) => {
       if (member.topics) {
-        const topic = member.topics as Topic
-        topicsMap.set(topic.id, topic)
+        const topic = Array.isArray(member.topics) ? member.topics[0] : member.topics
+        if (topic) {
+          topicsMap.set(topic.id, topic)
+        }
       }
     })
   }

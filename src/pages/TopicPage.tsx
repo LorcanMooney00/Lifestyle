@@ -79,7 +79,7 @@ export default function TopicPage() {
   const handleCreateNote = async () => {
     if (!topicId || !user) return
 
-    const note = await createNote(topicId, 'Untitled Note', '', user.id)
+    const note = await createNote('Untitled Note', '', user.id)
     if (note) {
       setNotes([note, ...notes])
       setSelectedNote(note)

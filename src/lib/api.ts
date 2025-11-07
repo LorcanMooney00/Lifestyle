@@ -105,23 +105,33 @@ export async function getAllNotes(userId: string): Promise<Array<Note & { creato
     const currentUserUsername = usernameMap.get(userId) || 'You'
     let otherPersonUsername: string | null = null
     
-    // Strategy: Identify the other person involved
-    // If creator is a partner, that's the other person
+    // Strategy: Use the creator to identify the partner pair
+    // If creator is a partner, that's definitely the other person
     if (creatorId !== userId && partnerIds.includes(creatorId)) {
       otherPersonUsername = usernameMap.get(creatorId) || null
     }
-    // If topic owner is a partner (and not the creator), that's the other person
-    else if (topicOwnerId && topicOwnerId !== userId && partnerIds.includes(topicOwnerId)) {
-      otherPersonUsername = usernameMap.get(topicOwnerId) || null
-    }
-    // If current user owns topic, find which partner can see it
-    else if (topicOwnerId === userId) {
-      // Prefer the first partner (in a couples app, there should typically be one)
-      // But if creator is a partner, use that
-      if (creatorId !== userId && partnerIds.includes(creatorId)) {
-        otherPersonUsername = usernameMap.get(creatorId) || null
-      } else if (partners.length > 0) {
-        otherPersonUsername = partners[0].username || null
+    // If creator is current user, find which partner is involved
+    else if (creatorId === userId) {
+      // If topic owner is a partner, that's the other person
+      if (topicOwnerId && topicOwnerId !== userId && partnerIds.includes(topicOwnerId)) {
+        otherPersonUsername = usernameMap.get(topicOwnerId) || null
+      }
+      // If current user owns topic, we need to find which partner created notes in this topic
+      else if (topicOwnerId === userId) {
+        // Find all creators of notes in this same topic
+        const topicNotes = notesData.filter((n: any) => n.topic_id === note.topic_id)
+        const otherCreators = topicNotes
+          .map((n: any) => n.created_by)
+          .filter((id: string) => id !== userId && partnerIds.includes(id))
+        
+        if (otherCreators.length > 0) {
+          // Use the first partner who created a note in this topic
+          const otherCreatorId = otherCreators[0]
+          otherPersonUsername = usernameMap.get(otherCreatorId) || null
+        } else if (partners.length > 0) {
+          // Fallback: if no partner has created notes yet, use first partner
+          otherPersonUsername = partners[0].username || null
+        }
       }
     }
     

@@ -12,7 +12,6 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<Event[]>([])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [showEventForm, setShowEventForm] = useState(false)
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [eventTitle, setEventTitle] = useState('')
   const [eventDescription, setEventDescription] = useState('')
   const [eventDate, setEventDate] = useState('')
@@ -83,7 +82,6 @@ export default function CalendarPage() {
 
   const handleDayClick = (day: number) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-    setSelectedDate(dateStr)
     setEventDate(dateStr)
     setEventTitle('')
     setEventDescription('')
@@ -122,7 +120,6 @@ export default function CalendarPage() {
       if (newEvent) {
         await loadEvents()
         setShowEventForm(false)
-        setSelectedDate(null)
       }
     }
     setSaving(false)
@@ -292,7 +289,6 @@ export default function CalendarPage() {
                     onClick={() => {
                       setShowEventForm(false)
                       setSelectedEvent(null)
-                      setSelectedDate(null)
                     }}
                     className="text-gray-400 hover:text-gray-600"
                   >
@@ -369,7 +365,6 @@ export default function CalendarPage() {
                         onClick={() => {
                           setShowEventForm(false)
                           setSelectedEvent(null)
-                          setSelectedDate(null)
                         }}
                         className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm font-medium"
                       >

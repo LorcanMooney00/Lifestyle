@@ -131,7 +131,7 @@ export default function TopicsPage() {
                 <button
                   key={partner.id}
                   onClick={() => navigate(`/app/partner/${partner.id}`)}
-                  className="bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left border-2 border-transparent hover:border-indigo-500 group"
+                  className="bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left border-2 border-transparent hover:border-indigo-500 group aspect-square flex flex-col justify-center"
                 >
                   <div className="text-4xl mb-3">👤</div>
                   <h4 className="text-lg font-bold mb-1 text-gray-100 group-hover:text-indigo-400 transition-colors">
@@ -150,7 +150,7 @@ export default function TopicsPage() {
         {/* Quick Stats */}
         {!loading && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 aspect-square flex flex-col justify-center">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Total Notes</p>
@@ -159,7 +159,7 @@ export default function TopicsPage() {
                 <div className="text-4xl">📝</div>
               </div>
             </div>
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 aspect-square flex flex-col justify-center">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Upcoming Events</p>
@@ -168,7 +168,7 @@ export default function TopicsPage() {
                 <div className="text-4xl">📅</div>
               </div>
             </div>
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 aspect-square flex flex-col justify-center">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Linked Partners</p>
@@ -190,7 +190,7 @@ export default function TopicsPage() {
                 <button
                   key={app.id}
                   onClick={() => navigate(app.route)}
-                  className={`${app.color} ${app.hoverColor} text-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left group`}
+                  className={`${app.color} ${app.hoverColor} text-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left group aspect-square flex flex-col justify-center`}
                 >
                   <div className="text-5xl mb-4">{app.icon}</div>
                   <h3 className="text-2xl font-bold mb-2">{app.title}</h3>
@@ -213,8 +213,8 @@ export default function TopicsPage() {
         {!loading && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Upcoming Events */}
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-              <div className="flex items-center justify-between mb-4">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 aspect-square flex flex-col">
+              <div className="flex items-center justify-between mb-4 flex-shrink-0">
                 <h3 className="text-xl font-bold text-gray-100">Upcoming Events</h3>
                 <button
                   onClick={() => navigate('/app/calendar')}
@@ -223,38 +223,40 @@ export default function TopicsPage() {
                   View all →
                 </button>
               </div>
-              {events.length === 0 ? (
-                <p className="text-gray-400 text-sm">No upcoming events</p>
-              ) : (
-                <div className="space-y-3">
-                  {events.slice(0, 5).map((event) => {
-                    const eventDate = new Date(event.event_date)
-                    const isToday = eventDate.toDateString() === new Date().toDateString()
-                    return (
-                      <div
-                        key={event.id}
-                        className="bg-gray-700 rounded-lg p-3 hover:bg-gray-600 transition-colors cursor-pointer"
-                        onClick={() => navigate('/app/calendar')}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="font-medium text-gray-100">{event.title}</p>
-                            <p className="text-sm text-gray-400 mt-1">
-                              {isToday ? 'Today' : eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                              {event.event_time && ` at ${event.event_time}`}
-                            </p>
+              <div className="flex-1 overflow-y-auto">
+                {events.length === 0 ? (
+                  <p className="text-gray-400 text-sm">No upcoming events</p>
+                ) : (
+                  <div className="space-y-3">
+                    {events.slice(0, 5).map((event) => {
+                      const eventDate = new Date(event.event_date)
+                      const isToday = eventDate.toDateString() === new Date().toDateString()
+                      return (
+                        <div
+                          key={event.id}
+                          className="bg-gray-700 rounded-lg p-3 hover:bg-gray-600 transition-colors cursor-pointer"
+                          onClick={() => navigate('/app/calendar')}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-100">{event.title}</p>
+                              <p className="text-sm text-gray-400 mt-1">
+                                {isToday ? 'Today' : eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                {event.event_time && ` at ${event.event_time}`}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Recent Notes */}
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-              <div className="flex items-center justify-between mb-4">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 aspect-square flex flex-col">
+              <div className="flex items-center justify-between mb-4 flex-shrink-0">
                 <h3 className="text-xl font-bold text-gray-100">Recent Notes</h3>
                 <button
                   onClick={() => navigate('/app/notes')}
@@ -263,39 +265,41 @@ export default function TopicsPage() {
                   View all →
                 </button>
               </div>
-              {notes.length === 0 ? (
-                <p className="text-gray-400 text-sm">No notes yet</p>
-              ) : (
-                <div className="space-y-3">
-                  {notes.slice(0, 5).map((note) => (
-                    <div
-                      key={note.id}
-                      className="bg-gray-700 rounded-lg p-3 hover:bg-gray-600 transition-colors cursor-pointer"
-                      onClick={() => navigate('/app/notes')}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-100 truncate">
-                            {note.title || 'Untitled Note'}
-                          </p>
-                          {note.content && (
-                            <p className="text-sm text-gray-400 mt-1 truncate">
-                              {note.content.substring(0, 60)}
-                              {note.content.length > 60 ? '...' : ''}
+              <div className="flex-1 overflow-y-auto">
+                {notes.length === 0 ? (
+                  <p className="text-gray-400 text-sm">No notes yet</p>
+                ) : (
+                  <div className="space-y-3">
+                    {notes.slice(0, 5).map((note) => (
+                      <div
+                        key={note.id}
+                        className="bg-gray-700 rounded-lg p-3 hover:bg-gray-600 transition-colors cursor-pointer"
+                        onClick={() => navigate('/app/notes')}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-100 truncate">
+                              {note.title || 'Untitled Note'}
                             </p>
-                          )}
-                          <p className="text-xs text-gray-500 mt-1">
-                            {new Date(note.updated_at).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                          </p>
+                            {note.content && (
+                              <p className="text-sm text-gray-400 mt-1 truncate">
+                                {note.content.substring(0, 60)}
+                                {note.content.length > 60 ? '...' : ''}
+                              </p>
+                            )}
+                            <p className="text-xs text-gray-500 mt-1">
+                              {new Date(note.updated_at).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

@@ -132,7 +132,7 @@ export default function PartnerDashboardPage() {
               <button
                 key={app.id}
                 onClick={() => navigate(app.route)}
-                className={`${app.color} ${app.hoverColor} text-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left group`}
+                className={`${app.color} ${app.hoverColor} text-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left group aspect-square flex flex-col justify-center`}
               >
                 <div className="text-5xl mb-4">{app.icon}</div>
                 <h3 className="text-2xl font-bold mb-2">{app.title}</h3>

@@ -105,36 +105,31 @@ export async function getAllNotes(userId: string): Promise<Array<Note & { creato
     const currentUserUsername = usernameMap.get(userId) || 'You'
     let otherPersonUsername: string | null = null
     
-    // If current user owns the topic, find which partner can see it
-    if (topicOwnerId === userId) {
-      // Find the partner who shares this topic (should be exactly one)
-      // Check which partner is linked and can see this topic
-      const partner = partners.find(p => {
-        // The partner can see this topic if they're linked
-        return partnerIds.includes(p.id)
-      })
-      // If multiple partners, prefer the one who created the note (if they're a partner)
+    // Strategy: Identify the other person involved
+    // If creator is a partner, that's the other person
+    if (creatorId !== userId && partnerIds.includes(creatorId)) {
+      otherPersonUsername = usernameMap.get(creatorId) || null
+    }
+    // If topic owner is a partner (and not the creator), that's the other person
+    else if (topicOwnerId && topicOwnerId !== userId && partnerIds.includes(topicOwnerId)) {
+      otherPersonUsername = usernameMap.get(topicOwnerId) || null
+    }
+    // If current user owns topic, find which partner can see it
+    else if (topicOwnerId === userId) {
+      // Prefer the first partner (in a couples app, there should typically be one)
+      // But if creator is a partner, use that
       if (creatorId !== userId && partnerIds.includes(creatorId)) {
         otherPersonUsername = usernameMap.get(creatorId) || null
-      } else if (partner) {
-        otherPersonUsername = partner.username || null
+      } else if (partners.length > 0) {
+        otherPersonUsername = partners[0].username || null
       }
-    }
-    // If a partner owns the topic, that partner is the other person
-    else if (topicOwnerId && partnerIds.includes(topicOwnerId)) {
-      otherPersonUsername = usernameMap.get(topicOwnerId) || null
     }
     
     // Only show exactly 2 people: current user and the other person
     const partnersList: string[] = []
     if (otherPersonUsername) {
-      // Sort alphabetically for consistency, but put "You" first
-      if (currentUserUsername === 'You') {
-        partnersList.push('You', otherPersonUsername)
-      } else {
-        const sorted = [currentUserUsername, otherPersonUsername].sort()
-        partnersList.push(...sorted)
-      }
+      // Always show "You" first, then the partner
+      partnersList.push('You', otherPersonUsername)
     } else {
       // Only current user (shouldn't happen in shared notes, but handle it)
       partnersList.push(currentUserUsername)

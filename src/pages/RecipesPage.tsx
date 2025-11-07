@@ -59,7 +59,7 @@ export default function RecipesPage() {
   const filterRecipes = async () => {
     if (!user) return
     const ingredientArray = Array.from(selectedIngredients)
-    const filtered = await getRecipesByIngredients(user.id, ingredientArray)
+    const filtered = await getRecipesByIngredients(ingredientArray)
     setFilteredRecipes(filtered)
   }
 

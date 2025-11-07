@@ -634,7 +634,7 @@ export async function getAllRecipes(): Promise<Recipe[]> {
   }))
 }
 
-export async function getRecipesByIngredients(userId: string, selectedIngredientNames: string[]): Promise<Recipe[]> {
+export async function getRecipesByIngredients(selectedIngredientNames: string[]): Promise<Recipe[]> {
   if (selectedIngredientNames.length === 0) {
     return getAllRecipes()
   }
@@ -715,7 +715,7 @@ export async function getAllIngredients(): Promise<string[]> {
   if (!data || data.length === 0) return []
 
   // Get unique ingredient names
-  const uniqueIngredients = [...new Set(data.map((ing: any) => ing.ingredient_name))]
+  const uniqueIngredients: string[] = [...new Set(data.map((ing: any) => ing.ingredient_name as string))]
   return uniqueIngredients.sort()
 }
 

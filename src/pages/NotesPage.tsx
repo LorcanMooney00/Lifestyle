@@ -135,8 +135,10 @@ export default function NotesPage() {
       </nav>
 
       <div className="flex-1 flex flex-col md:flex-row max-w-7xl mx-auto w-full overflow-hidden min-h-0">
-        {/* Notes List */}
-        <div className="w-full md:w-72 bg-white border-r flex flex-col overflow-hidden shadow-sm">
+        {/* Notes List - Hidden on mobile when note is selected */}
+        <div className={`w-full md:w-72 bg-white border-r flex flex-col overflow-hidden shadow-sm ${
+          selectedNote ? 'hidden md:flex' : 'flex'
+        }`}>
           <div className="p-4 border-b flex justify-between items-center flex-shrink-0 bg-gray-50">
             <h2 className="font-semibold text-gray-900 text-lg">Notes</h2>
             <button
@@ -215,6 +217,18 @@ export default function NotesPage() {
           {selectedNote ? (
             <>
               <div className="p-4 border-b">
+                <div className="flex items-center gap-2 mb-2 md:hidden">
+                  <button
+                    onClick={() => setSelectedNote(null)}
+                    className="text-gray-600 hover:text-gray-900 p-1"
+                    aria-label="Back to notes"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <span className="text-sm text-gray-600">Back to Notes</span>
+                </div>
                 <input
                   type="text"
                   value={noteTitle}
@@ -246,12 +260,13 @@ export default function NotesPage() {
                   className="w-full text-xl font-semibold border-none focus:outline-none focus:ring-0"
                 />
               </div>
-              <div className="flex-1 p-4 overflow-y-auto">
+              <div className="flex-1 p-4 overflow-y-auto min-h-0">
                 <textarea
                   value={noteContent}
                   onChange={(e) => handleContentChange(e.target.value)}
                   placeholder="Start writing..."
                   className="w-full h-full border-none focus:outline-none focus:ring-0 resize-none text-gray-900"
+                  style={{ minHeight: '400px' }}
                 />
               </div>
             </>

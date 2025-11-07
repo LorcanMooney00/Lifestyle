@@ -835,10 +835,20 @@ export async function removeUserIngredient(userId: string, ingredientName: strin
 // Photo functions
 export async function uploadPhoto(userId: string, file: File): Promise<{ photo: Photo | null; error: string | null }> {
   try {
+    // Get the authenticated user to ensure RLS policy works
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !authUser) {
+      return { photo: null, error: 'You must be logged in to upload photos' }
+    }
+
+    // Use the authenticated user's ID (RLS policy requires user_id = auth.uid())
+    const authenticatedUserId = authUser.id
+    
     // Generate a unique filename
     const fileExt = file.name.split('.').pop()
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-    const filePath = `${userId}/${fileName}`
+    const filePath = `${authenticatedUserId}/${fileName}`
 
     // Upload to Supabase Storage
     const { error: uploadError } = await supabase.storage
@@ -857,11 +867,11 @@ export async function uploadPhoto(userId: string, file: File): Promise<{ photo: 
     const { data: urlData } = supabase.storage.from('photos').getPublicUrl(filePath)
     const publicUrl = urlData.publicUrl
 
-    // Save photo record to database
+    // Save photo record to database (use authenticated user ID for RLS policy)
     const { data, error: dbError } = await supabase
       .from('photos')
       .insert({
-        user_id: userId,
+        user_id: authenticatedUserId,
         storage_path: filePath,
         url: publicUrl,
       })

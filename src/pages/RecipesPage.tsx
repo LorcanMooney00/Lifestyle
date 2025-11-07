@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { signOut } from '../lib/auth'
 import { getAllRecipes, getRecipesByIngredients, getAllIngredients, getUserIngredients, addUserIngredient, removeUserIngredient } from '../lib/api'
-import type { Recipe, UserIngredient } from '../types'
+import type { Recipe } from '../types'
 
 export default function RecipesPage() {
   const { user } = useAuth()

@@ -133,32 +133,50 @@ export default function PhotoGallery() {
   }
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-lg p-4 sm:p-6 h-full flex flex-col min-h-[250px] sm:min-h-[300px]">
-      <div className="flex items-center justify-between mb-3 sm:mb-4 gap-2">
-        <h3 className="text-lg sm:text-xl font-bold text-gray-100">Photo Gallery</h3>
-        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          {photos.length > 0 && (
-            <span className="text-xs sm:text-sm text-gray-400 font-medium">
-              {currentIndex + 1} / {photos.length}
-            </span>
-          )}
-          <button
-            onClick={() => setShowUpload(!showUpload)}
-            className="bg-indigo-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-indigo-500 text-xs sm:text-sm font-medium transition-colors shadow-md hover:shadow-lg active:scale-95 touch-manipulation"
-          >
-            {showUpload ? 'Cancel' : 'Upload'}
-          </button>
+    <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-lg overflow-hidden h-full flex flex-col min-h-[250px] sm:min-h-[300px] group">
+      {/* Compact header overlay when showing photos */}
+      {photos.length > 0 && !showUpload && (
+        <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-3 bg-gradient-to-b from-black/60 to-transparent backdrop-blur-sm">
+          <h3 className="text-sm sm:text-base font-semibold text-white drop-shadow-lg">Photo Gallery</h3>
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            {photos.length > 0 && (
+              <span className="text-xs sm:text-sm text-white/90 font-medium drop-shadow-lg">
+                {currentIndex + 1} / {photos.length}
+              </span>
+            )}
+            <button
+              onClick={() => setShowUpload(!showUpload)}
+              className="bg-indigo-600/90 hover:bg-indigo-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors shadow-md active:scale-95 touch-manipulation backdrop-blur-sm"
+            >
+              {showUpload ? 'Cancel' : 'Upload'}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Regular header when upload is shown */}
+      {showUpload && (
+        <div className="p-3 sm:p-4 border-b border-gray-700">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-gray-100">Photo Gallery</h3>
+            <button
+              onClick={() => setShowUpload(false)}
+              className="bg-indigo-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-indigo-500 text-xs sm:text-sm font-medium transition-colors shadow-md hover:shadow-lg active:scale-95 touch-manipulation"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {error && (
-        <div className="bg-red-900/50 border border-red-700/50 text-red-200 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg mb-3 sm:mb-4 text-xs sm:text-sm">
+        <div className="bg-red-900/50 border-b border-red-700/50 text-red-200 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm">
           {error}
         </div>
       )}
 
       {showUpload && (
-        <div className="mb-3 sm:mb-4 p-4 sm:p-5 bg-gray-700/50 rounded-lg border border-gray-600">
+        <div className="p-4 sm:p-5 bg-gray-800">
           <input
             ref={fileInputRef}
             type="file"
@@ -186,27 +204,26 @@ export default function PhotoGallery() {
       )}
 
       {photos.length > 0 && (
-        <div className="flex-1 relative overflow-hidden rounded-lg bg-gray-900/50 border border-gray-700/50 min-h-[200px] sm:min-h-[300px]">
+        <div className="flex-1 relative overflow-hidden bg-gray-900 min-h-[200px] sm:min-h-[300px]">
           <img
             src={photos[currentIndex].url}
             alt={`Photo ${currentIndex + 1}`}
-            className="w-full h-full object-contain"
-            style={{ maxHeight: '400px' }}
+            className="w-full h-full object-cover"
           />
 
-          {/* Navigation buttons */}
+          {/* Navigation buttons - only show on hover/active */}
           {photos.length > 1 && (
             <>
               <button
                 onClick={handlePrevious}
-                className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 bg-gray-900/80 hover:bg-gray-800/90 active:bg-gray-800 text-white p-3 sm:p-2.5 rounded-full transition-all shadow-lg hover:shadow-xl backdrop-blur-sm touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center text-lg sm:text-base"
+                className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 active:bg-black/70 text-white p-3 sm:p-2.5 rounded-full transition-all shadow-lg backdrop-blur-md touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center text-lg sm:text-base opacity-0 group-hover:opacity-100 hover:opacity-100"
                 aria-label="Previous photo"
               >
                 ←
               </button>
               <button
                 onClick={handleNext}
-                className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 bg-gray-900/80 hover:bg-gray-800/90 active:bg-gray-800 text-white p-3 sm:p-2.5 rounded-full transition-all shadow-lg hover:shadow-xl backdrop-blur-sm touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center text-lg sm:text-base"
+                className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 active:bg-black/70 text-white p-3 sm:p-2.5 rounded-full transition-all shadow-lg backdrop-blur-md touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center text-lg sm:text-base opacity-0 group-hover:opacity-100 hover:opacity-100"
                 aria-label="Next photo"
               >
                 →
@@ -214,18 +231,18 @@ export default function PhotoGallery() {
             </>
           )}
 
-          {/* Delete button */}
+          {/* Delete button - bottom right */}
           <button
             onClick={() => handleDelete(photos[currentIndex])}
-            className="absolute top-2 sm:top-3 right-2 sm:right-3 bg-red-600/90 hover:bg-red-600 active:bg-red-700 text-white p-3 sm:p-2.5 rounded-full transition-all shadow-lg hover:shadow-xl backdrop-blur-sm touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center text-base sm:text-sm"
+            className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 bg-red-600/80 hover:bg-red-600 active:bg-red-700 text-white p-2.5 sm:p-2 rounded-full transition-all shadow-lg backdrop-blur-md touch-manipulation min-w-[40px] min-h-[40px] flex items-center justify-center text-sm"
             aria-label="Delete photo"
           >
             🗑️
           </button>
 
-          {/* Dots indicator */}
+          {/* Dots indicator - bottom center */}
           {photos.length > 1 && (
-            <div className="absolute bottom-2 sm:bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 bg-gray-900/60 backdrop-blur-sm px-2 sm:px-3 py-1.5 sm:py-2 rounded-full">
+            <div className="absolute bottom-2 sm:bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 bg-black/40 backdrop-blur-md px-2 sm:px-3 py-1.5 sm:py-2 rounded-full">
               {photos.map((_, index) => (
                 <button
                   key={index}
@@ -241,8 +258,8 @@ export default function PhotoGallery() {
                   }}
                   className={`rounded-full transition-all touch-manipulation ${
                     index === currentIndex 
-                      ? 'bg-indigo-500 w-6 sm:w-6 h-2.5 sm:h-2.5' 
-                      : 'bg-gray-500 hover:bg-gray-400 active:bg-gray-400 w-2.5 sm:w-2.5 h-2.5 sm:h-2.5'
+                      ? 'bg-white w-6 sm:w-6 h-2 sm:h-2' 
+                      : 'bg-white/50 hover:bg-white/70 active:bg-white/70 w-2 sm:w-2 h-2 sm:h-2'
                   }`}
                   aria-label={`Go to photo ${index + 1}`}
                 />

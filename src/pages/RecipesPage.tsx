@@ -80,15 +80,13 @@ export default function RecipesPage() {
     if (!user || !ingredientSearchTerm.trim()) return
 
     const trimmed = ingredientSearchTerm.trim()
-    if (!allIngredients.includes(trimmed)) {
-      // Add to all ingredients list (we'll need to add it to recipe_ingredients or a separate table)
-      // For now, just add to user ingredients
-      await addUserIngredient(user.id, trimmed)
-      setSelectedIngredients(new Set([...selectedIngredients, trimmed]))
-      setIngredientSearchTerm('')
-      setShowIngredientSearch(false)
-      await loadData()
-    }
+    await addUserIngredient(user.id, trimmed)
+    const newSelected = new Set(selectedIngredients)
+    newSelected.add(trimmed)
+    setSelectedIngredients(newSelected)
+    setIngredientSearchTerm('')
+    setShowIngredientSearch(false)
+    // Don't call loadData() - just update the selection
   }
 
   const filteredIngredients = allIngredients.filter(ing =>

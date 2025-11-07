@@ -836,7 +836,7 @@ export async function removeUserIngredient(userId: string, ingredientName: strin
 }
 
 // Photo functions
-export async function uploadPhoto(userId: string, file: File): Promise<{ photo: Photo | null; error: string | null }> {
+export async function uploadPhoto(file: File): Promise<{ photo: Photo | null; error: string | null }> {
   try {
     // Get the authenticated user to ensure RLS policy works
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()

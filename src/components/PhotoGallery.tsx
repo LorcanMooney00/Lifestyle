@@ -66,7 +66,7 @@ export default function PhotoGallery() {
     setUploading(true)
     setError(null)
 
-    const { photo, error: uploadError } = await uploadPhoto(user.id, file)
+    const { photo, error: uploadError } = await uploadPhoto(file)
 
     if (uploadError) {
       setError(uploadError)

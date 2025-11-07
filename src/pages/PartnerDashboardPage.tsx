@@ -125,18 +125,18 @@ export default function PartnerDashboardPage() {
           <p className="text-gray-400">Choose an app to get started</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
           {appCards
             .filter((app) => tilePreferences[app.id] !== false)
             .map((app) => (
               <button
                 key={app.id}
                 onClick={() => navigate(app.route)}
-                className={`${app.color} ${app.hoverColor} text-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left group aspect-square flex flex-col justify-center`}
+                className={`${app.color} ${app.hoverColor} text-white p-4 sm:p-6 lg:p-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left group aspect-square flex flex-col justify-center`}
               >
-                <div className="text-5xl mb-4">{app.icon}</div>
-                <h3 className="text-2xl font-bold mb-2">{app.title}</h3>
-                <p className="text-indigo-100 group-hover:text-white transition-colors">
+                <div className="text-3xl sm:text-4xl lg:text-5xl mb-2 sm:mb-3 lg:mb-4">{app.icon}</div>
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mb-1 sm:mb-2">{app.title}</h3>
+                <p className="text-xs sm:text-sm text-indigo-100 group-hover:text-white transition-colors">
                   {app.description}
                 </p>
               </button>

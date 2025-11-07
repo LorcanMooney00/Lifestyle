@@ -76,9 +76,9 @@ export default function NotesPage() {
   }
 
   const handleCreateNote = async () => {
-    if (!user) return
+    if (!user || !partnerId) return // Don't allow creating notes without a partner selected
 
-    const note = await createNote('Untitled Note', '', user.id, partnerId || undefined)
+    const note = await createNote('Untitled Note', '', user.id, partnerId)
     if (note) {
       await loadNotes()
       setSelectedNote(note)
@@ -145,25 +145,42 @@ export default function NotesPage() {
         }`}>
           <div className="p-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0 bg-gray-800">
             <h2 className="font-semibold text-gray-100 text-lg">Notes</h2>
-            <button
-              onClick={handleCreateNote}
-              className="bg-indigo-600 text-white px-4 py-1.5 rounded-md text-sm hover:bg-indigo-500 font-medium shadow-sm transition-colors"
-            >
-              + New
-            </button>
+            {partnerId && (
+              <button
+                onClick={handleCreateNote}
+                className="bg-indigo-600 text-white px-4 py-1.5 rounded-md text-sm hover:bg-indigo-500 font-medium shadow-sm transition-colors"
+              >
+                + New
+              </button>
+            )}
+            {!partnerId && (
+              <span className="text-xs text-gray-500 px-2">Select a partner to create notes</span>
+            )}
           </div>
           <div className="flex-1 overflow-y-auto min-h-0">
             {loading ? (
               <div className="p-6 text-center text-sm text-gray-400">Loading...</div>
             ) : notes.length === 0 ? (
               <div className="p-6 text-center">
-                <p className="text-sm text-gray-400 mb-4">No notes yet.</p>
-                <button
-                  onClick={handleCreateNote}
-                  className="text-indigo-400 hover:text-indigo-300 text-sm font-medium"
-                >
-                  Create your first note →
-                </button>
+                <p className="text-sm text-gray-400 mb-4">
+                  {partnerId ? 'No notes yet.' : 'No notes found. Select a partner to view or create notes.'}
+                </p>
+                {partnerId && (
+                  <button
+                    onClick={handleCreateNote}
+                    className="text-indigo-400 hover:text-indigo-300 text-sm font-medium"
+                  >
+                    Create your first note →
+                  </button>
+                )}
+                {!partnerId && (
+                  <button
+                    onClick={() => navigate('/app/topics')}
+                    className="text-indigo-400 hover:text-indigo-300 text-sm font-medium"
+                  >
+                    Go to Dashboard →
+                  </button>
+                )}
               </div>
             ) : (
               <div className="p-2">
@@ -299,7 +316,9 @@ export default function NotesPage() {
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center text-gray-400">
-              {notes.length === 0 ? 'Create your first note to get started!' : 'Select a note to start editing'}
+              {notes.length === 0 
+                ? (partnerId ? 'Create your first note to get started!' : 'Select a note to view or select a partner to create notes')
+                : 'Select a note to start editing'}
             </div>
           )}
         </div>

@@ -4,6 +4,7 @@ A shared notes application for couples, built with React, TypeScript, Tailwind C
 
 ## Features
 
+
 - 🔐 User authentication (sign up / sign in)
 - 👥 Partner account linking
 - 📝 Topics and notes organization

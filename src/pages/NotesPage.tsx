@@ -180,6 +180,13 @@ export default function NotesPage() {
                         }`}>
                           {note.title || 'Untitled Note'}
                         </h3>
+                        {note.content && (
+                          <p className={`text-xs truncate mb-1 ${
+                            selectedNote?.id === note.id ? 'text-indigo-700' : 'text-gray-600'
+                          }`}>
+                            {note.content.length > 60 ? `${note.content.substring(0, 60)}...` : note.content}
+                          </p>
+                        )}
                         <p className={`text-xs ${
                           selectedNote?.id === note.id ? 'text-indigo-600' : 'text-gray-500'
                         }`}>

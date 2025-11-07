@@ -639,10 +639,13 @@ export async function getRecipesByIngredients(selectedIngredientNames: string[])
     return getAllRecipes()
   }
 
+  // Normalize selected ingredient names for comparison
+  const selectedLower = selectedIngredientNames.map(name => name.toLowerCase().trim())
+
   // Get all recipes that use at least one of the selected ingredients
   const { data: matchingIngredients, error: ingredientsError } = await supabase
     .from('recipe_ingredients')
-    .select('recipe_id')
+    .select('recipe_id, ingredient_name')
     .in('ingredient_name', selectedIngredientNames)
 
   if (ingredientsError) {
@@ -687,21 +690,36 @@ export async function getRecipesByIngredients(selectedIngredientNames: string[])
     })
   }
 
-  // Attach ingredients to recipes and filter to only show recipes where user has all ingredients
-  return recipesData
-    .map((recipe: any) => ({
+  // Attach ingredients to recipes and calculate match score
+  const recipesWithScores = recipesData.map((recipe: any) => {
+    const ingredients = ingredientsByRecipe.get(recipe.id) || []
+    const requiredIngredients = ingredients.map((ing: RecipeIngredient) => ing.ingredient_name.toLowerCase().trim())
+    
+    // Count how many ingredients match
+    const matchingCount = requiredIngredients.filter((ing: string) => 
+      selectedLower.includes(ing)
+    ).length
+    
+    // Calculate match percentage
+    const matchPercentage = ingredients.length > 0 ? (matchingCount / ingredients.length) * 100 : 0
+    
+    return {
       ...recipe,
-      ingredients: ingredientsByRecipe.get(recipe.id) || [],
-    }))
-    .filter((recipe: Recipe) => {
-      // Check if user has all required ingredients for this recipe
-      const requiredIngredients = recipe.ingredients?.map(ing => ing.ingredient_name.toLowerCase().trim()) || []
-      const userIngredientsLower = selectedIngredientNames.map(name => name.toLowerCase().trim())
-      
-      // Recipe matches if user has ALL required ingredients
-      return requiredIngredients.length > 0 && requiredIngredients.every((ing: string) => 
-        userIngredientsLower.includes(ing)
-      )
+      ingredients,
+      matchingCount,
+      matchPercentage,
+    }
+  })
+
+  // Filter to show recipes that use at least one selected ingredient
+  // Sort by match percentage (recipes with more matching ingredients first)
+  return recipesWithScores
+    .filter((recipe: any) => recipe.matchingCount > 0)
+    .sort((a: any, b: any) => b.matchPercentage - a.matchPercentage)
+    .map((recipe: any) => {
+      // Remove the scoring fields before returning
+      const { matchingCount, matchPercentage, ...recipeWithoutScores } = recipe
+      return recipeWithoutScores
     })
 }
 

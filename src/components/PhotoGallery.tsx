@@ -118,7 +118,7 @@ export default function PhotoGallery() {
 
   if (photos.length === 0 && !showUpload) {
     return (
-      <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-lg p-6 sm:p-8 h-full flex flex-col items-center justify-center min-h-[250px] sm:min-h-[300px]">
+      <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-lg p-6 sm:p-8 aspect-square flex flex-col items-center justify-center">
         <div className="text-5xl sm:text-6xl mb-3 sm:mb-4">📸</div>
         <h3 className="text-lg sm:text-xl font-semibold text-gray-100 mb-2">Photo Gallery</h3>
         <p className="text-gray-400 text-xs sm:text-sm mb-4 sm:mb-6 text-center px-4">Upload photos to create your gallery</p>
@@ -133,7 +133,7 @@ export default function PhotoGallery() {
   }
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-lg overflow-hidden h-full flex flex-col min-h-[250px] sm:min-h-[300px] group">
+    <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-lg overflow-hidden aspect-square flex flex-col group">
       {/* Compact header overlay when showing photos */}
       {photos.length > 0 && !showUpload && (
         <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-3 bg-gradient-to-b from-black/60 to-transparent backdrop-blur-sm">
@@ -204,7 +204,7 @@ export default function PhotoGallery() {
       )}
 
       {photos.length > 0 && (
-        <div className="flex-1 relative overflow-hidden bg-gray-900 min-h-[200px] sm:min-h-[300px]">
+        <div className="flex-1 relative overflow-hidden bg-gray-900 w-full h-full">
           <img
             src={photos[currentIndex].url}
             alt={`Photo ${currentIndex + 1}`}

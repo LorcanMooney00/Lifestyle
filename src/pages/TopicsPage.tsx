@@ -204,7 +204,7 @@ export default function TopicsPage() {
 
         {/* Photo Gallery Widget */}
         {tilePreferences['photo-gallery'] !== false && (
-          <div className="mb-8">
+          <div className="mb-8 max-w-md mx-auto">
             <PhotoGallery />
           </div>
         )}

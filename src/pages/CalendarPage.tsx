@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { signOut } from '../lib/auth'
 import { getEvents, createEvent, updateEvent, deleteEvent } from '../lib/api'
@@ -8,6 +8,7 @@ import type { Event } from '../types'
 export default function CalendarPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const { partnerId } = useParams<{ partnerId?: string }>()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [events, setEvents] = useState<Event[]>([])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)

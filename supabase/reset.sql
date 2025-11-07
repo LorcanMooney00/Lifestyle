@@ -375,9 +375,11 @@ CREATE POLICY "Topic owners can remove members"
   );
 
 -- Notes policies
+-- Users can only see their own notes, or notes in topics they're explicitly members of
 CREATE POLICY "Users can view notes for accessible topics"
   ON public.notes FOR SELECT
   USING (
+    created_by = auth.uid() OR
     EXISTS (
       SELECT 1 FROM public.topics
       WHERE topics.id = notes.topic_id
@@ -387,8 +389,7 @@ CREATE POLICY "Users can view notes for accessible topics"
           SELECT 1 FROM public.topic_members
           WHERE topic_members.topic_id = topics.id
           AND topic_members.user_id = auth.uid()
-        ) OR
-        are_partners(auth.uid(), topics.owner_id)
+        )
       )
     )
   );

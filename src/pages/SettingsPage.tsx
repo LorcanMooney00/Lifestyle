@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
-import { getPartnerId, linkPartner } from '../lib/api'
+import { getPartnerId, linkPartner, unlinkPartner } from '../lib/api'
 import { signOut } from '../lib/auth'
 
 export default function SettingsPage() {
@@ -11,6 +11,7 @@ export default function SettingsPage() {
   const [linkedPartnerId, setLinkedPartnerId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [linking, setLinking] = useState(false)
+  const [unlinking, setUnlinking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
@@ -48,9 +49,26 @@ export default function SettingsPage() {
     setLinking(false)
   }
 
-  const handleSignOut = async () => {
-    await signOut()
-    navigate('/login')
+  const handleUnlinkPartner = async () => {
+    if (!user) return
+    
+    if (!confirm('Are you sure you want to unlink from your partner? You will no longer be able to see each other\'s notes.')) {
+      return
+    }
+
+    setUnlinking(true)
+    setError(null)
+    setSuccess(null)
+
+    const success = await unlinkPartner(user.id)
+    if (success) {
+      setSuccess('Partner unlinked successfully.')
+      setLinkedPartnerId(null)
+    } else {
+      setError('Failed to unlink partner. Please try again.')
+    }
+
+    setUnlinking(false)
   }
 
   return (
@@ -98,6 +116,13 @@ export default function SettingsPage() {
               <p className="text-sm text-gray-600">
                 Partner ID: {linkedPartnerId}
               </p>
+              <button
+                onClick={handleUnlinkPartner}
+                disabled={unlinking}
+                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+              >
+                {unlinking ? 'Unlinking...' : 'Unlink Partner'}
+              </button>
             </div>
           ) : (
             <div className="space-y-4">

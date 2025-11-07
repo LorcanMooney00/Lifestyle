@@ -40,7 +40,7 @@ ADD COLUMN IF NOT EXISTS tile_preferences JSONB DEFAULT '{"shared-notes": true, 
 -- ============================================
 -- Copy and paste this into Supabase SQL Editor to create photos table and set up RLS:
 /*
--- Create photos table if it doesn't exist
+-- Step 1: Create photos table if it doesn't exist
 CREATE TABLE IF NOT EXISTS public.photos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
@@ -49,19 +49,20 @@ CREATE TABLE IF NOT EXISTS public.photos (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Create indexes for photos table
+-- Step 2: Create indexes for photos table
 CREATE INDEX IF NOT EXISTS idx_photos_user_id ON public.photos(user_id);
 CREATE INDEX IF NOT EXISTS idx_photos_created_at ON public.photos(created_at);
 
--- Enable RLS on photos table
+-- Step 3: CRITICAL - Enable RLS on photos table (must be done before creating policies)
 ALTER TABLE public.photos ENABLE ROW LEVEL SECURITY;
 
--- Drop existing policies if they exist
+-- Step 4: Drop ALL existing policies first (important to avoid conflicts)
 DROP POLICY IF EXISTS "Users can view their own photos" ON public.photos CASCADE;
 DROP POLICY IF EXISTS "Users can add their own photos" ON public.photos CASCADE;
 DROP POLICY IF EXISTS "Users can delete their own photos" ON public.photos CASCADE;
 
--- Create RLS policies for photos
+-- Step 5: Create RLS policies for photos
+-- These policies ensure users can only access their own photos
 CREATE POLICY "Users can view their own photos"
   ON public.photos FOR SELECT
   USING (user_id = auth.uid());
@@ -74,10 +75,15 @@ CREATE POLICY "Users can delete their own photos"
   ON public.photos FOR DELETE
   USING (user_id = auth.uid());
 
--- Verify RLS policies are active (run this to check):
--- SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
--- FROM pg_policies 
--- WHERE tablename = 'photos';
+-- Step 6: Verify RLS is enabled and policies exist (should return 3 rows)
+SELECT 
+  tablename, 
+  policyname, 
+  cmd,
+  CASE WHEN cmd = 'SELECT' THEN qual ELSE with_check END as policy_condition
+FROM pg_policies 
+WHERE tablename = 'photos'
+ORDER BY cmd;
 */
 
 -- ============================================

@@ -838,15 +838,17 @@ export async function removeUserIngredient(userId: string, ingredientName: strin
 // Photo functions
 export async function uploadPhoto(file: File): Promise<{ photo: Photo | null; error: string | null }> {
   try {
-    // Get the authenticated user to ensure RLS policy works
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+    // Get the current session to ensure we have an authenticated user
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
-    if (authError || !authUser) {
+    if (sessionError || !session || !session.user) {
       return { photo: null, error: 'You must be logged in to upload photos' }
     }
 
-    // Use the authenticated user's ID (RLS policy requires user_id = auth.uid())
-    const authenticatedUserId = authUser.id
+    // Use the authenticated user's ID from the session
+    // The RLS policy checks: user_id = auth.uid()
+    // The Supabase client automatically includes the auth token in requests
+    const authenticatedUserId = session.user.id
     
     // Generate a unique filename
     const fileExt = file.name.split('.').pop()
@@ -870,21 +872,9 @@ export async function uploadPhoto(file: File): Promise<{ photo: Photo | null; er
     const { data: urlData } = supabase.storage.from('photos').getPublicUrl(filePath)
     const publicUrl = urlData.publicUrl
 
-    // Verify session is still valid before inserting
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    if (sessionError || !session || session.user.id !== authenticatedUserId) {
-      // Try to delete the uploaded file
-      await supabase.storage.from('photos').remove([filePath])
-      return { photo: null, error: 'Authentication session invalid. Please try again.' }
-    }
-
-    // Debug: Log the user ID we're trying to insert
-    console.log('Attempting to insert photo with user_id:', authenticatedUserId)
-    console.log('Session user ID:', session.user.id)
-    console.log('Session access token exists:', !!session.access_token)
-
-    // Save photo record to database (use authenticated user ID for RLS policy)
+    // Save photo record to database
     // The RLS policy checks: user_id = auth.uid()
+    // We use the authenticated user's ID, and Supabase client automatically includes auth token
     const { data, error: dbError } = await supabase
       .from('photos')
       .insert({

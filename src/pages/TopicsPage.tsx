@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth'
 import { getAllNotes, getEvents, getPartners, getTilePreferences } from '../lib/api'
 import type { Note, Event } from '../types'
 import PhotoGallery from '../components/PhotoGallery'
+import PhotoWidget from '../components/PhotoWidget'
 
 export default function TopicsPage() {
   const navigate = useNavigate()
@@ -147,40 +148,46 @@ export default function TopicsPage() {
           </div>
         )}
 
-        {/* Quick Stats */}
+        {/* Quick Stats with Photo Widget 1 */}
         {!loading && (
-          <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3 mb-4 sm:mb-6 md:mb-8">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 aspect-square flex flex-col justify-center">
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-2 mb-4 sm:mb-6 md:mb-8">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-2.5 aspect-square flex flex-col justify-center">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs text-gray-400 mb-1 truncate">Total Notes</p>
-                  <p className="text-lg sm:text-xl md:text-2xl lg:text-xl xl:text-2xl 2xl:text-xl font-bold text-gray-100">{notes.length}</p>
+                  <p className="text-xs text-gray-400 mb-0.5 sm:mb-1 truncate">Total Notes</p>
+                  <p className="text-lg sm:text-xl md:text-2xl lg:text-xl xl:text-2xl 2xl:text-lg font-bold text-gray-100">{notes.length}</p>
                 </div>
-                <div className="text-xl sm:text-2xl md:text-3xl lg:text-2xl xl:text-3xl 2xl:text-2xl flex-shrink-0 ml-1">📝</div>
+                <div className="text-xl sm:text-2xl md:text-3xl lg:text-2xl xl:text-3xl 2xl:text-xl flex-shrink-0 ml-1">📝</div>
               </div>
             </div>
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 aspect-square flex flex-col justify-center">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-2.5 aspect-square flex flex-col justify-center">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs text-gray-400 mb-1 truncate">Upcoming Events</p>
-                  <p className="text-lg sm:text-xl md:text-2xl lg:text-xl xl:text-2xl 2xl:text-xl font-bold text-gray-100">{events.length}</p>
+                  <p className="text-xs text-gray-400 mb-0.5 sm:mb-1 truncate">Upcoming Events</p>
+                  <p className="text-lg sm:text-xl md:text-2xl lg:text-xl xl:text-2xl 2xl:text-lg font-bold text-gray-100">{events.length}</p>
                 </div>
-                <div className="text-xl sm:text-2xl md:text-3xl lg:text-2xl xl:text-3xl 2xl:text-2xl flex-shrink-0 ml-1">📅</div>
+                <div className="text-xl sm:text-2xl md:text-3xl lg:text-2xl xl:text-3xl 2xl:text-xl flex-shrink-0 ml-1">📅</div>
               </div>
             </div>
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 aspect-square flex flex-col justify-center">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-2.5 aspect-square flex flex-col justify-center">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs text-gray-400 mb-1 truncate">Linked Partners</p>
-                  <p className="text-lg sm:text-xl md:text-2xl lg:text-xl xl:text-2xl 2xl:text-xl font-bold text-gray-100">{partners.length}</p>
+                  <p className="text-xs text-gray-400 mb-0.5 sm:mb-1 truncate">Linked Partners</p>
+                  <p className="text-lg sm:text-xl md:text-2xl lg:text-xl xl:text-2xl 2xl:text-lg font-bold text-gray-100">{partners.length}</p>
                 </div>
-                <div className="text-xl sm:text-2xl md:text-3xl lg:text-2xl xl:text-3xl 2xl:text-2xl flex-shrink-0 ml-1">👥</div>
+                <div className="text-xl sm:text-2xl md:text-3xl lg:text-2xl xl:text-3xl 2xl:text-xl flex-shrink-0 ml-1">👥</div>
               </div>
             </div>
+            {/* Photo Widget 1 */}
+            {tilePreferences['photo-gallery'] !== false && (
+              <div className="hidden md:block">
+                <PhotoWidget photoIndex={0} />
+              </div>
+            )}
           </div>
         )}
 
-        {/* App Cards */}
+        {/* App Cards with Photo Widget 2 */}
         <div className="mb-4 sm:mb-6 md:mb-8">
           <h3 className="text-base sm:text-lg md:text-xl lg:text-lg xl:text-xl 2xl:text-lg font-semibold text-gray-100 mb-2 sm:mb-3 md:mb-4">Apps</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3">
@@ -199,17 +206,17 @@ export default function TopicsPage() {
                   </p>
                 </button>
               ))}
+            {/* Photo Widget 2 - integrated into app cards grid */}
+            {tilePreferences['photo-gallery'] !== false && (
+              <div className="hidden lg:block">
+                <PhotoWidget photoIndex={1} />
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Photo Gallery Widget */}
-        {tilePreferences['photo-gallery'] !== false && (
-          <div className="mb-4 sm:mb-6 md:mb-8 max-w-[200px] sm:max-w-xs md:max-w-sm lg:max-w-xs xl:max-w-sm 2xl:max-w-xs mx-auto">
-            <PhotoGallery />
-          </div>
-        )}
 
-        {/* Recent Activity */}
+        {/* Recent Activity with Photo Widget 3 */}
         {!loading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3">
             {/* Upcoming Events */}
@@ -301,9 +308,17 @@ export default function TopicsPage() {
                 )}
               </div>
             </div>
+
+            {/* Photo Widget 3 - integrated into recent activity grid */}
+            {tilePreferences['photo-gallery'] !== false && (
+              <div className="hidden lg:block">
+                <PhotoWidget photoIndex={2} />
+              </div>
+            )}
           </div>
         )}
       </main>
     </div>
   )
 }
+

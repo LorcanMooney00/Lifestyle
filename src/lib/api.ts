@@ -52,7 +52,7 @@ export async function createTopic(name: string, ownerId: string): Promise<{ topi
   return { topic: data, error: null }
 }
 
-export async function getAllNotes(userId: string): Promise<Array<Note & { creator_username?: string | null; partners?: string[] }>> {
+export async function getAllNotes(userId: string, filterPartnerId?: string): Promise<Array<Note & { creator_username?: string | null; partners?: string[] }>> {
   // RLS policies will automatically filter to notes from topics user has access to
   // (owned, member of, or partner's topics)
   // First get all notes with their topics
@@ -77,6 +77,9 @@ export async function getAllNotes(userId: string): Promise<Array<Note & { creato
 
   // Get all user IDs we need usernames for
   const allUserIds = [...new Set([...creatorIds, ...topicOwnerIds, userId])]
+  if (filterPartnerId) {
+    allUserIds.push(filterPartnerId)
+  }
 
   // Fetch usernames for all users
   const { data: profilesData } = await supabase
@@ -97,7 +100,7 @@ export async function getAllNotes(userId: string): Promise<Array<Note & { creato
   const partnerIds = partners.map(p => p.id)
 
   // Map notes to include creator_username and partners
-  return notesData.map((note: any) => {
+  const mappedNotes = notesData.map((note: any) => {
     const topicOwnerId = note.topic?.owner_id
     const creatorId = note.created_by
     
@@ -149,8 +152,24 @@ export async function getAllNotes(userId: string): Promise<Array<Note & { creato
       ...note,
       creator_username: usernameMap.get(creatorId) || null,
       partners: partnersList,
+      // Store the other person's ID for filtering
+      otherPersonId: otherPersonUsername ? 
+        (creatorId !== userId ? creatorId : (topicOwnerId !== userId ? topicOwnerId : partners.find(p => p.username === otherPersonUsername)?.id)) 
+        : null,
     }
   })
+
+  // If filtering by partner, only return notes involving that partner
+  if (filterPartnerId) {
+    return mappedNotes.filter((note: any) => {
+      // Check if the note involves the specific partner
+      return note.created_by === filterPartnerId || 
+             note.topic?.owner_id === filterPartnerId ||
+             note.otherPersonId === filterPartnerId
+    })
+  }
+
+  return mappedNotes
 }
 
 export async function getNotes(topicId: string): Promise<Note[]> {

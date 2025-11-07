@@ -22,8 +22,16 @@
    - **Add Environment Variables:**
      - `VITE_SUPABASE_URL` = your Supabase URL
      - `VITE_SUPABASE_ANON_KEY` = your Supabase anon key
+     - `VITE_SITE_URL` = your Vercel deployment URL (e.g., `https://your-app.vercel.app`)
    - Click "Deploy"
    - Your app will be live at `your-project-name.vercel.app`
+
+**Important:** After deployment, configure Supabase:
+1. Go to your Supabase project dashboard
+2. Navigate to **Authentication** → **URL Configuration**
+3. Set **Site URL** to your Vercel deployment URL (e.g., `https://your-app.vercel.app`)
+4. Add your Vercel URL to **Redirect URLs** (e.g., `https://your-app.vercel.app/**`)
+5. Also add `http://localhost:5173/**` for local development if needed
 
 **Pros:** Free, automatic deployments on git push, custom domains, very fast
 
@@ -43,8 +51,11 @@
    - **Add Environment Variables:**
      - `VITE_SUPABASE_URL` = your Supabase URL
      - `VITE_SUPABASE_ANON_KEY` = your Supabase anon key
+     - `VITE_SITE_URL` = your Netlify deployment URL (e.g., `https://your-app.netlify.app`)
    - Click "Deploy site"
    - Your app will be live at `your-project-name.netlify.app`
+
+**Important:** After deployment, configure Supabase (same as Vercel instructions above)
 
 **Pros:** Free, automatic deployments, custom domains
 

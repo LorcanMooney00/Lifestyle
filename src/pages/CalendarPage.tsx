@@ -198,10 +198,15 @@ export default function CalendarPage() {
                   e.stopPropagation()
                   setSelectedEvent(event)
                 }}
-                className="text-xs bg-indigo-600 text-white px-2 py-1 rounded-md truncate hover:bg-indigo-500 active:bg-indigo-400 flex items-center shadow-sm"
-                title={event.title}
+                className="text-xs bg-indigo-600 text-white px-2 py-1 rounded-md truncate hover:bg-indigo-500 active:bg-indigo-400 flex flex-col shadow-sm cursor-pointer"
+                title={event.title + (event.description ? `: ${event.description}` : '')}
               >
-                {event.title}
+                <span className="font-medium truncate">{event.title}</span>
+                {event.description && (
+                  <span className="text-[10px] opacity-90 truncate mt-0.5">
+                    {event.description.length > 30 ? `${event.description.substring(0, 30)}...` : event.description}
+                  </span>
+                )}
               </div>
             ))}
             {dayEvents.length > 3 && (

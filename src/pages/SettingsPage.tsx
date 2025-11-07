@@ -1,26 +1,27 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
-import { getPartners, linkPartner, unlinkPartner, getUserProfile, updateUserProfile, getTilePreferences, updateTilePreferences } from '../lib/api'
+import { getUserProfile, updateUserProfile, getTilePreferences, updateTilePreferences, uploadProfilePicture, getProfilePictureUrl } from '../lib/api'
 import { signOut, changePassword, deleteAccount } from '../lib/auth'
 
 export default function SettingsPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [partnerEmail, setPartnerEmail] = useState('')
-  const [partners, setPartners] = useState<Array<{ id: string; email: string; username: string }>>([])
-  const [loading, setLoading] = useState(true)
-  const [linking, setLinking] = useState(false)
-  const [unlinking, setUnlinking] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-  
   // Username state
   const [username, setUsername] = useState('')
   const [usernameLoading, setUsernameLoading] = useState(false)
   const [usernameEditing, setUsernameEditing] = useState(false)
   const [usernameError, setUsernameError] = useState<string | null>(null)
   const [usernameSuccess, setUsernameSuccess] = useState<string | null>(null)
+
+  // Profile picture state
+  // Store the storage path (not signed URL) so it doesn't expire
+  const [profilePicturePath, setProfilePicturePath] = useState<string | null>(null)
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null) // Signed URL for display
+  const [uploadingPicture, setUploadingPicture] = useState(false)
+  const [pictureError, setPictureError] = useState<string | null>(null)
+  const [pictureSuccess, setPictureSuccess] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Password change state
   const [passwordEditing, setPasswordEditing] = useState(false)
@@ -49,7 +50,6 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (user) {
-      loadPartnerStatus()
       loadUsername()
       loadTilePreferences()
     }
@@ -57,9 +57,36 @@ export default function SettingsPage() {
 
   const loadUsername = async () => {
     if (!user) return
-    const { username: currentUsername } = await getUserProfile(user.id)
+    console.log('=== SettingsPage: Loading Username ===')
+    const { username: currentUsername, profilePictureUrl } = await getUserProfile(user.id)
+    console.log('Loaded username:', currentUsername)
+    console.log('Loaded profile picture URL from DB:', profilePictureUrl)
     setUsername(currentUsername || '')
+    // Store the storage path (not the signed URL) so it doesn't expire
+    if (profilePictureUrl) {
+      console.log('Storing profile picture path:', profilePictureUrl)
+      setProfilePicturePath(profilePictureUrl)
+    } else {
+      console.log('No profile picture URL found')
+      setProfilePicturePath(null)
+    }
+    console.log('=== END SettingsPage: Loading Username ===')
   }
+
+  // Convert storage path to signed URL when it changes
+  useEffect(() => {
+    const convertToSignedUrl = async () => {
+      if (profilePicturePath) {
+        console.log('Converting profile picture path to signed URL:', profilePicturePath)
+        const signedUrl = await getProfilePictureUrl(profilePicturePath)
+        console.log('Generated signed URL:', signedUrl)
+        setProfilePictureUrl(signedUrl)
+      } else {
+        setProfilePictureUrl(null)
+      }
+    }
+    convertToSignedUrl()
+  }, [profilePicturePath])
 
   const loadTilePreferences = async () => {
     if (!user) return
@@ -99,14 +126,6 @@ export default function SettingsPage() {
     setTilePreferencesLoading(false)
   }
 
-  const loadPartnerStatus = async () => {
-    if (!user) return
-    setLoading(true)
-    const data = await getPartners(user.id)
-    setPartners(data)
-    setLoading(false)
-  }
-
   const handleUpdateUsername = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user || !username.trim()) {
@@ -118,13 +137,11 @@ export default function SettingsPage() {
     setUsernameError(null)
     setUsernameSuccess(null)
 
-    const { success, error } = await updateUserProfile(user.id, username.trim())
+    const { success, error } = await updateUserProfile(user.id, username.trim(), profilePicturePath)
     
     if (success) {
       setUsernameSuccess('Username updated successfully!')
       setUsernameEditing(false)
-      // Reload partners to show updated username
-      await loadPartnerStatus()
     } else {
       setUsernameError(error || 'Failed to update username')
     }
@@ -132,24 +149,68 @@ export default function SettingsPage() {
     setUsernameLoading(false)
   }
 
-  const handleLinkPartner = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user || !partnerEmail.trim()) return
+  const handleProfilePictureSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
 
-    setLinking(true)
-    setError(null)
-    setSuccess(null)
-
-    const success = await linkPartner(user.id, partnerEmail.trim())
-    if (success) {
-      setSuccess('Partner linked successfully!')
-      setPartnerEmail('')
-      await loadPartnerStatus()
-    } else {
-      setError('Failed to link partner. Make sure they have an account with this email.')
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setPictureError('Please select an image file')
+      return
     }
 
-    setLinking(false)
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setPictureError('Profile picture size must be less than 2MB')
+      return
+    }
+
+    setUploadingPicture(true)
+    setPictureError(null)
+    setPictureSuccess(null)
+
+    console.log('=== SettingsPage: Profile Picture Upload ===')
+    const { url, error: uploadError } = await uploadProfilePicture(file)
+    console.log('Upload result - URL:', url)
+    console.log('Upload result - Error:', uploadError)
+
+    if (uploadError) {
+      setPictureError(uploadError)
+    } else if (url) {
+      // url is the storage path (not a signed URL)
+      // Store the storage path - useEffect will convert it to signed URL
+      console.log('Setting profile picture path (storage path):', url)
+      setProfilePicturePath(url) // Store storage path - useEffect will generate signed URL
+      setPictureSuccess('Profile picture updated successfully!')
+      setTimeout(() => setPictureSuccess(null), 3000)
+    }
+    console.log('=== END SettingsPage: Profile Picture Upload ===')
+
+    setUploadingPicture(false)
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const handleRemoveProfilePicture = async () => {
+    if (!user) return
+
+    setUploadingPicture(true)
+    setPictureError(null)
+    setPictureSuccess(null)
+
+    const { success, error } = await updateUserProfile(user.id, username, null)
+    
+    if (success) {
+      setProfilePicturePath(null) // Clear storage path - useEffect will clear signed URL
+      setPictureSuccess('Profile picture removed successfully!')
+      setTimeout(() => setPictureSuccess(null), 3000)
+    } else {
+      setPictureError(error || 'Failed to remove profile picture')
+    }
+
+    setUploadingPicture(false)
   }
 
   const handleSignOut = async () => {
@@ -242,111 +303,75 @@ export default function SettingsPage() {
       </nav>
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-gray-800 shadow-sm rounded-lg p-6 border border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-100 mb-6">
-            Partner Linking
+        <div className="bg-gray-800 shadow-sm rounded-lg p-6 mt-6 border border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-100 mb-4">
+            Profile Picture
           </h2>
-
-          {loading ? (
-            <div className="text-gray-400">Loading...</div>
-          ) : (
-            <div className="space-y-6">
-              {/* Show existing partners if any */}
-              {partners.length > 0 && (
-                <div className="space-y-4">
-                  <div className="bg-green-900 border border-green-700 text-green-200 px-4 py-3 rounded">
-                    <p className="font-medium">Linked Partners</p>
-                    <p className="text-sm mt-1">
-                      You have {partners.length} partner{partners.length !== 1 ? 's' : ''} linked.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    {partners.map((partner) => (
-                      <div
-                        key={partner.id}
-                        className="flex items-center justify-between bg-gray-700 p-3 rounded border border-gray-600"
-                      >
-                        <div>
-                          <p className="font-medium text-gray-100">{partner.username}</p>
-                          <p className="text-sm text-gray-400">{partner.email}</p>
-                        </div>
-                        <button
-                          onClick={async () => {
-                            if (!user) return
-                            if (confirm(`Are you sure you want to unlink from ${partner.email}?`)) {
-                              setUnlinking(true)
-                              const success = await unlinkPartner(user.id, partner.id)
-                              if (success) {
-                                setSuccess('Partner unlinked successfully.')
-                                await loadPartnerStatus()
-                              } else {
-                                setError('Failed to unlink partner. Please try again.')
-                              }
-                              setUnlinking(false)
-                            }
-                          }}
-                          disabled={unlinking || !user}
-                          className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-500 disabled:opacity-50"
-                        >
-                          Unlink
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Always show the form to add more partners */}
-              <div className="space-y-4 border-t border-gray-700 pt-6">
-                <h3 className="text-lg font-semibold text-gray-100">
-                  {partners.length > 0 ? 'Add Another Partner' : 'Link a Partner'}
-                </h3>
-                <p className="text-gray-400 text-sm">
-                  Link your account with a partner's account to share notes and calendar events together.
-                  Your partner needs to have an account with the email address you provide.
-                </p>
-
-                {error && (
-                  <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded">
-                    {error}
-                  </div>
-                )}
-
-                {success && (
-                  <div className="bg-green-900 border border-green-700 text-green-200 px-4 py-3 rounded">
-                    {success}
-                  </div>
-                )}
-
-                <form onSubmit={handleLinkPartner} className="space-y-4">
-                  <div>
-                    <label
-                      htmlFor="partner-email"
-                      className="block text-sm font-medium text-gray-300 mb-2"
-                    >
-                      Partner's Email Address
-                    </label>
-                    <input
-                      id="partner-email"
-                      type="email"
-                      value={partnerEmail}
-                      onChange={(e) => setPartnerEmail(e.target.value)}
-                      placeholder="partner@example.com"
-                      required
-                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={linking || !partnerEmail.trim()}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-                  >
-                    {linking ? 'Linking...' : 'Link Partner'}
-                  </button>
-                </form>
-              </div>
+          
+          {pictureError && (
+            <div className="mb-4 p-4 bg-red-900/30 border border-red-700/50 rounded-xl">
+              <p className="text-sm text-red-300">{pictureError}</p>
             </div>
           )}
+
+          {pictureSuccess && (
+            <div className="mb-4 p-4 bg-green-900/30 border border-green-700/50 rounded-xl">
+              <p className="text-sm text-green-300">{pictureSuccess}</p>
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              {profilePictureUrl ? (
+                <div className="relative">
+                  <img
+                    src={profilePictureUrl}
+                    alt="Profile"
+                    className="w-20 h-20 rounded-full object-cover border-2 border-indigo-500/50 shadow-lg"
+                  />
+                  <button
+                    onClick={handleRemoveProfilePicture}
+                    disabled={uploadingPicture}
+                    className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-red-600 hover:bg-red-500 text-white text-xs flex items-center justify-center transition-all shadow-lg hover:shadow-xl disabled:opacity-50"
+                    title="Remove profile picture"
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-slate-700/50 border-2 border-slate-600/50 flex items-center justify-center text-3xl">
+                  👤
+                </div>
+              )}
+              <div className="flex-1">
+                <p className="text-sm text-slate-300 mb-2">
+                  {profilePictureUrl ? 'Your profile picture' : 'No profile picture set'}
+                </p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleProfilePictureSelect}
+                  className="hidden"
+                  id="profile-picture-upload"
+                  disabled={uploadingPicture}
+                />
+                <label
+                  htmlFor="profile-picture-upload"
+                  className={`inline-block px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                    uploadingPicture
+                      ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-500 active:bg-indigo-700 shadow-lg hover:shadow-xl active:scale-95'
+                  }`}
+                >
+                  {uploadingPicture ? 'Uploading...' : profilePictureUrl ? 'Change Picture' : 'Upload Picture'}
+                </label>
+                <p className="text-xs text-slate-400 mt-2">
+                  Max 2MB. JPG, PNG, or GIF.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="bg-gray-800 shadow-sm rounded-lg p-6 mt-6 border border-gray-700">
@@ -443,10 +468,10 @@ export default function SettingsPage() {
 
         <div className="bg-gray-800 shadow-sm rounded-lg p-6 mt-6 border border-gray-700">
           <h2 className="text-xl font-semibold text-gray-100 mb-4">
-            Tile Visibility
+            Dashboard Preferences
           </h2>
           <p className="text-sm text-gray-400 mb-4">
-            Choose which tiles to show on your dashboard
+            Choose which tiles to show on your partner dashboards
           </p>
 
           {tilePreferencesError && (
@@ -540,7 +565,7 @@ export default function SettingsPage() {
                 <span className="text-2xl">📸</span>
                 <div>
                   <p className="font-medium text-gray-100">Photo Gallery</p>
-                  <p className="text-sm text-gray-400">Upload and view your photos</p>
+                  <p className="text-sm text-gray-400">Upload and view your photos on the main dashboard</p>
                 </div>
               </div>
               <button
@@ -747,4 +772,5 @@ export default function SettingsPage() {
     </div>
   )
 }
+
 

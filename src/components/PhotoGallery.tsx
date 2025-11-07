@@ -204,7 +204,7 @@ export default function PhotoGallery() {
       )}
 
       {photos.length > 0 && (
-        <div className="flex-1 relative overflow-hidden bg-gray-900 w-full h-full">
+        <div className="flex-1 relative overflow-hidden bg-gray-900 w-full h-full group">
           <img
             src={photos[currentIndex].url}
             alt={`Photo ${currentIndex + 1}`}
@@ -231,10 +231,10 @@ export default function PhotoGallery() {
             </>
           )}
 
-          {/* Delete button - bottom right */}
+          {/* Delete button - bottom right, hidden until hover */}
           <button
             onClick={() => handleDelete(photos[currentIndex])}
-            className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 bg-red-600/80 hover:bg-red-600 active:bg-red-700 text-white p-2.5 sm:p-2 rounded-full transition-all shadow-lg backdrop-blur-md touch-manipulation min-w-[40px] min-h-[40px] flex items-center justify-center text-sm"
+            className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 bg-red-600/80 hover:bg-red-600 active:bg-red-700 text-white p-2.5 sm:p-2 rounded-full transition-all shadow-lg backdrop-blur-md touch-manipulation min-w-[40px] min-h-[40px] flex items-center justify-center text-sm opacity-0 group-hover:opacity-100"
             aria-label="Delete photo"
           >
             🗑️

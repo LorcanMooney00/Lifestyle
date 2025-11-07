@@ -69,17 +69,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
-      <div className="max-w-md w-full space-y-8 bg-gray-800 p-8 rounded-lg shadow-md border border-gray-700">
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="max-w-md w-full space-y-8 glass backdrop-blur-xl p-8 rounded-2xl shadow-2xl border border-slate-600/50">
         <div>
-          <h2 className="text-center text-3xl font-extrabold text-gray-100">
+          <h2 className="text-center text-3xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
             {showResetPassword
               ? 'Reset your password'
               : isSignUp
               ? 'Create your account'
               : 'Sign in to your account'}
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-400">
+          <p className="mt-2 text-center text-sm text-slate-400">
             {showResetPassword
               ? "Enter your email and we'll send you a reset link"
               : isSignUp
@@ -89,16 +89,16 @@ export default function LoginPage() {
         </div>
         <form className="mt-8 space-y-6" onSubmit={showResetPassword ? handleResetPassword : handleSubmit}>
           {error && (
-            <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded">
+            <div className="bg-red-900/30 border border-red-700/50 text-red-200 px-4 py-3 rounded-xl">
               {error}
             </div>
           )}
           {success && (
-            <div className="bg-green-900 border border-green-700 text-green-200 px-4 py-3 rounded">
+            <div className="bg-green-900/30 border border-green-700/50 text-green-200 px-4 py-3 rounded-xl">
               {success}
             </div>
           )}
-          <div className="rounded-md shadow-sm -space-y-px">
+          <div className="rounded-lg shadow-sm -space-y-px">
             {isSignUp && !showResetPassword && (
               <div>
                 <label htmlFor="username" className="sr-only">
@@ -110,7 +110,7 @@ export default function LoginPage() {
                   type="text"
                   autoComplete="username"
                   required
-                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-600 bg-gray-700 placeholder-gray-400 text-gray-100 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                  className="appearance-none rounded-none relative block w-full px-4 py-3 border border-slate-600 bg-slate-700/50 placeholder-slate-400 text-white rounded-t-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm transition-all"
                   placeholder="Username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
@@ -127,7 +127,7 @@ export default function LoginPage() {
                 type="email"
                 autoComplete="email"
                 required
-                className={`appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-600 bg-gray-700 placeholder-gray-400 text-gray-100 ${isSignUp && !showResetPassword ? '' : 'rounded-t-md'} focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
+                className={`appearance-none rounded-none relative block w-full px-4 py-3 border border-slate-600 bg-slate-700/50 placeholder-slate-400 text-white ${isSignUp && !showResetPassword ? '' : 'rounded-t-lg'} focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm transition-all`}
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -144,7 +144,7 @@ export default function LoginPage() {
                   type="password"
                   autoComplete="current-password"
                   required
-                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-600 bg-gray-700 placeholder-gray-400 text-gray-100 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                  className="appearance-none rounded-none relative block w-full px-4 py-3 border border-slate-600 bg-slate-700/50 placeholder-slate-400 text-white rounded-b-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm transition-all"
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -157,7 +157,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl active:scale-95"
             >
               {loading
                 ? 'Please wait...'
@@ -179,7 +179,7 @@ export default function LoginPage() {
                   setSuccess(null)
                   setPassword('')
                 }}
-                className="block w-full text-sm text-indigo-400 hover:text-indigo-300"
+                className="block w-full text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
               >
                 Forgot password?
               </button>
@@ -192,7 +192,7 @@ export default function LoginPage() {
                   setError(null)
                   setSuccess(null)
                 }}
-                className="text-sm text-indigo-400 hover:text-indigo-300"
+                className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
               >
                 Back to sign in
               </button>
@@ -205,7 +205,7 @@ export default function LoginPage() {
                   setSuccess(null)
                   setUsername('')
                 }}
-                className="text-sm text-indigo-400 hover:text-indigo-300"
+                className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
               >
                 {isSignUp
                   ? 'Already have an account? Sign in'

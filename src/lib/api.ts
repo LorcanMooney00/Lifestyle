@@ -352,23 +352,23 @@ export async function addTopicMember(
   return data
 }
 
-export async function getUserProfile(userId: string): Promise<{ username: string | null; error: string | null }> {
+export async function getUserProfile(userId: string): Promise<{ username: string | null; profilePictureUrl: string | null; error: string | null }> {
   const { data, error } = await supabase
     .from('user_profiles')
-    .select('username')
+    .select('username, profile_picture_url')
     .eq('id', userId)
     .single()
 
   if (error) {
     if (error.code === 'PGRST116') {
       // No profile found
-      return { username: null, error: null }
+      return { username: null, profilePictureUrl: null, error: null }
     }
     console.error('Error fetching user profile:', error)
-    return { username: null, error: error.message }
+    return { username: null, profilePictureUrl: null, error: error.message }
   }
 
-  return { username: data?.username || null, error: null }
+  return { username: data?.username || null, profilePictureUrl: data?.profile_picture_url || null, error: null }
 }
 
 export async function getTilePreferences(userId: string): Promise<{ preferences: Record<string, boolean> | null; error: string | null }> {
@@ -416,15 +416,21 @@ export async function updateTilePreferences(userId: string, preferences: Record<
   return { success: true, error: null }
 }
 
-export async function updateUserProfile(userId: string, username: string): Promise<{ success: boolean; error: string | null }> {
+export async function updateUserProfile(userId: string, username: string, profilePictureUrl?: string | null): Promise<{ success: boolean; error: string | null }> {
   // Use upsert to either update existing profile or create new one
+  const updateData: any = {
+    id: userId,
+    username,
+  }
+  
+  if (profilePictureUrl !== undefined) {
+    updateData.profile_picture_url = profilePictureUrl
+  }
+
   const { error } = await supabase
     .from('user_profiles')
     .upsert(
-      {
-        id: userId,
-        username,
-      },
+      updateData,
       {
         onConflict: 'id',
       }
@@ -442,7 +448,290 @@ export async function updateUserProfile(userId: string, username: string): Promi
   return { success: true, error: null }
 }
 
-export async function getPartners(userId: string): Promise<Array<{ id: string; email: string; username: string }>> {
+export async function uploadProfilePicture(file: File): Promise<{ url: string | null; error: string | null }> {
+  try {
+    // Get the current session to ensure we have an authenticated user
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError || !session || !session.user) {
+      return { url: null, error: 'You must be logged in to upload profile pictures' }
+    }
+
+    const authenticatedUserId = session.user.id
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      return { url: null, error: 'Please select an image file' }
+    }
+
+    // Validate file size (max 2MB for profile pictures)
+    if (file.size > 2 * 1024 * 1024) {
+      return { url: null, error: 'Profile picture size must be less than 2MB' }
+    }
+
+    // Generate a unique filename
+    const fileExt = file.name.split('.').pop()
+    const fileName = `profile-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+    const filePath = `${authenticatedUserId}/${fileName}`
+
+    // Upload to Supabase Storage (using photos bucket, or create a profile-pictures bucket)
+    // Use upsert: true to overwrite if file exists
+    const { error: uploadError } = await supabase.storage
+      .from('photos')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true, // Allow overwriting existing files
+      })
+
+    console.log('Upload result - error:', uploadError)
+    if (uploadError) {
+      console.error('Error uploading profile picture:', uploadError)
+      return { url: null, error: uploadError.message }
+    }
+    console.log('File uploaded successfully to:', filePath)
+
+    // Verify the file actually exists in storage immediately after upload
+    console.log('Verifying file exists in storage...')
+    const { data: verifyList, error: verifyError } = await supabase.storage
+      .from('photos')
+      .list(authenticatedUserId)
+    
+    console.log('Verification - file list:', verifyList)
+    console.log('Verification - error:', verifyError)
+    
+    const uploadedFileName = filePath.split('/')[1]
+    const fileExists = verifyList?.some((file: any) => file.name === uploadedFileName)
+    console.log('File exists verification:', fileExists, 'for file:', uploadedFileName)
+    
+    if (!fileExists) {
+      console.error('CRITICAL: File was not found in storage after upload!')
+      console.error('This suggests a storage permissions issue or upload failure')
+      return { url: null, error: 'File upload failed - file not found in storage' }
+    }
+
+    // Store the storage path (not the public URL) so we can generate signed URLs
+    // The storage path is: userId/fileName
+    const storagePath = filePath
+
+    console.log('=== PROFILE PICTURE UPLOAD DEBUG ===')
+    console.log('Storage path:', storagePath)
+    console.log('User ID:', authenticatedUserId)
+
+    // First, check if profile exists
+    const { data: existingProfile, error: fetchError } = await supabase
+      .from('user_profiles')
+      .select('username, profile_picture_url')
+      .eq('id', authenticatedUserId)
+      .single()
+
+    console.log('Existing profile:', existingProfile)
+    console.log('Fetch error:', fetchError)
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      // PGRST116 means no rows found, which is fine
+      console.error('Error checking profile:', fetchError)
+      await supabase.storage.from('photos').remove([filePath])
+      return { url: null, error: 'Failed to check user profile' }
+    }
+
+    // Update or create profile
+    if (existingProfile) {
+      console.log('Updating existing profile')
+      
+      // Save old profile picture path BEFORE updating database
+      const oldProfilePictureUrl = existingProfile.profile_picture_url
+      
+      // Profile exists, update the picture URL FIRST (store storage path)
+      // This ensures the new path is in the database before we try to delete the old one
+      console.log('Updating profile with storage path:', storagePath)
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({ profile_picture_url: storagePath })
+        .eq('id', authenticatedUserId)
+
+      if (updateError) {
+        console.error('Error updating profile picture URL:', updateError)
+        await supabase.storage.from('photos').remove([filePath])
+        return { url: null, error: updateError.message }
+      }
+      console.log('Profile updated successfully')
+      
+      // Delete old profile picture AFTER updating the database (to save storage space)
+      // This way, if deletion fails, we still have the new picture in the database
+      if (oldProfilePictureUrl && oldProfilePictureUrl !== storagePath) {
+        console.log('Old profile picture URL:', oldProfilePictureUrl)
+        try {
+          // Check if old picture is a storage path or URL
+          let oldPath = oldProfilePictureUrl
+          try {
+            const oldUrl = new URL(oldProfilePictureUrl)
+            console.log('Old URL parsed:', oldUrl.href)
+            if (oldUrl.hostname.includes('supabase')) {
+              // Extract path from URL
+              const pathParts = oldUrl.pathname.split('/')
+              const bucketIndex = pathParts.findIndex(part => part === 'photos')
+              if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
+                oldPath = pathParts.slice(bucketIndex + 1).join('/')
+                console.log('Extracted old path from URL:', oldPath)
+              } else {
+                oldPath = null // Can't extract path, skip deletion
+                console.log('Could not extract path from URL')
+              }
+            } else {
+              oldPath = null // Not a Supabase URL, skip deletion
+              console.log('Not a Supabase URL, skipping deletion')
+            }
+          } catch {
+            // Not a URL, assume it's already a storage path
+            oldPath = oldProfilePictureUrl
+            console.log('Not a URL, using as storage path:', oldPath)
+          }
+          
+          if (oldPath && oldPath !== storagePath) {
+            // Only delete if it's different from the new one
+            console.log('Deleting old profile picture:', oldPath)
+            const { error: deleteError } = await supabase.storage.from('photos').remove([oldPath])
+            if (deleteError) {
+              console.warn('Error deleting old profile picture (non-critical):', deleteError)
+            } else {
+              console.log('Old profile picture deleted successfully')
+            }
+          } else {
+            console.log('Skipping deletion - same path or no old path')
+          }
+        } catch (deleteError) {
+          // Ignore deletion errors - not critical
+          console.warn('Could not delete old profile picture (non-critical):', deleteError)
+        }
+      } else {
+        console.log('No old profile picture to delete')
+      }
+    } else {
+      // Profile doesn't exist, need to create it with a username
+      // Get user email to use as default username
+      const { data: { user } } = await supabase.auth.getUser()
+      const defaultUsername = user?.email?.split('@')[0] || `user_${authenticatedUserId.slice(0, 8)}`
+      
+      const { error: insertError } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: authenticatedUserId,
+          username: defaultUsername,
+          profile_picture_url: storagePath,
+        })
+
+      if (insertError) {
+        console.error('Error creating profile with picture:', insertError)
+        await supabase.storage.from('photos').remove([filePath])
+        return { url: null, error: insertError.message }
+      }
+    }
+
+    // Return the storage path (not a signed URL) so it doesn't expire
+    // The caller should use getProfilePictureUrl() to convert it to a signed URL for display
+    console.log('Returning storage path:', storagePath)
+    console.log('=== END PROFILE PICTURE UPLOAD DEBUG ===')
+    return { url: storagePath, error: null }
+  } catch (error: any) {
+    console.error('Error uploading profile picture:', error)
+    return { url: null, error: error.message || 'Failed to upload profile picture' }
+  }
+}
+
+export async function getProfilePictureUrl(profilePictureUrl: string | null | undefined): Promise<string | null> {
+  if (!profilePictureUrl) {
+    console.log('getProfilePictureUrl: No URL provided')
+    return null
+  }
+  
+  console.log('=== getProfilePictureUrl DEBUG ===')
+  console.log('Input URL/path:', profilePictureUrl)
+  
+  // Check if it's already a full URL (legacy format) or a storage path
+  try {
+    // Try to parse as URL first
+    const url = new URL(profilePictureUrl)
+    console.log('Parsed as URL:', url.href)
+    
+    // If it's already a full URL, try to extract the path and create signed URL
+    // Or if it's a signed URL, return it as-is
+    if (url.hostname.includes('supabase')) {
+      console.log('Supabase URL detected')
+      // Extract storage path from URL
+      const pathParts = url.pathname.split('/')
+      const bucketIndex = pathParts.findIndex(part => part === 'photos')
+      
+      if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
+        const filePath = pathParts.slice(bucketIndex + 1).join('/')
+        console.log('Extracted file path from URL:', filePath)
+        const { data: signedUrlData, error: signedError } = await supabase.storage
+          .from('photos')
+          .createSignedUrl(filePath, 3600)
+        
+        console.log('Signed URL from extracted path:', signedUrlData?.signedUrl)
+        console.log('Signed URL error:', signedError)
+        
+        if (!signedError && signedUrlData?.signedUrl) {
+          console.log('=== END getProfilePictureUrl DEBUG ===')
+          return signedUrlData.signedUrl
+        }
+      }
+      
+      // If extraction failed, return original URL (might be a public URL)
+      console.log('Returning original URL (extraction failed or public URL)')
+      console.log('=== END getProfilePictureUrl DEBUG ===')
+      return profilePictureUrl
+    }
+    
+    // Not a Supabase URL, return as-is
+    console.log('Not a Supabase URL, returning as-is')
+    console.log('=== END getProfilePictureUrl DEBUG ===')
+    return profilePictureUrl
+  } catch (e) {
+    // Not a URL, assume it's a storage path (e.g., "userId/filename.jpg")
+    console.log('Not a URL, treating as storage path:', profilePictureUrl)
+    
+    // Try to generate signed URL directly - the storage policy should allow this
+    // Note: We skip the list check because listing folders requires different permissions
+    // and the signed URL creation will fail if the file doesn't exist or we don't have permission
+    const { data: signedUrlData, error: signedError } = await supabase.storage
+      .from('photos')
+      .createSignedUrl(profilePictureUrl, 3600) // Valid for 1 hour
+    
+    console.log('Signed URL from storage path:', signedUrlData?.signedUrl)
+    console.log('Signed URL error:', signedError)
+    if (signedError) {
+      console.log('Signed URL error details:', JSON.stringify(signedError, null, 2))
+      console.log('Error message:', signedError.message)
+      console.log('Error status:', (signedError as { statusCode?: number }).statusCode)
+    }
+    
+    if (!signedError && signedUrlData?.signedUrl) {
+      console.log('=== END getProfilePictureUrl DEBUG ===')
+      return signedUrlData.signedUrl
+    } else if (signedError) {
+      // If file doesn't exist, handle gracefully
+      if (signedError.message?.includes('not found') || signedError.message?.includes('Object not found')) {
+        console.warn('Profile picture file not found in storage:', profilePictureUrl)
+        console.log('This could mean:')
+        console.log('1. File was deleted')
+        console.log('2. Storage policy doesn\'t allow access')
+        console.log('3. File path is incorrect')
+        console.log('Returning null - UI will show default icon.')
+      } else {
+        console.warn('Error creating signed URL for profile picture:', signedError)
+        console.log('Error type:', signedError.constructor.name)
+      }
+      console.log('=== END getProfilePictureUrl DEBUG ===')
+      return null
+    }
+  }
+  
+  console.log('=== END getProfilePictureUrl DEBUG (fallback) ===')
+  return null
+}
+
+export async function getPartners(userId: string): Promise<Array<{ id: string; email: string; username: string; profilePictureUrl?: string | null }>> {
   // Use RPC function to get partners with emails
   const { data, error } = await supabase.rpc('get_partners_with_emails', {
     p_user_id: userId,
@@ -467,6 +756,7 @@ export async function getPartners(userId: string): Promise<Array<{ id: string; e
       id: link.partner_id,
       email: `Partner ${link.partner_id.slice(0, 8)}`,
       username: `Partner ${link.partner_id.slice(0, 8)}`,
+      profilePictureUrl: null,
     }))
   }
 
@@ -476,14 +766,38 @@ export async function getPartners(userId: string): Promise<Array<{ id: string; e
     return []
   }
 
-  const mapped = data.map((row: any) => {
-    console.log('Mapping partner row:', row)
-    return {
-      id: row.partner_id,
-      email: row.email || 'Unknown',
-      username: row.username || row.email || 'Unknown',
-    }
-  })
+  // Get signed URLs for profile pictures
+  const mapped = await Promise.all(
+    data.map(async (row: any) => {
+      console.log('Mapping partner row:', row)
+      let profilePictureUrl = null
+      
+      // Check if profile_picture_url exists in the row data
+      const profilePicturePath = row.profile_picture_url || null
+      
+      if (profilePicturePath) {
+        console.log('Found profile picture path for partner:', row.partner_id, profilePicturePath)
+        profilePictureUrl = await getProfilePictureUrl(profilePicturePath)
+        console.log('Generated signed URL for partner:', row.partner_id, profilePictureUrl)
+        
+        // If file doesn't exist, clean up the database entry
+        if (!profilePictureUrl && profilePicturePath) {
+          console.log('Profile picture file not found, cleaning up database entry for partner:', row.partner_id)
+          // Note: We can't directly update partner profiles here without proper permissions
+          // The profile picture will just show as null (default icon)
+        }
+      } else {
+        console.log('No profile picture path found for partner:', row.partner_id)
+      }
+      
+      return {
+        id: row.partner_id,
+        email: row.email || 'Unknown',
+        username: row.username || row.email || 'Unknown',
+        profilePictureUrl,
+      }
+    })
+  )
   
   console.log('Mapped partners:', mapped)
   return mapped
@@ -547,7 +861,7 @@ export async function unlinkPartner(userId: string, partnerId?: string): Promise
 }
 
 // Events API functions
-export async function getEvents(startDate?: Date, endDate?: Date): Promise<Event[]> {
+export async function getEvents(startDate?: Date, endDate?: Date, filterPartnerId?: string): Promise<Event[]> {
   let query = supabase
     .from('events')
     .select('*')
@@ -562,11 +876,31 @@ export async function getEvents(startDate?: Date, endDate?: Date): Promise<Event
     query = query.lte('event_date', endDate.toISOString().split('T')[0])
   }
 
+  // Don't filter by partner_id in the query (column may not exist)
+  // We'll filter in memory instead to avoid errors
+
   const { data, error } = await query
 
   if (error) {
     console.error('Error fetching events:', error)
     return []
+  }
+
+  // If filtering by partner, filter in memory to ensure we only show events involving that partner
+  if (filterPartnerId && data) {
+    return data.filter((event: any) => {
+      // Show events where:
+      // 1. The partner_id matches the filter (events created for this partner)
+      // 2. The event was created by the partner (events created by this partner)
+      // Note: partner_id may be undefined if column doesn't exist yet, so we check both
+      const hasPartnerId = event.partner_id !== undefined && event.partner_id !== null
+      if (hasPartnerId) {
+        return event.partner_id === filterPartnerId || event.created_by === filterPartnerId
+      } else {
+        // If partner_id column doesn't exist, only show events created by the partner
+        return event.created_by === filterPartnerId
+      }
+    })
   }
 
   return data || []
@@ -577,21 +911,38 @@ export async function createEvent(
   description: string | null,
   eventDate: string,
   eventTime: string | null,
-  createdBy: string
+  createdBy: string,
+  partnerId?: string
 ): Promise<Event | null> {
+  // Build insert object - don't include partner_id (column may not exist)
+  // We'll try to include it, but if it fails, retry without it
+  const baseInsertData = {
+    title,
+    description,
+    event_date: eventDate,
+    event_time: eventTime,
+    created_by: createdBy,
+  }
+  
+  // Try to include partner_id if provided
+  const insertData: any = { ...baseInsertData }
+  if (partnerId) {
+    insertData.partner_id = partnerId
+  }
+
   const { data, error } = await supabase
     .from('events')
-    .insert({
-      title,
-      description,
-      event_date: eventDate,
-      event_time: eventTime,
-      created_by: createdBy,
-    })
+    .insert(insertData)
     .select()
     .single()
 
   if (error) {
+    // If error is about missing partner_id column, don't create the event
+    // Events must be associated with a partner for proper privacy
+    if (partnerId && (error.code === 'PGRST204' || error.message?.includes('partner_id'))) {
+      console.error('Cannot create event: partner_id column does not exist. Please add the column to your database.')
+      return null
+    }
     console.error('Error creating event:', error)
     return null
   }

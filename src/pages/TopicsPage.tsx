@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signOut } from '../lib/auth'
 import { useAuth } from '../lib/auth'
-import { getAllNotes, getEvents, getPartners, getTilePreferences } from '../lib/api'
+import { getAllNotes, getEvents, getPartners, getTilePreferences, linkPartner, unlinkPartner } from '../lib/api'
 import type { Note, Event } from '../types'
 import PhotoWidget from '../components/PhotoWidget'
 
@@ -11,14 +11,19 @@ export default function TopicsPage() {
   const { user } = useAuth()
   const [notes, setNotes] = useState<Note[]>([])
   const [events, setEvents] = useState<Event[]>([])
-  const [partners, setPartners] = useState<Array<{ id: string; email: string; username: string }>>([])
+  const [partners, setPartners] = useState<Array<{ id: string; email: string; username: string; profilePictureUrl?: string | null }>>([])
   const [loading, setLoading] = useState(true)
   const [tilePreferences, setTilePreferences] = useState<Record<string, boolean>>({
-    'shared-notes': true,
-    'calendar': true,
-    'recipes': true,
     'photo-gallery': true,
   })
+  const [showAddPartnerModal, setShowAddPartnerModal] = useState(false)
+  const [partnerEmail, setPartnerEmail] = useState('')
+  const [linking, setLinking] = useState(false)
+  const [linkError, setLinkError] = useState<string | null>(null)
+  const [linkSuccess, setLinkSuccess] = useState<string | null>(null)
+  const [showUnlinkModal, setShowUnlinkModal] = useState(false)
+  const [partnerToUnlink, setPartnerToUnlink] = useState<{ id: string; email: string; username: string; profilePictureUrl?: string | null } | null>(null)
+  const [unlinking, setUnlinking] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -59,55 +64,92 @@ export default function TopicsPage() {
     navigate('/login')
   }
 
-  // Dashboard app cards - easy to add more later!
-  const appCards = [
-    {
-      id: 'shared-notes',
-      title: 'Shared Notes',
-      description: 'Create and share notes with your partner',
-      icon: '📝',
-      route: '/app/notes',
-      color: 'bg-indigo-500',
-      hoverColor: 'hover:bg-indigo-600',
-    },
-    {
-      id: 'calendar',
-      title: 'Calendar',
-      description: 'Shared calendar and events',
-      icon: '📅',
-      route: '/app/calendar',
-      color: 'bg-green-500',
-      hoverColor: 'hover:bg-green-600',
-    },
-    {
-      id: 'recipes',
-      title: 'Recipes',
-      description: 'Find recipes based on ingredients you have',
-      icon: '🍳',
-      route: '/app/recipes',
-      color: 'bg-orange-500',
-      hoverColor: 'hover:bg-orange-600',
-    },
-  ]
+  const handleLinkPartner = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user || !partnerEmail.trim()) return
+
+    setLinking(true)
+    setLinkError(null)
+    setLinkSuccess(null)
+
+    const success = await linkPartner(user.id, partnerEmail.trim())
+    if (success) {
+      setLinkSuccess('Partner linked successfully!')
+      setPartnerEmail('')
+      await loadDashboardData()
+      setTimeout(() => {
+        setShowAddPartnerModal(false)
+        setLinkSuccess(null)
+      }, 1500)
+    } else {
+      setLinkError('Failed to link partner. Make sure they have an account with this email.')
+    }
+
+    setLinking(false)
+  }
+
+  const handleOpenAddPartner = () => {
+    setShowAddPartnerModal(true)
+    setPartnerEmail('')
+    setLinkError(null)
+    setLinkSuccess(null)
+  }
+
+  const handleCloseAddPartner = () => {
+    setShowAddPartnerModal(false)
+    setPartnerEmail('')
+    setLinkError(null)
+    setLinkSuccess(null)
+  }
+
+  const handleUnlinkPartner = (partner: { id: string; email: string; username: string; profilePictureUrl?: string | null }, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent navigation to partner dashboard
+    setPartnerToUnlink(partner)
+    setShowUnlinkModal(true)
+  }
+
+  const handleConfirmUnlink = async () => {
+    if (!user || !partnerToUnlink) return
+
+    setUnlinking(true)
+    const success = await unlinkPartner(user.id, partnerToUnlink.id)
+    setUnlinking(false)
+
+    if (success) {
+      setShowUnlinkModal(false)
+      setPartnerToUnlink(null)
+      await loadDashboardData()
+    } else {
+      alert('Failed to unlink partner. Please try again.')
+    }
+  }
+
+  const handleCancelUnlink = () => {
+    setShowUnlinkModal(false)
+    setPartnerToUnlink(null)
+  }
+
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      <nav className="bg-gray-800 shadow-sm border-b border-gray-700">
+    <div className="min-h-screen">
+      <nav className="glass backdrop-blur-xl shadow-lg border-b border-slate-700/40 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <h1 className="text-xl font-bold text-gray-100">Lifestyle</h1>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-purple-300 via-pink-300 to-rose-300 bg-clip-text text-transparent">
+                Lifestyle
+              </h1>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <button
                 onClick={() => navigate('/app/settings')}
-                className="text-gray-300 hover:text-gray-100 px-3 py-2 rounded-md text-sm font-medium"
+                className="text-slate-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-700/50 active:scale-95"
               >
-                Settings
+                ⚙️ Settings
               </button>
               <button
                 onClick={handleSignOut}
-                className="text-gray-300 hover:text-gray-100 px-3 py-2 rounded-md text-sm font-medium"
+                className="text-slate-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-700/50 active:scale-95"
               >
                 Sign Out
               </button>
@@ -116,211 +158,434 @@ export default function TopicsPage() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-100 mb-2">Dashboard</h2>
-          <p className="text-gray-400">Choose an app or select a partner to get started</p>
-        </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        {/* Photo Widget Banner */}
+        {!loading && tilePreferences['photo-gallery'] !== false && (
+          <div className="mb-6 sm:mb-8 md:mb-10 w-full">
+            <PhotoWidget photoIndex={1} wide={true} />
+          </div>
+        )}
 
-        {/* Partner Selection with Photo Widget 1 on the right */}
-        {!loading && partners.length > 0 && (
-          <div className="mb-4 sm:mb-6 md:mb-8">
-            <h3 className="text-base sm:text-lg md:text-xl lg:text-lg xl:text-xl 2xl:text-lg font-semibold text-gray-100 mb-2 sm:mb-3 md:mb-4">Your Partners</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3 mb-3 sm:mb-4 md:mb-6">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3 md:col-span-3 lg:col-span-4 xl:col-span-5 2xl:col-span-6">
-                {partners.map((partner) => (
+        {/* Recent Activity - Moved to top for most helpful information */}
+        {!loading && (
+          <div className="mb-6 sm:mb-8 md:mb-10">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4 sm:mb-5">
+              <h3 className="text-lg sm:text-xl font-semibold text-white flex items-center gap-2">
+                <span className="text-xl sm:text-2xl">⚡</span>
+                Recent Activity
+              </h3>
+              <div className="text-sm sm:text-base text-slate-400">
+                {new Date().toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 md:gap-6 lg:gap-5 xl:gap-6 2xl:gap-5">
+              {/* Upcoming Events */}
+              <div className="glass backdrop-blur-sm border border-slate-600/40 rounded-2xl p-4 sm:p-5 md:p-6 lg:p-5 xl:p-6 2xl:p-5 min-h-[300px] flex flex-col overflow-hidden shadow-lg">
+                <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                  <h3 className="text-base sm:text-lg font-bold text-white truncate flex items-center gap-2">
+                    <span className="text-lg sm:text-xl">📅</span>
+                    Upcoming Events
+                  </h3>
                   <button
-                    key={partner.id}
-                    onClick={() => navigate(`/app/partner/${partner.id}`)}
-                    className="bg-gray-800 p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left border-2 border-transparent hover:border-indigo-500 group aspect-square flex flex-col justify-center overflow-hidden"
+                    onClick={() => navigate('/app/calendar')}
+                    className="text-xs sm:text-sm text-purple-300 hover:text-purple-200 flex-shrink-0 ml-2 transition-colors"
                   >
-                    <div className="text-xl sm:text-2xl md:text-3xl lg:text-2xl xl:text-3xl 2xl:text-2xl mb-1 sm:mb-2 md:mb-3 flex-shrink-0">👤</div>
-                    <h4 className="text-xs sm:text-sm md:text-base lg:text-sm xl:text-base 2xl:text-sm font-bold mb-1 text-gray-100 group-hover:text-indigo-400 transition-colors truncate">
-                      {partner.username}
-                    </h4>
-                    <p className="text-gray-400 text-xs sm:text-sm truncate">{partner.email}</p>
-                    <div className="mt-1 sm:mt-2 md:mt-3 text-indigo-400 font-medium text-xs sm:text-sm group-hover:text-indigo-300">
-                      View shared content →
+                    View all →
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto min-h-0">
+                  {events.length === 0 ? (
+                    <p className="text-slate-400 text-sm">No upcoming events</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {events.slice(0, 6).map((event) => {
+                        const eventDate = new Date(event.event_date)
+                        const today = new Date()
+                        today.setHours(0, 0, 0, 0)
+                        const eventDateOnly = new Date(eventDate)
+                        eventDateOnly.setHours(0, 0, 0, 0)
+                        
+                        const diffTime = eventDateOnly.getTime() - today.getTime()
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                        
+                        let timeLabel = ''
+                        let urgencyClass = ''
+                        
+                        if (diffDays === 0) {
+                          timeLabel = 'Today'
+                          urgencyClass = 'bg-red-500/20 text-red-300 border-red-500/30'
+                        } else if (diffDays === 1) {
+                          timeLabel = 'Tomorrow'
+                          urgencyClass = 'bg-orange-500/20 text-orange-300 border-orange-500/30'
+                        } else if (diffDays === 2) {
+                          timeLabel = 'In 2 days'
+                          urgencyClass = 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
+                        } else if (diffDays <= 7) {
+                          timeLabel = `In ${diffDays} days`
+                          urgencyClass = 'bg-purple-500/15 text-purple-200 border-purple-500/25'
+                        } else if (diffDays <= 30) {
+                          timeLabel = `In ${diffDays} days`
+                          urgencyClass = 'bg-slate-500/20 text-slate-300 border-slate-500/30'
+                        } else {
+                          timeLabel = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                          urgencyClass = 'bg-slate-500/20 text-slate-300 border-slate-500/30'
+                        }
+                        
+                        return (
+                          <div
+                            key={event.id}
+                            className="bg-slate-700/50 rounded-xl p-3 hover:bg-slate-700 transition-colors cursor-pointer card-hover"
+                            onClick={() => navigate('/app/calendar')}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-white text-sm truncate">{event.title}</p>
+                                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                  <span className={`text-xs px-2 py-0.5 rounded-md border ${urgencyClass} font-medium whitespace-nowrap flex items-center gap-1`}>
+                                    {diffDays === 0 && '🔥'}
+                                    {diffDays === 1 && '⏰'}
+                                    {diffDays === 2 && '📌'}
+                                    {diffDays > 2 && diffDays <= 7 && '📆'}
+                                    {diffDays > 7 && '📅'}
+                                    {timeLabel}
+                                  </span>
+                                  {event.event_time && (
+                                    <span className="text-xs text-slate-400 whitespace-nowrap flex items-center gap-1">
+                                      <span>🕐</span>
+                                      {event.event_time}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
-                  </button>
-                ))}
-              </div>
-              {/* Photo Widget 1 - Large area to the right of Partners */}
-              {tilePreferences['photo-gallery'] !== false && (
-                <div className="md:col-span-1 row-span-2">
-                  <PhotoWidget photoIndex={0} />
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
-        )}
+              </div>
 
-        {/* Quick Stats with Photo Widget 3 */}
-        {!loading && (
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-2 mb-4 sm:mb-6 md:mb-8">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-2.5 aspect-square flex flex-col justify-center">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-gray-400 mb-0.5 sm:mb-1 truncate">Total Notes</p>
-                  <p className="text-lg sm:text-xl md:text-2xl lg:text-xl xl:text-2xl 2xl:text-lg font-bold text-gray-100">{notes.length}</p>
-                </div>
-                <div className="text-xl sm:text-2xl md:text-3xl lg:text-2xl xl:text-3xl 2xl:text-xl flex-shrink-0 ml-1">📝</div>
-              </div>
-            </div>
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-2.5 aspect-square flex flex-col justify-center">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-gray-400 mb-0.5 sm:mb-1 truncate">Upcoming Events</p>
-                  <p className="text-lg sm:text-xl md:text-2xl lg:text-xl xl:text-2xl 2xl:text-lg font-bold text-gray-100">{events.length}</p>
-                </div>
-                <div className="text-xl sm:text-2xl md:text-3xl lg:text-2xl xl:text-3xl 2xl:text-xl flex-shrink-0 ml-1">📅</div>
-              </div>
-            </div>
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-2.5 aspect-square flex flex-col justify-center">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-gray-400 mb-0.5 sm:mb-1 truncate">Linked Partners</p>
-                  <p className="text-lg sm:text-xl md:text-2xl lg:text-xl xl:text-2xl 2xl:text-lg font-bold text-gray-100">{partners.length}</p>
-                </div>
-                <div className="text-xl sm:text-2xl md:text-3xl lg:text-2xl xl:text-3xl 2xl:text-xl flex-shrink-0 ml-1">👥</div>
-              </div>
-            </div>
-            {/* Photo Widget 3 - After Linked Partners */}
-            {tilePreferences['photo-gallery'] !== false && (
-              <div className="md:col-span-1">
-                <PhotoWidget photoIndex={2} />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* App Cards and Recent Activity with Photo Widget 2 on the left */}
-        <div className="mb-4 sm:mb-6 md:mb-8">
-          <h3 className="text-base sm:text-lg md:text-xl lg:text-lg xl:text-xl 2xl:text-lg font-semibold text-gray-100 mb-2 sm:mb-3 md:mb-4">Apps</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3">
-            {/* Photo Widget 2 - Vertical area on the left covering Share Notes and Upcoming Events */}
-            {tilePreferences['photo-gallery'] !== false && (
-              <div className="md:col-span-1 row-span-3">
-                <PhotoWidget photoIndex={1} tall={true} />
-              </div>
-            )}
-
-            {/* App Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3 md:col-span-3 lg:col-span-4 xl:col-span-5 2xl:col-span-6">
-              {appCards
-                .filter((app) => tilePreferences[app.id] !== false)
-                .map((app) => (
+              {/* Recent Notes */}
+              <div className="glass backdrop-blur-sm border border-slate-600/40 rounded-2xl p-4 sm:p-5 md:p-6 lg:p-5 xl:p-6 2xl:p-5 min-h-[300px] flex flex-col overflow-hidden shadow-lg">
+                <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                  <h3 className="text-base sm:text-lg font-bold text-white truncate flex items-center gap-2">
+                    <span className="text-lg sm:text-xl">📝</span>
+                    Recent Notes
+                  </h3>
                   <button
-                    key={app.id}
-                    onClick={() => navigate(app.route)}
-                    className={`${app.color} ${app.hoverColor} text-white p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left group aspect-square flex flex-col justify-center`}
+                    onClick={() => navigate('/app/notes')}
+                    className="text-xs sm:text-sm text-purple-300 hover:text-purple-200 flex-shrink-0 ml-2 transition-colors"
                   >
-                    <div className="text-2xl sm:text-3xl md:text-4xl lg:text-3xl xl:text-4xl 2xl:text-3xl mb-1 sm:mb-2 md:mb-3 lg:mb-2 xl:mb-3 2xl:mb-2">{app.icon}</div>
-                    <h3 className="text-sm sm:text-base md:text-lg lg:text-base xl:text-lg 2xl:text-base font-bold mb-1 sm:mb-2">{app.title}</h3>
-                    <p className="text-xs sm:text-sm text-indigo-100 group-hover:text-white transition-colors line-clamp-2">
-                      {app.description}
-                    </p>
+                    View all →
                   </button>
-                ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        {!loading && (
-          <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3">
-            {/* Photo Widget 2 spacer - keeps alignment with above */}
-            {tilePreferences['photo-gallery'] !== false && (
-              <div className="hidden md:block md:col-span-1"></div>
-            )}
-
-            {/* Upcoming Events */}
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 aspect-square flex flex-col overflow-hidden md:col-span-1">
-              <div className="flex items-center justify-between mb-2 sm:mb-3 md:mb-4 flex-shrink-0">
-                <h3 className="text-sm sm:text-base md:text-lg lg:text-base xl:text-lg 2xl:text-base font-bold text-gray-100 truncate">Upcoming Events</h3>
-                <button
-                  onClick={() => navigate('/app/calendar')}
-                  className="text-xs sm:text-sm text-indigo-400 hover:text-indigo-300 flex-shrink-0 ml-2"
-                >
-                  View all →
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto min-h-0">
-                {events.length === 0 ? (
-                  <p className="text-gray-400 text-xs sm:text-sm">No upcoming events</p>
-                ) : (
-                  <div className="space-y-1.5 sm:space-y-2 md:space-y-3">
-                    {events.slice(0, 5).map((event) => {
-                      const eventDate = new Date(event.event_date)
-                      const isToday = eventDate.toDateString() === new Date().toDateString()
-                      return (
+                </div>
+                <div className="flex-1 overflow-y-auto min-h-0">
+                  {notes.length === 0 ? (
+                    <p className="text-slate-400 text-sm">No notes yet</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {notes.slice(0, 6).map((note) => (
                         <div
-                          key={event.id}
-                          className="bg-gray-700 rounded-lg p-2 sm:p-2.5 md:p-3 hover:bg-gray-600 transition-colors cursor-pointer"
-                          onClick={() => navigate('/app/calendar')}
+                          key={note.id}
+                          className="bg-slate-700/50 rounded-xl p-3 hover:bg-slate-700 transition-colors cursor-pointer card-hover"
+                          onClick={() => navigate('/app/notes')}
                         >
-                          <div className="flex items-start justify-between">
+                          <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-gray-100 text-xs sm:text-sm md:text-base truncate">{event.title}</p>
-                              <p className="text-xs sm:text-sm text-gray-400 mt-0.5 sm:mt-1 truncate">
-                                {isToday ? 'Today' : eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                {event.event_time && ` at ${event.event_time}`}
+                              <p className="font-medium text-white truncate text-sm">
+                                {note.title || 'Untitled Note'}
                               </p>
+                              {note.content && (
+                                <p className="text-xs text-slate-400 mt-1 truncate">
+                                  {note.content.substring(0, 50)}
+                                  {note.content.length > 50 ? '...' : ''}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                {note.partners && note.partners.length > 1 && (
+                                  <span className="text-xs px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-200 border border-purple-500/25 font-medium whitespace-nowrap flex items-center gap-1">
+                                    <span>👥</span>
+                                    {note.partners.join(' & ')}
+                                  </span>
+                                )}
+                                <span className="text-xs text-slate-500 whitespace-nowrap flex items-center gap-1">
+                                  <span>📅</span>
+                                  {new Date(note.updated_at).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                  })}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      )
-                    })}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Recent Notes */}
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 aspect-square flex flex-col overflow-hidden md:col-span-1">
-              <div className="flex items-center justify-between mb-2 sm:mb-3 md:mb-4 flex-shrink-0">
-                <h3 className="text-sm sm:text-base md:text-lg lg:text-base xl:text-lg 2xl:text-base font-bold text-gray-100 truncate">Recent Notes</h3>
+        {/* Partner Selection and Quick Stats with Photo Widget 1 spanning both */}
+        {!loading && (
+          <div className="mb-6 sm:mb-8 md:mb-10">
+            <h3 className="text-lg sm:text-xl font-semibold text-white mb-4 sm:mb-5 flex items-center gap-2">
+              <span className="text-xl sm:text-2xl">👥</span>
+              Your Partners
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-8 lg:grid-cols-9 xl:grid-cols-10 2xl:grid-cols-11 gap-3 sm:gap-4 md:gap-4 lg:gap-4 xl:gap-4 2xl:gap-4 items-stretch">
+              {/* Row 1: Partners */}
+              <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-3 lg:gap-3 xl:gap-3 2xl:gap-3 md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-5">
+                {partners.map((partner) => (
+                  <div
+                    key={partner.id}
+                    onClick={() => navigate(`/app/partner/${partner.id}`)}
+                    className="glass backdrop-blur-sm border border-slate-600/40 p-3 sm:p-4 rounded-2xl shadow-lg card-hover text-left group aspect-square flex flex-col justify-center overflow-hidden relative cursor-pointer"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/8 to-pink-500/8 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
+                    {/* Unlink Button - Top Right */}
+                    <button
+                      onClick={(e) => handleUnlinkPartner(partner, e)}
+                      className="absolute top-2 right-2 z-20 p-1.5 sm:p-2 rounded-lg bg-red-600/80 hover:bg-red-600 active:bg-red-700 text-white transition-all shadow-lg hover:shadow-xl opacity-0 group-hover:opacity-100 backdrop-blur-sm"
+                      title="Unlink partner"
+                      aria-label="Unlink partner"
+                    >
+                      <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <div className="relative z-10">
+                      {partner.profilePictureUrl ? (
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 mb-2 mx-auto rounded-full overflow-hidden border-2 border-purple-400/40 shadow-lg flex-shrink-0">
+                          <img
+                            src={partner.profilePictureUrl}
+                            alt={partner.username}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="text-2xl sm:text-3xl mb-2 flex-shrink-0">👤</div>
+                      )}
+                      <h4 className="text-xs sm:text-sm font-bold mb-1 text-white group-hover:text-purple-200 transition-colors truncate">
+                        {partner.username}
+                      </h4>
+                      <p className="text-[10px] sm:text-xs text-slate-400 truncate mb-2">{partner.email}</p>
+                      <div className="text-purple-300 font-medium text-[10px] sm:text-xs group-hover:text-purple-200 transition-colors">
+                        View →
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {/* Add Partner Card */}
                 <button
-                  onClick={() => navigate('/app/notes')}
-                  className="text-xs sm:text-sm text-indigo-400 hover:text-indigo-300 flex-shrink-0 ml-2"
+                  onClick={handleOpenAddPartner}
+                  className="glass backdrop-blur-sm border-2 border-dashed border-purple-400/40 p-3 sm:p-4 rounded-2xl shadow-lg card-hover text-left group aspect-square flex flex-col justify-center overflow-hidden relative hover:border-purple-300/50 transition-all"
                 >
-                  View all →
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/8 to-pink-500/8 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
+                  <div className="relative z-10 flex flex-col items-center justify-center text-center">
+                    <div className="text-3xl sm:text-4xl mb-2 flex-shrink-0">➕</div>
+                    <h4 className="text-xs sm:text-sm font-bold mb-1 text-purple-200 group-hover:text-purple-100 transition-colors">
+                      Add Partner
+                    </h4>
+                    <p className="text-[10px] sm:text-xs text-slate-400 group-hover:text-slate-300 transition-colors">
+                      Link a new partner
+                    </p>
+                  </div>
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto min-h-0">
-                {notes.length === 0 ? (
-                  <p className="text-gray-400 text-xs sm:text-sm">No notes yet</p>
-                ) : (
-                  <div className="space-y-1.5 sm:space-y-2 md:space-y-3">
-                    {notes.slice(0, 5).map((note) => (
-                      <div
-                        key={note.id}
-                        className="bg-gray-700 rounded-lg p-2 sm:p-2.5 md:p-3 hover:bg-gray-600 transition-colors cursor-pointer"
-                        onClick={() => navigate('/app/notes')}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-100 truncate text-xs sm:text-sm md:text-base">
-                              {note.title || 'Untitled Note'}
-                            </p>
-                            {note.content && (
-                              <p className="text-xs sm:text-sm text-gray-400 mt-0.5 sm:mt-1 truncate">
-                                {note.content.substring(0, 50)}
-                                {note.content.length > 50 ? '...' : ''}
-                              </p>
-                            )}
-                            <p className="text-xs text-gray-500 mt-0.5 sm:mt-1">
-                              {new Date(note.updated_at).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                              })}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+
+              {/* Photo Widget 1 - Spans over both rows (Partners and Quick Stats) - Dynamically sized */}
+              {tilePreferences['photo-gallery'] !== false && (
+                <div className="md:col-span-3 lg:col-span-4 xl:col-span-5 2xl:col-span-6 row-span-2 self-stretch">
+                  <PhotoWidget photoIndex={0} fillHeight={true} />
+                </div>
+              )}
+
+              {/* Row 2: Quick Stats - Made smaller */}
+              <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-3 lg:gap-3 xl:gap-3 2xl:gap-3 md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-5">
+                <div className="glass backdrop-blur-sm border border-slate-600/40 rounded-2xl p-3 sm:p-4 aspect-square flex flex-col justify-center card-hover shadow-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] sm:text-xs text-slate-400 mb-1 truncate">Total Notes</p>
+                      <p className="text-lg sm:text-xl md:text-2xl lg:text-xl xl:text-2xl 2xl:text-lg font-bold text-white">{notes.length}</p>
+                    </div>
+                    <div className="text-2xl sm:text-3xl flex-shrink-0 ml-2">📝</div>
+                  </div>
+                </div>
+                <div className="glass backdrop-blur-sm border border-slate-600/40 rounded-2xl p-3 sm:p-4 aspect-square flex flex-col justify-center card-hover shadow-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] sm:text-xs text-slate-400 mb-1 truncate">Upcoming Events</p>
+                      <p className="text-lg sm:text-xl md:text-2xl lg:text-xl xl:text-2xl 2xl:text-lg font-bold text-white">{events.length}</p>
+                    </div>
+                    <div className="text-2xl sm:text-3xl flex-shrink-0 ml-2">📅</div>
+                  </div>
+                </div>
+                <div className="glass backdrop-blur-sm border border-slate-600/40 rounded-2xl p-3 sm:p-4 aspect-square flex flex-col justify-center card-hover shadow-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] sm:text-xs text-slate-400 mb-1 truncate">Linked Partners</p>
+                      <p className="text-lg sm:text-xl md:text-2xl lg:text-xl xl:text-2xl 2xl:text-lg font-bold text-white">{partners.length}</p>
+                    </div>
+                    <div className="text-2xl sm:text-3xl flex-shrink-0 ml-2">👥</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+
+        {/* Add Partner Modal */}
+        {showAddPartnerModal && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md border border-slate-600/50">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-2xl font-bold text-white">Link a Partner</h3>
+                  <button
+                    onClick={handleCloseAddPartner}
+                    className="text-slate-400 hover:text-white text-2xl min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors rounded-lg hover:bg-slate-700/50"
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {linkError && (
+                  <div className="mb-4 p-4 bg-red-900/30 border border-red-700/50 rounded-xl">
+                    <p className="text-sm text-red-300">{linkError}</p>
                   </div>
                 )}
+
+                {linkSuccess && (
+                  <div className="mb-4 p-4 bg-green-900/30 border border-green-700/50 rounded-xl">
+                    <p className="text-sm text-green-300">{linkSuccess}</p>
+                  </div>
+                )}
+
+                <form onSubmit={handleLinkPartner} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Partner's Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      value={partnerEmail}
+                      onChange={(e) => setPartnerEmail(e.target.value)}
+                      placeholder="partner@example.com"
+                      required
+                      className="w-full px-4 py-3 text-base border border-slate-600 bg-slate-700/50 text-white placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                      disabled={linking}
+                    />
+                    <p className="mt-2 text-xs text-slate-400">
+                      Your partner needs to have an account with this email address.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={handleCloseAddPartner}
+                      disabled={linking}
+                      className="flex-1 px-6 py-3 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 active:bg-slate-500 text-sm font-medium transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={linking || !partnerEmail.trim()}
+                      className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
+                    >
+                      {linking ? 'Linking...' : 'Link Partner'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Unlink Partner Confirmation Modal */}
+        {showUnlinkModal && partnerToUnlink && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md border border-red-600/50">
+              <div className="p-6">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-600/20 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-bold text-white mb-1">Unlink Partner?</h3>
+                    <p className="text-sm text-slate-400">This action cannot be undone</p>
+                  </div>
+                  <button
+                    onClick={handleCancelUnlink}
+                    className="text-slate-400 hover:text-white text-2xl min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors rounded-lg hover:bg-slate-700/50"
+                    aria-label="Close"
+                    disabled={unlinking}
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="mb-6 p-4 bg-slate-700/30 rounded-xl border border-slate-600/50">
+                  <p className="text-sm text-slate-300 mb-2">
+                    Are you sure you want to unlink from:
+                  </p>
+                  <div className="flex items-center gap-3">
+                    {partnerToUnlink.profilePictureUrl ? (
+                      <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-indigo-500/50 shadow-lg flex-shrink-0">
+                        <img
+                          src={partnerToUnlink.profilePictureUrl}
+                          alt={partnerToUnlink.username}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="text-2xl">👤</div>
+                    )}
+                    <div>
+                      <p className="font-semibold text-white">{partnerToUnlink.username}</p>
+                      <p className="text-xs text-slate-400">{partnerToUnlink.email}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-700/30 rounded-xl">
+                  <p className="text-xs text-yellow-300">
+                    ⚠️ This will remove all shared access. You'll need to link again to share notes, events, and recipes.
+                  </p>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={handleCancelUnlink}
+                    disabled={unlinking}
+                    className="flex-1 px-6 py-3 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 active:bg-slate-500 text-sm font-medium transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmUnlink}
+                    disabled={unlinking}
+                    className="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-500 active:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
+                  >
+                    {unlinking ? 'Unlinking...' : 'Yes, Unlink'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

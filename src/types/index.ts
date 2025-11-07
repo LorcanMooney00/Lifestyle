@@ -1,4 +1,5 @@
 export interface Event {
+  partner_id?: string | null
   id: string
   title: string
   description: string | null
@@ -60,6 +61,8 @@ export interface Note {
   created_by: string
   created_at: string
   updated_at: string
+  creator_username?: string | null
+  partners?: string[]
 }
 
 export interface User {

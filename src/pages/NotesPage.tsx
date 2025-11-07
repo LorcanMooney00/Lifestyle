@@ -104,32 +104,32 @@ export default function NotesPage() {
   }
 
   return (
-    <div className="h-screen bg-gray-900 flex flex-col overflow-hidden">
-      <nav className="bg-gray-800 shadow-sm border-b border-gray-700 flex-shrink-0">
+    <div className="h-screen flex flex-col overflow-hidden">
+      <nav className="glass backdrop-blur-xl shadow-lg border-b border-slate-700/50 flex-shrink-0 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <button
                 onClick={() => navigate('/app/topics')}
-                className="text-gray-300 hover:text-gray-100 mr-4"
+                className="text-slate-300 hover:text-white mr-4 transition-colors"
               >
                 ← Dashboard
               </button>
-              <h1 className="text-xl font-bold text-gray-100">Shared Notes</h1>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Shared Notes</h1>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <button
                 onClick={() => navigate('/app/settings')}
-                className="text-gray-300 hover:text-gray-100 px-3 py-2 rounded-md text-sm font-medium"
+                className="text-slate-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-700/50 active:scale-95"
               >
-                Settings
+                ⚙️ Settings
               </button>
               {saving && (
-                <span className="text-sm text-gray-400">Saving...</span>
+                <span className="text-sm text-slate-400">Saving...</span>
               )}
               <button
                 onClick={handleSignOut}
-                className="text-gray-300 hover:text-gray-100 px-3 py-2 rounded-md text-sm font-medium"
+                className="text-slate-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-700/50 active:scale-95"
               >
                 Sign Out
               </button>
@@ -140,35 +140,35 @@ export default function NotesPage() {
 
       <div className="flex-1 flex flex-col md:flex-row max-w-7xl mx-auto w-full overflow-hidden min-h-0">
         {/* Notes List - Hidden on mobile when note is selected */}
-        <div className={`w-full md:w-72 bg-gray-800 border-r border-gray-700 flex flex-col overflow-hidden shadow-sm ${
+        <div className={`w-full md:w-72 glass backdrop-blur-sm border-r border-slate-600/50 flex flex-col overflow-hidden shadow-lg ${
           selectedNote ? 'hidden md:flex' : 'flex'
         }`}>
-          <div className="p-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0 bg-gray-800">
-            <h2 className="font-semibold text-gray-100 text-lg">Notes</h2>
+          <div className="p-4 border-b border-slate-600/50 flex justify-between items-center flex-shrink-0">
+            <h2 className="font-semibold text-white text-lg">Notes</h2>
             {partnerId && (
               <button
                 onClick={handleCreateNote}
-                className="bg-indigo-600 text-white px-4 py-1.5 rounded-md text-sm hover:bg-indigo-500 font-medium shadow-sm transition-colors"
+                className="bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-indigo-500 font-medium shadow-lg hover:shadow-xl transition-all active:scale-95"
               >
                 + New
               </button>
             )}
             {!partnerId && (
-              <span className="text-xs text-gray-500 px-2">Select a partner to create notes</span>
+              <span className="text-xs text-slate-500 px-2">Select a partner to create notes</span>
             )}
           </div>
           <div className="flex-1 overflow-y-auto min-h-0">
             {loading ? (
-              <div className="p-6 text-center text-sm text-gray-400">Loading...</div>
+              <div className="p-6 text-center text-sm text-slate-400">Loading...</div>
             ) : notes.length === 0 ? (
               <div className="p-6 text-center">
-                <p className="text-sm text-gray-400 mb-4">
+                <p className="text-sm text-slate-400 mb-4">
                   {partnerId ? 'No notes yet.' : 'No notes found. Select a partner to view or create notes.'}
                 </p>
                 {partnerId && (
                   <button
                     onClick={handleCreateNote}
-                    className="text-indigo-400 hover:text-indigo-300 text-sm font-medium"
+                    className="text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors"
                   >
                     Create your first note →
                   </button>
@@ -176,7 +176,7 @@ export default function NotesPage() {
                 {!partnerId && (
                   <button
                     onClick={() => navigate('/app/topics')}
-                    className="text-indigo-400 hover:text-indigo-300 text-sm font-medium"
+                    className="text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors"
                   >
                     Go to Dashboard →
                   </button>
@@ -188,29 +188,29 @@ export default function NotesPage() {
                   <button
                     key={note.id}
                     onClick={() => setSelectedNote(note)}
-                    className={`w-full text-left p-3 rounded-lg mb-1 transition-all ${
+                    className={`w-full text-left p-3 rounded-xl mb-2 transition-all card-hover ${
                       selectedNote?.id === note.id
-                        ? 'bg-indigo-900 border border-indigo-700 shadow-sm'
-                        : 'hover:bg-gray-700 border border-transparent'
+                        ? 'bg-indigo-500/20 border border-indigo-400/50 shadow-lg shadow-indigo-500/20'
+                        : 'hover:bg-slate-700/30 border border-transparent'
                     }`}
                   >
                     <div className="flex justify-between items-start gap-2">
                       <div className="flex-1 min-w-0">
                         <h3 className={`font-medium truncate text-sm mb-1 ${
-                          selectedNote?.id === note.id ? 'text-indigo-200' : 'text-gray-100'
+                          selectedNote?.id === note.id ? 'text-indigo-200' : 'text-white'
                         }`}>
                           {note.title || 'Untitled Note'}
                         </h3>
                         {note.content && (
                           <p className={`text-xs truncate mb-1 ${
-                            selectedNote?.id === note.id ? 'text-indigo-300' : 'text-gray-400'
+                            selectedNote?.id === note.id ? 'text-indigo-300' : 'text-slate-400'
                           }`}>
                             {note.content.length > 60 ? `${note.content.substring(0, 60)}...` : note.content}
                           </p>
                         )}
                         <div className="flex items-center justify-between gap-2">
                           <p className={`text-xs ${
-                            selectedNote?.id === note.id ? 'text-indigo-400' : 'text-gray-500'
+                            selectedNote?.id === note.id ? 'text-indigo-400' : 'text-slate-500'
                           }`}>
                             {new Date(note.updated_at).toLocaleDateString('en-US', {
                               month: 'short',
@@ -220,7 +220,7 @@ export default function NotesPage() {
                           </p>
                           {note.partners && note.partners.length > 0 && (
                             <p className={`text-xs truncate ${
-                              selectedNote?.id === note.id ? 'text-indigo-400' : 'text-gray-500'
+                              selectedNote?.id === note.id ? 'text-indigo-400' : 'text-slate-500'
                             }`}>
                               {note.partners.join(' & ')}
                             </p>
@@ -232,8 +232,8 @@ export default function NotesPage() {
                           e.stopPropagation()
                           handleDeleteNote(note.id)
                         }}
-                        className={`flex-shrink-0 p-1 rounded hover:bg-red-900 transition-colors ${
-                          selectedNote?.id === note.id ? 'text-red-400' : 'text-gray-500'
+                        className={`flex-shrink-0 p-1 rounded-lg hover:bg-red-900/50 transition-colors ${
+                          selectedNote?.id === note.id ? 'text-red-400' : 'text-slate-500'
                         }`}
                         title="Delete note"
                       >
@@ -250,21 +250,21 @@ export default function NotesPage() {
         </div>
 
         {/* Note Editor */}
-        <div className="flex-1 flex flex-col bg-gray-900">
+        <div className="flex-1 flex flex-col">
           {selectedNote ? (
             <>
-              <div className="p-4 border-b border-gray-700">
+              <div className="p-4 border-b border-slate-600/50">
                 <div className="flex items-center gap-2 mb-2 md:hidden">
                   <button
                     onClick={() => setSelectedNote(null)}
-                    className="text-gray-300 hover:text-gray-100 p-1"
+                    className="text-slate-300 hover:text-white p-1 transition-colors rounded-lg hover:bg-slate-700/50"
                     aria-label="Back to notes"
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
                   </button>
-                  <span className="text-sm text-gray-300">Back to Notes</span>
+                  <span className="text-sm text-slate-300">Back to Notes</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <input
@@ -295,10 +295,10 @@ export default function NotesPage() {
                       setSaveTimeout(timeout)
                     }}
                     placeholder="Note title"
-                    className="flex-1 text-xl font-semibold border-none focus:outline-none focus:ring-0 bg-transparent text-gray-100 placeholder-gray-500"
+                    className="flex-1 text-xl font-semibold border-none focus:outline-none focus:ring-0 bg-transparent text-white placeholder-slate-500"
                   />
                   {selectedNote.partners && selectedNote.partners.length > 0 && (
-                    <span className="text-sm text-gray-400 whitespace-nowrap">
+                    <span className="text-sm text-slate-400 whitespace-nowrap">
                       {selectedNote.partners.join(' & ')}
                     </span>
                   )}
@@ -309,13 +309,13 @@ export default function NotesPage() {
                   value={noteContent}
                   onChange={(e) => handleContentChange(e.target.value)}
                   placeholder="Start writing..."
-                  className="w-full h-full border-none focus:outline-none focus:ring-0 resize-none text-gray-100 bg-transparent placeholder-gray-500"
+                  className="w-full h-full border-none focus:outline-none focus:ring-0 resize-none text-white bg-transparent placeholder-slate-500"
                   style={{ minHeight: '400px' }}
                 />
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-400">
+            <div className="flex-1 flex items-center justify-center text-slate-400">
               {notes.length === 0 
                 ? (partnerId ? 'Create your first note to get started!' : 'Select a note to view or select a partner to create notes')
                 : 'Select a note to start editing'}

@@ -119,6 +119,29 @@ SELECT
 FROM pg_policies 
 WHERE tablename = 'photos'
 ORDER BY cmd;
+
+-- IMPORTANT: You also need to set up Storage bucket policies!
+-- Go to Supabase Dashboard → Storage → photos bucket → Policies
+-- Or run this SQL to create storage policies:
+-- Note: Storage policies are managed differently - you need to use the Storage API or Dashboard
+-- 
+-- In Supabase Dashboard:
+-- 1. Go to Storage → photos bucket
+-- 2. Click "Policies" tab
+-- 3. Click "New Policy"
+-- 4. Create these policies:
+--
+-- Policy 1: "Allow authenticated users to upload"
+--   Operation: INSERT
+--   Policy definition: (bucket_id = 'photos'::text) AND (auth.uid()::text = (storage.foldername(name))[1])
+--
+-- Policy 2: "Allow authenticated users to view their own files"
+--   Operation: SELECT
+--   Policy definition: (bucket_id = 'photos'::text) AND (auth.uid()::text = (storage.foldername(name))[1])
+--
+-- Policy 3: "Allow authenticated users to delete their own files"
+--   Operation: DELETE
+--   Policy definition: (bucket_id = 'photos'::text) AND (auth.uid()::text = (storage.foldername(name))[1])
 */
 
 -- ============================================
@@ -248,9 +271,29 @@ CREATE POLICY "Users can delete notes in accessible topics"
     )
   );
 */
+-- QUICK UPDATE: Add partner_id column to events table
+--- ============================================
+-- Copy and paste this into Supabase SQL Editor if the column doesn't exist:
+-- ALTER TABLE public.events 
+-- ADD COLUMN IF NOT EXISTS partner_id UUID REFERENCES auth.users(id);
 -- ============================================
 -- END QUICK UPDATE SECTION
 -- ============================================
+
+-- Add partner_id column to events table if it doesn't exist
+-- This is safe to run even if the column already exists
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'events' 
+    AND column_name = 'partner_id'
+  ) THEN
+    ALTER TABLE public.events 
+    ADD COLUMN partner_id UUID REFERENCES auth.users(id);
+  END IF;
+END $$;
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -310,6 +353,7 @@ CREATE TABLE IF NOT EXISTS public.events (
   event_date DATE NOT NULL,
   event_time TIME,
   created_by UUID REFERENCES auth.users(id) NOT NULL,
+  partner_id UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -602,15 +646,21 @@ CREATE POLICY "Users can delete their own partner links"
   USING (user_id = auth.uid() OR partner_id = auth.uid());
 
 -- Events policies (shared between partners)
+-- Note: This policy works with or without the partner_id column
+-- If partner_id column doesn't exist yet, run: ALTER TABLE public.events ADD COLUMN partner_id UUID REFERENCES auth.users(id);
 DROP POLICY IF EXISTS "Users can view shared events" ON public.events CASCADE;
 CREATE POLICY "Users can view shared events"
   ON public.events FOR SELECT
   USING (
+    -- User can see events they created
     created_by = auth.uid() OR
+    -- User can see events created by their partners
     EXISTS (
       SELECT 1 FROM public.partner_links
-      WHERE (partner_links.user_id = auth.uid() AND partner_links.partner_id = events.created_by)
-      OR (partner_links.partner_id = auth.uid() AND partner_links.user_id = events.created_by)
+      WHERE (
+        (partner_links.user_id = auth.uid() AND partner_links.partner_id = events.created_by)
+        OR (partner_links.partner_id = auth.uid() AND partner_links.user_id = events.created_by)
+      )
     )
   );
 
@@ -730,8 +780,10 @@ CREATE TRIGGER update_notes_updated_at
   EXECUTE FUNCTION update_updated_at_column();
 
 -- Function to get partners with emails and usernames
+-- Drop the function first if it exists with a different signature
+DROP FUNCTION IF EXISTS get_partners_with_emails(uuid);
 CREATE OR REPLACE FUNCTION get_partners_with_emails(p_user_id UUID)
-RETURNS TABLE(partner_id UUID, email TEXT, username TEXT)
+RETURNS TABLE(partner_id UUID, email TEXT, username TEXT, profile_picture_url TEXT)
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
@@ -740,7 +792,8 @@ BEGIN
   SELECT 
     pl.partner_id,
     au.email::TEXT,
-    COALESCE(up.username, au.email::TEXT) as username
+    COALESCE(up.username, au.email::TEXT) as username,
+    up.profile_picture_url::TEXT
   FROM public.partner_links pl
   JOIN auth.users au ON au.id = pl.partner_id
   LEFT JOIN public.user_profiles up ON up.id = pl.partner_id

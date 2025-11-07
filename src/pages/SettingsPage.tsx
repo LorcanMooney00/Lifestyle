@@ -108,6 +108,7 @@ export default function SettingsPage() {
                     </div>
                     <button
                       onClick={async () => {
+                        if (!user) return
                         if (confirm(`Are you sure you want to unlink from ${partner.email}?`)) {
                           setUnlinking(true)
                           const success = await unlinkPartner(user.id, partner.id)
@@ -120,7 +121,7 @@ export default function SettingsPage() {
                           setUnlinking(false)
                         }
                       }}
-                      disabled={unlinking}
+                      disabled={unlinking || !user}
                       className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 disabled:opacity-50"
                     >
                       Unlink

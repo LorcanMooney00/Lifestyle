@@ -68,6 +68,15 @@ export default function TopicsPage() {
       color: 'bg-green-500',
       hoverColor: 'hover:bg-green-600',
     },
+    {
+      id: 'recipes',
+      title: 'Recipes',
+      description: 'Find recipes based on ingredients you have',
+      icon: '🍳',
+      route: '/app/recipes',
+      color: 'bg-orange-500',
+      hoverColor: 'hover:bg-orange-600',
+    },
   ]
 
   return (

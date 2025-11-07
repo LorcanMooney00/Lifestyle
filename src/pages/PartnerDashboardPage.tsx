@@ -55,6 +55,15 @@ export default function PartnerDashboardPage() {
       color: 'bg-green-500',
       hoverColor: 'hover:bg-green-600',
     },
+    {
+      id: 'recipes',
+      title: 'Recipes',
+      description: 'Find recipes based on ingredients',
+      icon: '🍳',
+      route: `/app/partner/${partnerId}/recipes`,
+      color: 'bg-orange-500',
+      hoverColor: 'hover:bg-orange-600',
+    },
   ]
 
   if (loading) {

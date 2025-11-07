@@ -5,6 +5,7 @@ import PartnerDashboardPage from './pages/PartnerDashboardPage'
 import TopicsPage from './pages/TopicsPage'
 import NotesPage from './pages/NotesPage'
 import CalendarPage from './pages/CalendarPage'
+import RecipesPage from './pages/RecipesPage'
 import SettingsPage from './pages/SettingsPage'
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -75,6 +76,22 @@ function App() {
           element={
             <AuthGate>
               <CalendarPage />
+            </AuthGate>
+          }
+        />
+        <Route
+          path="/app/recipes"
+          element={
+            <AuthGate>
+              <RecipesPage />
+            </AuthGate>
+          }
+        />
+        <Route
+          path="/app/partner/:partnerId/recipes"
+          element={
+            <AuthGate>
+              <RecipesPage />
             </AuthGate>
           }
         />

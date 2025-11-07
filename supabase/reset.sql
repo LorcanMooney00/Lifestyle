@@ -165,6 +165,9 @@ CREATE POLICY "Users can delete notes in accessible topics"
 -- Drop tables first (CASCADE will automatically drop policies, triggers, and dependent objects)
 DROP TABLE IF EXISTS public.user_profiles CASCADE;
 DROP TABLE IF EXISTS public.events CASCADE;
+DROP TABLE IF EXISTS public.user_ingredients CASCADE;
+DROP TABLE IF EXISTS public.recipe_ingredients CASCADE;
+DROP TABLE IF EXISTS public.recipes CASCADE;
 DROP TABLE IF EXISTS public.notes CASCADE;
 DROP TABLE IF EXISTS public.topic_members CASCADE;
 DROP TABLE IF EXISTS public.topics CASCADE;
@@ -242,6 +245,38 @@ CREATE TABLE public.events (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Recipes table
+CREATE TABLE public.recipes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  description TEXT,
+  instructions TEXT,
+  prep_time INTEGER,
+  cook_time INTEGER,
+  servings INTEGER,
+  image_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Recipe ingredients table (many-to-many relationship)
+CREATE TABLE public.recipe_ingredients (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  recipe_id UUID REFERENCES public.recipes(id) ON DELETE CASCADE NOT NULL,
+  ingredient_name TEXT NOT NULL,
+  amount TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(recipe_id, ingredient_name)
+);
+
+-- User ingredients table (tracks what ingredients users have)
+CREATE TABLE public.user_ingredients (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  ingredient_name TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, ingredient_name)
+);
+
 -- Create indexes for better performance
 CREATE INDEX idx_user_profiles_username ON public.user_profiles(username);
 CREATE INDEX idx_topics_owner_id ON public.topics(owner_id);
@@ -252,6 +287,11 @@ CREATE INDEX idx_partner_links_user_id ON public.partner_links(user_id);
 CREATE INDEX idx_partner_links_partner_id ON public.partner_links(partner_id);
 CREATE INDEX idx_events_event_date ON public.events(event_date);
 CREATE INDEX idx_events_created_by ON public.events(created_by);
+CREATE INDEX idx_recipes_title ON public.recipes(title);
+CREATE INDEX idx_recipe_ingredients_recipe_id ON public.recipe_ingredients(recipe_id);
+CREATE INDEX idx_recipe_ingredients_ingredient_name ON public.recipe_ingredients(ingredient_name);
+CREATE INDEX idx_user_ingredients_user_id ON public.user_ingredients(user_id);
+CREATE INDEX idx_user_ingredients_ingredient_name ON public.user_ingredients(ingredient_name);
 
 -- Enable Row-Level Security on all tables
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
@@ -260,6 +300,9 @@ ALTER TABLE public.topic_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.partner_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.recipes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.recipe_ingredients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_ingredients ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
 -- FUNCTIONS (must be created before policies)
@@ -487,6 +530,29 @@ CREATE POLICY "Users can update their own events"
 CREATE POLICY "Users can delete their own events"
   ON public.events FOR DELETE
   USING (created_by = auth.uid());
+
+-- Recipes policies (public recipes, anyone can view)
+CREATE POLICY "Anyone can view recipes"
+  ON public.recipes FOR SELECT
+  USING (true);
+
+-- Recipe ingredients policies (public, anyone can view)
+CREATE POLICY "Anyone can view recipe ingredients"
+  ON public.recipe_ingredients FOR SELECT
+  USING (true);
+
+-- User ingredients policies (private to user)
+CREATE POLICY "Users can view their own ingredients"
+  ON public.user_ingredients FOR SELECT
+  USING (user_id = auth.uid());
+
+CREATE POLICY "Users can add their own ingredients"
+  ON public.user_ingredients FOR INSERT
+  WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can delete their own ingredients"
+  ON public.user_ingredients FOR DELETE
+  USING (user_id = auth.uid());
 
 -- ============================================
 -- FUNCTIONS AND TRIGGERS

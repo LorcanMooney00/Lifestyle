@@ -218,6 +218,38 @@ CREATE TABLE IF NOT EXISTS public.events (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Recipes table
+CREATE TABLE IF NOT EXISTS public.recipes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  description TEXT,
+  instructions TEXT,
+  prep_time INTEGER, -- minutes
+  cook_time INTEGER, -- minutes
+  servings INTEGER,
+  image_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Recipe ingredients table (many-to-many relationship)
+CREATE TABLE IF NOT EXISTS public.recipe_ingredients (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  recipe_id UUID REFERENCES public.recipes(id) ON DELETE CASCADE NOT NULL,
+  ingredient_name TEXT NOT NULL,
+  amount TEXT, -- e.g., "2 cups", "1 tsp", "to taste"
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(recipe_id, ingredient_name)
+);
+
+-- User ingredients table (tracks what ingredients users have)
+CREATE TABLE IF NOT EXISTS public.user_ingredients (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  ingredient_name TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, ingredient_name)
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_user_profiles_username ON public.user_profiles(username);
 CREATE INDEX IF NOT EXISTS idx_topics_owner_id ON public.topics(owner_id);
@@ -228,6 +260,11 @@ CREATE INDEX IF NOT EXISTS idx_partner_links_user_id ON public.partner_links(use
 CREATE INDEX IF NOT EXISTS idx_partner_links_partner_id ON public.partner_links(partner_id);
 CREATE INDEX IF NOT EXISTS idx_events_event_date ON public.events(event_date);
 CREATE INDEX IF NOT EXISTS idx_events_created_by ON public.events(created_by);
+CREATE INDEX IF NOT EXISTS idx_recipes_title ON public.recipes(title);
+CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_recipe_id ON public.recipe_ingredients(recipe_id);
+CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_ingredient_name ON public.recipe_ingredients(ingredient_name);
+CREATE INDEX IF NOT EXISTS idx_user_ingredients_user_id ON public.user_ingredients(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_ingredients_ingredient_name ON public.user_ingredients(ingredient_name);
 
 -- Enable Row-Level Security on all tables
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
@@ -236,6 +273,9 @@ ALTER TABLE public.topic_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.partner_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.recipes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.recipe_ingredients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_ingredients ENABLE ROW LEVEL SECURITY;
 
 -- Function to check if user is member of topic (bypasses RLS to avoid recursion)
 -- Must be created before policies that use it
@@ -480,6 +520,34 @@ DROP POLICY IF EXISTS "Users can delete their own events" ON public.events CASCA
 CREATE POLICY "Users can delete their own events"
   ON public.events FOR DELETE
   USING (created_by = auth.uid());
+
+-- Recipes policies (public recipes, anyone can view)
+DROP POLICY IF EXISTS "Anyone can view recipes" ON public.recipes CASCADE;
+CREATE POLICY "Anyone can view recipes"
+  ON public.recipes FOR SELECT
+  USING (true);
+
+-- Recipe ingredients policies (public, anyone can view)
+DROP POLICY IF EXISTS "Anyone can view recipe ingredients" ON public.recipe_ingredients CASCADE;
+CREATE POLICY "Anyone can view recipe ingredients"
+  ON public.recipe_ingredients FOR SELECT
+  USING (true);
+
+-- User ingredients policies (private to user)
+DROP POLICY IF EXISTS "Users can view their own ingredients" ON public.user_ingredients CASCADE;
+CREATE POLICY "Users can view their own ingredients"
+  ON public.user_ingredients FOR SELECT
+  USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can add their own ingredients" ON public.user_ingredients CASCADE;
+CREATE POLICY "Users can add their own ingredients"
+  ON public.user_ingredients FOR INSERT
+  WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can delete their own ingredients" ON public.user_ingredients CASCADE;
+CREATE POLICY "Users can delete their own ingredients"
+  ON public.user_ingredients FOR DELETE
+  USING (user_id = auth.uid());
 
 -- Trigger to automatically update updated_at on events
 DROP TRIGGER IF EXISTS update_events_updated_at ON public.events;

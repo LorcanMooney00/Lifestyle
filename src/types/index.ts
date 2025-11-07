@@ -9,6 +9,34 @@ export interface Event {
   updated_at: string
 }
 
+export interface Recipe {
+  id: string
+  title: string
+  description: string | null
+  instructions: string | null
+  prep_time: number | null
+  cook_time: number | null
+  servings: number | null
+  image_url: string | null
+  created_at: string
+  ingredients?: RecipeIngredient[]
+}
+
+export interface RecipeIngredient {
+  id: string
+  recipe_id: string
+  ingredient_name: string
+  amount: string | null
+  created_at: string
+}
+
+export interface UserIngredient {
+  id: string
+  user_id: string
+  ingredient_name: string
+  created_at: string
+}
+
 export interface Topic {
   id: string
   name: string

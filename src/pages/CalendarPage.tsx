@@ -234,38 +234,40 @@ export default function CalendarPage() {
       <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8">
         <div className="bg-gray-800 rounded-lg shadow-sm border border-gray-700">
           {/* Calendar Header */}
-          <div className="p-6 border-b border-gray-700 flex justify-between items-center">
-            <div className="flex items-center space-x-4">
+          <div className="p-3 sm:p-6 border-b border-gray-700 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
+            <div className="flex items-center justify-between w-full sm:w-auto space-x-2 sm:space-x-4">
               <button
                 onClick={goToPreviousMonth}
-                className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-gray-100"
+                className="p-3 sm:p-2 hover:bg-gray-700 active:bg-gray-600 rounded-md text-gray-300 hover:text-gray-100 text-xl sm:text-base min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
+                aria-label="Previous month"
               >
                 ←
               </button>
-              <h2 className="text-2xl font-bold text-gray-100">
+              <h2 className="text-lg sm:text-2xl font-bold text-gray-100 text-center flex-1 sm:flex-none">
                 {monthNames[month]} {year}
               </h2>
               <button
                 onClick={goToNextMonth}
-                className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-gray-100"
+                className="p-3 sm:p-2 hover:bg-gray-700 active:bg-gray-600 rounded-md text-gray-300 hover:text-gray-100 text-xl sm:text-base min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
+                aria-label="Next month"
               >
                 →
               </button>
             </div>
             <button
               onClick={goToToday}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500 text-sm font-medium"
+              className="w-full sm:w-auto px-6 py-3 sm:py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500 active:bg-indigo-700 text-sm font-medium min-h-[44px] sm:min-h-0"
             >
               Today
             </button>
           </div>
 
           {/* Calendar Grid */}
-          <div className="p-6">
+          <div className="p-2 sm:p-6">
             {/* Day Names Header */}
-            <div className="grid grid-cols-7 gap-0 mb-2">
+            <div className="grid grid-cols-7 gap-0 mb-1 sm:mb-2">
               {dayNames.map((day) => (
-                <div key={day} className="text-center text-sm font-semibold text-gray-400 py-2">
+                <div key={day} className="text-center text-xs sm:text-sm font-semibold text-gray-400 py-1 sm:py-2">
                   {day}
                 </div>
               ))}

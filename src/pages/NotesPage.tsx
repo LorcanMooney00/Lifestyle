@@ -14,7 +14,7 @@ export default function NotesPage() {
   const [noteTitle, setNoteTitle] = useState('')
   const [noteContent, setNoteContent] = useState('')
   const [saving, setSaving] = useState(false)
-  const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [saveTimeout, setSaveTimeout] = useState<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (user) {

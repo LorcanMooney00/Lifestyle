@@ -81,6 +81,10 @@ export default function CalendarPage() {
   }
 
   const handleDayClick = (day: number) => {
+    // Don't allow creating new events without a partner selected
+    if (!partnerId) {
+      return
+    }
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     setEventDate(dateStr)
     setEventTitle('')
@@ -93,6 +97,11 @@ export default function CalendarPage() {
   const handleSaveEvent = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user || !eventTitle.trim() || !eventDate) return
+
+    // Don't allow creating new events without a partner selected
+    if (!selectedEvent && !partnerId) {
+      return
+    }
 
     setSaving(true)
     if (selectedEvent) {
@@ -109,7 +118,11 @@ export default function CalendarPage() {
         setSelectedEvent(null)
       }
     } else {
-      // Create new event
+      // Create new event (only if partnerId is present)
+      if (!partnerId) {
+        setSaving(false)
+        return
+      }
       const newEvent = await createEvent(
         eventTitle.trim(),
         eventDescription.trim() || null,
@@ -163,8 +176,12 @@ export default function CalendarPage() {
         <div
           key={day}
           onClick={() => handleDayClick(day)}
-          className={`min-h-[70px] sm:min-h-[100px] p-2 border border-gray-700 hover:bg-gray-700 active:bg-gray-600 cursor-pointer transition-colors flex flex-col ${
+          className={`min-h-[70px] sm:min-h-[100px] p-2 border border-gray-700 flex flex-col ${
             isToday ? 'bg-indigo-900/50 border-indigo-500' : 'bg-gray-800/50'
+          } ${
+            partnerId 
+              ? 'hover:bg-gray-700 active:bg-gray-600 cursor-pointer transition-colors' 
+              : 'cursor-not-allowed opacity-75'
           }`}
         >
           <div className={`text-base sm:text-lg mb-1 font-semibold ${
@@ -287,7 +304,7 @@ export default function CalendarPage() {
               <div className="p-4 sm:p-6">
                 <div className="flex justify-between items-center mb-4 sm:mb-6">
                   <h3 className="text-lg sm:text-xl font-bold text-gray-100">
-                    {selectedEvent ? 'Edit Event' : 'New Event'}
+                    {selectedEvent ? 'Edit Event' : partnerId ? 'New Event' : 'Select a Partner'}
                   </h3>
                   <button
                     onClick={() => {
@@ -300,6 +317,23 @@ export default function CalendarPage() {
                     ×
                   </button>
                 </div>
+
+                {!selectedEvent && !partnerId && (
+                  <div className="mb-4 p-4 bg-yellow-900/20 border border-yellow-700 rounded-md">
+                    <p className="text-sm text-yellow-300">
+                      Please select a partner from the dashboard to create new events.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setShowEventForm(false)
+                        navigate('/app/topics')
+                      }}
+                      className="mt-2 text-sm text-yellow-400 hover:text-yellow-300 underline"
+                    >
+                      Go to Dashboard →
+                    </button>
+                  </div>
+                )}
 
                 <form onSubmit={handleSaveEvent} className="space-y-4 sm:space-y-4">
                   <div>
@@ -377,7 +411,7 @@ export default function CalendarPage() {
                       </button>
                       <button
                         type="submit"
-                        disabled={saving || !eventTitle.trim() || !eventDate}
+                        disabled={saving || !eventTitle.trim() || !eventDate || (!selectedEvent && !partnerId)}
                         className="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium min-h-[44px]"
                       >
                         {saving ? 'Saving...' : 'Save'}

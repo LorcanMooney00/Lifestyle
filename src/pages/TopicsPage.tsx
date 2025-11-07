@@ -125,16 +125,16 @@ export default function TopicsPage() {
         {/* Partner Selection */}
         {!loading && partners.length > 0 && (
           <div className="mb-4 sm:mb-6 md:mb-8">
-            <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-100 mb-2 sm:mb-3 md:mb-4">Your Partners</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-3 sm:mb-4 md:mb-6">
+            <h3 className="text-base sm:text-lg md:text-xl lg:text-lg xl:text-xl 2xl:text-lg font-semibold text-gray-100 mb-2 sm:mb-3 md:mb-4">Your Partners</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3 mb-3 sm:mb-4 md:mb-6">
               {partners.map((partner) => (
                 <button
                   key={partner.id}
                   onClick={() => navigate(`/app/partner/${partner.id}`)}
-                  className="bg-gray-800 p-3 sm:p-4 md:p-5 lg:p-6 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left border-2 border-transparent hover:border-indigo-500 group aspect-square flex flex-col justify-center overflow-hidden"
+                  className="bg-gray-800 p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left border-2 border-transparent hover:border-indigo-500 group aspect-square flex flex-col justify-center overflow-hidden"
                 >
-                  <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl mb-1 sm:mb-2 md:mb-3 flex-shrink-0">👤</div>
-                  <h4 className="text-xs sm:text-sm md:text-base lg:text-lg font-bold mb-1 text-gray-100 group-hover:text-indigo-400 transition-colors truncate">
+                  <div className="text-xl sm:text-2xl md:text-3xl lg:text-2xl xl:text-3xl 2xl:text-2xl mb-1 sm:mb-2 md:mb-3 flex-shrink-0">👤</div>
+                  <h4 className="text-xs sm:text-sm md:text-base lg:text-sm xl:text-base 2xl:text-sm font-bold mb-1 text-gray-100 group-hover:text-indigo-400 transition-colors truncate">
                     {partner.username}
                   </h4>
                   <p className="text-gray-400 text-xs sm:text-sm truncate">{partner.email}</p>
@@ -149,32 +149,32 @@ export default function TopicsPage() {
 
         {/* Quick Stats */}
         {!loading && (
-          <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6 md:mb-8">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-6 aspect-square flex flex-col justify-center">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3 mb-4 sm:mb-6 md:mb-8">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 aspect-square flex flex-col justify-center">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-gray-400 mb-1 truncate">Total Notes</p>
-                  <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-100">{notes.length}</p>
+                  <p className="text-lg sm:text-xl md:text-2xl lg:text-xl xl:text-2xl 2xl:text-xl font-bold text-gray-100">{notes.length}</p>
                 </div>
-                <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl flex-shrink-0 ml-1">📝</div>
+                <div className="text-xl sm:text-2xl md:text-3xl lg:text-2xl xl:text-3xl 2xl:text-2xl flex-shrink-0 ml-1">📝</div>
               </div>
             </div>
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-6 aspect-square flex flex-col justify-center">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 aspect-square flex flex-col justify-center">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-gray-400 mb-1 truncate">Upcoming Events</p>
-                  <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-100">{events.length}</p>
+                  <p className="text-lg sm:text-xl md:text-2xl lg:text-xl xl:text-2xl 2xl:text-xl font-bold text-gray-100">{events.length}</p>
                 </div>
-                <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl flex-shrink-0 ml-1">📅</div>
+                <div className="text-xl sm:text-2xl md:text-3xl lg:text-2xl xl:text-3xl 2xl:text-2xl flex-shrink-0 ml-1">📅</div>
               </div>
             </div>
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-6 aspect-square flex flex-col justify-center">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 aspect-square flex flex-col justify-center">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-gray-400 mb-1 truncate">Linked Partners</p>
-                  <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-100">{partners.length}</p>
+                  <p className="text-lg sm:text-xl md:text-2xl lg:text-xl xl:text-2xl 2xl:text-xl font-bold text-gray-100">{partners.length}</p>
                 </div>
-                <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl flex-shrink-0 ml-1">👥</div>
+                <div className="text-xl sm:text-2xl md:text-3xl lg:text-2xl xl:text-3xl 2xl:text-2xl flex-shrink-0 ml-1">👥</div>
               </div>
             </div>
           </div>
@@ -182,18 +182,18 @@ export default function TopicsPage() {
 
         {/* App Cards */}
         <div className="mb-4 sm:mb-6 md:mb-8">
-          <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-100 mb-2 sm:mb-3 md:mb-4">Apps</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-3 gap-2 sm:gap-3 md:gap-4 lg:gap-5 xl:gap-6">
+          <h3 className="text-base sm:text-lg md:text-xl lg:text-lg xl:text-xl 2xl:text-lg font-semibold text-gray-100 mb-2 sm:mb-3 md:mb-4">Apps</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3">
             {appCards
               .filter((app) => tilePreferences[app.id] !== false)
               .map((app) => (
                 <button
                   key={app.id}
                   onClick={() => navigate(app.route)}
-                  className={`${app.color} ${app.hoverColor} text-white p-3 sm:p-4 md:p-5 lg:p-6 xl:p-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left group aspect-square flex flex-col justify-center`}
+                  className={`${app.color} ${app.hoverColor} text-white p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left group aspect-square flex flex-col justify-center`}
                 >
-                  <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-1 sm:mb-2 md:mb-3 lg:mb-4">{app.icon}</div>
-                  <h3 className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold mb-1 sm:mb-2">{app.title}</h3>
+                  <div className="text-2xl sm:text-3xl md:text-4xl lg:text-3xl xl:text-4xl 2xl:text-3xl mb-1 sm:mb-2 md:mb-3 lg:mb-2 xl:mb-3 2xl:mb-2">{app.icon}</div>
+                  <h3 className="text-sm sm:text-base md:text-lg lg:text-base xl:text-lg 2xl:text-base font-bold mb-1 sm:mb-2">{app.title}</h3>
                   <p className="text-xs sm:text-sm text-indigo-100 group-hover:text-white transition-colors line-clamp-2">
                     {app.description}
                   </p>
@@ -204,18 +204,18 @@ export default function TopicsPage() {
 
         {/* Photo Gallery Widget */}
         {tilePreferences['photo-gallery'] !== false && (
-          <div className="mb-4 sm:mb-6 md:mb-8 max-w-[200px] sm:max-w-xs md:max-w-sm lg:max-w-md mx-auto">
+          <div className="mb-4 sm:mb-6 md:mb-8 max-w-[200px] sm:max-w-xs md:max-w-sm lg:max-w-xs xl:max-w-sm 2xl:max-w-xs mx-auto">
             <PhotoGallery />
           </div>
         )}
 
         {/* Recent Activity */}
         {!loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:gap-5 xl:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3">
             {/* Upcoming Events */}
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-6 aspect-square flex flex-col overflow-hidden">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 aspect-square flex flex-col overflow-hidden">
               <div className="flex items-center justify-between mb-2 sm:mb-3 md:mb-4 flex-shrink-0">
-                <h3 className="text-sm sm:text-base md:text-lg lg:text-xl font-bold text-gray-100 truncate">Upcoming Events</h3>
+                <h3 className="text-sm sm:text-base md:text-lg lg:text-base xl:text-lg 2xl:text-base font-bold text-gray-100 truncate">Upcoming Events</h3>
                 <button
                   onClick={() => navigate('/app/calendar')}
                   className="text-xs sm:text-sm text-indigo-400 hover:text-indigo-300 flex-shrink-0 ml-2"
@@ -255,9 +255,9 @@ export default function TopicsPage() {
             </div>
 
             {/* Recent Notes */}
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-6 aspect-square flex flex-col overflow-hidden">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 aspect-square flex flex-col overflow-hidden">
               <div className="flex items-center justify-between mb-2 sm:mb-3 md:mb-4 flex-shrink-0">
-                <h3 className="text-sm sm:text-base md:text-lg lg:text-xl font-bold text-gray-100 truncate">Recent Notes</h3>
+                <h3 className="text-sm sm:text-base md:text-lg lg:text-base xl:text-lg 2xl:text-base font-bold text-gray-100 truncate">Recent Notes</h3>
                 <button
                   onClick={() => navigate('/app/notes')}
                   className="text-xs sm:text-sm text-indigo-400 hover:text-indigo-300 flex-shrink-0 ml-2"

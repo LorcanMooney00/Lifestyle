@@ -173,6 +173,7 @@ DROP TABLE IF EXISTS public.partner_links CASCADE;
 -- Drop functions
 DROP FUNCTION IF EXISTS is_topic_member(UUID, UUID) CASCADE;
 DROP FUNCTION IF EXISTS are_partners(UUID, UUID) CASCADE;
+DROP FUNCTION IF EXISTS get_partners_with_emails(UUID) CASCADE;
 DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;
 DROP FUNCTION IF EXISTS link_partner_by_email(UUID, TEXT) CASCADE;
 

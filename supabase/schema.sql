@@ -3,6 +3,30 @@
 -- Run this ONLY if you want to create tables without dropping existing ones first
 
 -- ============================================
+-- QUICK UPDATE: Run this SQL to update get_partners_with_emails function for username support
+-- ============================================
+-- Copy and paste this into Supabase SQL Editor:
+/*
+CREATE OR REPLACE FUNCTION get_partners_with_emails(p_user_id UUID)
+RETURNS TABLE(partner_id UUID, email TEXT, username TEXT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    pl.partner_id,
+    au.email,
+    COALESCE(up.username, au.email) as username
+  FROM public.partner_links pl
+  JOIN auth.users au ON au.id = pl.partner_id
+  LEFT JOIN public.user_profiles up ON up.id = pl.partner_id
+  WHERE pl.user_id = p_user_id;
+END;
+$$;
+*/
+
+-- ============================================
 -- QUICK UPDATE: Run this SQL to enable partner notes sharing
 -- ============================================
 -- Copy and paste this section into Supabase SQL Editor to update existing database:

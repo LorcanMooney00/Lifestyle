@@ -232,6 +232,8 @@ export async function getPartners(userId: string): Promise<Array<{ id: string; e
   if (error) {
     console.error('Error fetching partners with emails:', error)
     console.error('Error details:', JSON.stringify(error, null, 2))
+    console.error('Error code:', error.code)
+    console.error('Error message:', error.message)
     // Fallback: get partner IDs only
     const { data: links } = await supabase
       .from('partner_links')
@@ -249,15 +251,23 @@ export async function getPartners(userId: string): Promise<Array<{ id: string; e
     }))
   }
 
+  console.log('Partners data received:', data)
+  
   if (!data || data.length === 0) {
     return []
   }
 
-  return data.map((row: any) => ({
-    id: row.partner_id,
-    email: row.email || 'Unknown',
-    username: row.username || row.email || 'Unknown',
-  }))
+  const mapped = data.map((row: any) => {
+    console.log('Mapping partner row:', row)
+    return {
+      id: row.partner_id,
+      email: row.email || 'Unknown',
+      username: row.username || row.email || 'Unknown',
+    }
+  })
+  
+  console.log('Mapped partners:', mapped)
+  return mapped
 }
 
 export async function linkPartner(userId: string, partnerEmail: string): Promise<boolean> {

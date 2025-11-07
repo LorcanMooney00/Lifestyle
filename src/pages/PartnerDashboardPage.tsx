@@ -72,10 +72,10 @@ export default function PartnerDashboardPage() {
           <div className="flex justify-between h-16">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => navigate('/app/partners')}
+                onClick={() => navigate('/app/topics')}
                 className="text-gray-300 hover:text-gray-100"
               >
-                ← Back to Partners
+                ← Back to Dashboard
               </button>
               <h1 className="text-xl font-bold text-gray-100">
                 {partnerUsername || partnerEmail || 'Partner'}

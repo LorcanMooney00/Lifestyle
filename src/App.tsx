@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './lib/auth'
 import LoginPage from './pages/LoginPage'
-import PartnersPage from './pages/PartnersPage'
 import PartnerDashboardPage from './pages/PartnerDashboardPage'
 import TopicsPage from './pages/TopicsPage'
 import NotesPage from './pages/NotesPage'
@@ -31,14 +30,6 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/app/partners"
-          element={
-            <AuthGate>
-              <PartnersPage />
-            </AuthGate>
-          }
-        />
         <Route
           path="/app/partner/:partnerId"
           element={
@@ -95,7 +86,7 @@ function App() {
             </AuthGate>
           }
         />
-        <Route path="/" element={<Navigate to="/app/partners" replace />} />
+        <Route path="/" element={<Navigate to="/app/topics" replace />} />
       </Routes>
     </BrowserRouter>
   )

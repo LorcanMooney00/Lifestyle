@@ -27,14 +27,14 @@ export default function LoginPage() {
         if (authError) {
           setError(authError.message)
         } else {
-          navigate('/app/partners')
+          navigate('/app/topics')
         }
       } else {
         const { error: authError } = await signIn(email, password)
         if (authError) {
           setError(authError.message)
         } else {
-          navigate('/app/partners')
+          navigate('/app/topics')
         }
       }
     } catch (err) {

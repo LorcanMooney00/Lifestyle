@@ -81,7 +81,7 @@ export default function LoginPage() {
           </h2>
           <p className="mt-2 text-center text-sm text-gray-400">
             {showResetPassword
-              ? 'Enter your email and we'll send you a reset link'
+              ? "Enter your email and we'll send you a reset link"
               : isSignUp
               ? 'Start sharing notes with your partner'
               : 'Welcome back'}

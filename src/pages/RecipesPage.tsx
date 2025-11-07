@@ -73,7 +73,7 @@ export default function RecipesPage() {
       await addUserIngredient(user.id, ingredientName)
     }
     setSelectedIngredients(newSelected)
-    await loadData() // Reload to sync with database
+    // Don't call loadData() - just update the selection and let useEffect handle filtering
   }
 
   const handleAddCustomIngredient = async () => {

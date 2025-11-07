@@ -695,9 +695,13 @@ export async function getRecipesByIngredients(selectedIngredientNames: string[])
     }))
     .filter((recipe: Recipe) => {
       // Check if user has all required ingredients for this recipe
-      const requiredIngredients = recipe.ingredients?.map(ing => ing.ingredient_name.toLowerCase()) || []
-      const userIngredientsLower = selectedIngredientNames.map(name => name.toLowerCase())
-      return requiredIngredients.every((ing: string) => userIngredientsLower.includes(ing))
+      const requiredIngredients = recipe.ingredients?.map(ing => ing.ingredient_name.toLowerCase().trim()) || []
+      const userIngredientsLower = selectedIngredientNames.map(name => name.toLowerCase().trim())
+      
+      // Recipe matches if user has ALL required ingredients
+      return requiredIngredients.length > 0 && requiredIngredients.every((ing: string) => 
+        userIngredientsLower.includes(ing)
+      )
     })
 }
 

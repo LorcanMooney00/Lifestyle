@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="48" fill="url(#grad)"/>
+  <!-- Heart shape -->
+  <path d="M50,75 C50,75 30,60 30,45 C30,35 38,30 45,30 C48,30 50,32 50,32 C50,32 52,30 55,30 C62,30 70,35 70,45 C70,60 50,75 50,75 Z" fill="white" opacity="0.95"/>
+  <!-- Small heart accent -->
+  <path d="M50,65 C50,65 38,55 38,45 C38,40 42,38 45,38 C46.5,38 47.5,39 50,41 C52.5,39 53.5,38 55,38 C58,38 62,40 62,45 C62,55 50,65 50,65 Z" fill="#6366f1" opacity="0.8"/>
+</svg>
+

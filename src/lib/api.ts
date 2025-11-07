@@ -185,12 +185,17 @@ export async function getPartners(userId: string): Promise<Array<{ id: string; e
   })
 
   if (error) {
-    console.error('Error fetching partners:', error)
+    console.error('Error fetching partners with emails:', error)
+    console.error('Error details:', JSON.stringify(error, null, 2))
     // Fallback: get partner IDs only
     const { data: links } = await supabase
       .from('partner_links')
       .select('partner_id')
       .eq('user_id', userId)
+
+    if (links && links.length > 0) {
+      console.warn('Using fallback: partner emails not available. Make sure get_partners_with_emails function exists in Supabase.')
+    }
 
     return (links || []).map((link: any) => ({
       id: link.partner_id,
@@ -198,7 +203,11 @@ export async function getPartners(userId: string): Promise<Array<{ id: string; e
     }))
   }
 
-  return (data || []).map((row: any) => ({
+  if (!data || data.length === 0) {
+    return []
+  }
+
+  return data.map((row: any) => ({
     id: row.partner_id,
     email: row.email || 'Unknown',
   }))

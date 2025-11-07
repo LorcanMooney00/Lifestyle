@@ -8,8 +8,8 @@ import { signOut } from '../lib/auth'
 export default function NotesPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [notes, setNotes] = useState<Array<Note & { creator_username?: string | null }>>([])
-  const [selectedNote, setSelectedNote] = useState<(Note & { creator_username?: string | null }) | null>(null)
+  const [notes, setNotes] = useState<Array<Note & { creator_username?: string | null; partners?: string[] }>>([])
+  const [selectedNote, setSelectedNote] = useState<(Note & { creator_username?: string | null; partners?: string[] }) | null>(null)
   const [loading, setLoading] = useState(true)
   const [noteTitle, setNoteTitle] = useState('')
   const [noteContent, setNoteContent] = useState('')
@@ -35,7 +35,7 @@ export default function NotesPage() {
   const loadNotes = async () => {
     if (!user) return
     setLoading(true)
-    const data = await getAllNotes()
+    const data = await getAllNotes(user.id)
     console.log('Loaded notes:', data)
     console.log('User ID:', user.id)
     setNotes(data)
@@ -197,11 +197,11 @@ export default function NotesPage() {
                               year: 'numeric'
                             })}
                           </p>
-                          {note.creator_username && (
+                          {note.partners && note.partners.length > 0 && (
                             <p className={`text-xs truncate ${
                               selectedNote?.id === note.id ? 'text-indigo-400' : 'text-gray-500'
                             }`}>
-                              {note.created_by === user?.id ? 'You' : note.creator_username}
+                              {note.partners.join(' & ')}
                             </p>
                           )}
                         </div>
@@ -276,9 +276,9 @@ export default function NotesPage() {
                     placeholder="Note title"
                     className="flex-1 text-xl font-semibold border-none focus:outline-none focus:ring-0 bg-transparent text-gray-100 placeholder-gray-500"
                   />
-                  {selectedNote.creator_username && (
+                  {selectedNote.partners && selectedNote.partners.length > 0 && (
                     <span className="text-sm text-gray-400 whitespace-nowrap">
-                      by {selectedNote.created_by === user?.id ? 'You' : selectedNote.creator_username}
+                      {selectedNote.partners.join(' & ')}
                     </span>
                   )}
                 </div>

@@ -52,13 +52,16 @@ export async function createTopic(name: string, ownerId: string): Promise<{ topi
   return { topic: data, error: null }
 }
 
-export async function getAllNotes(): Promise<Array<Note & { creator_username?: string | null }>> {
+export async function getAllNotes(userId: string): Promise<Array<Note & { creator_username?: string | null; partners?: string[] }>> {
   // RLS policies will automatically filter to notes from topics user has access to
   // (owned, member of, or partner's topics)
-  // First get all notes
+  // First get all notes with their topics
   const { data: notesData, error: notesError } = await supabase
     .from('notes')
-    .select('*')
+    .select(`
+      *,
+      topic:topics!inner(owner_id)
+    `)
     .order('updated_at', { ascending: false })
 
   if (notesError) {
@@ -68,14 +71,18 @@ export async function getAllNotes(): Promise<Array<Note & { creator_username?: s
 
   if (!notesData || notesData.length === 0) return []
 
-  // Get unique creator IDs
-  const creatorIds = [...new Set(notesData.map((note: Note) => note.created_by))]
+  // Get unique creator IDs and topic owner IDs
+  const creatorIds = [...new Set(notesData.map((note: any) => note.created_by))]
+  const topicOwnerIds = [...new Set(notesData.map((note: any) => note.topic?.owner_id).filter(Boolean))]
 
-  // Fetch usernames for all creators
+  // Get all user IDs we need usernames for
+  const allUserIds = [...new Set([...creatorIds, ...topicOwnerIds, userId])]
+
+  // Fetch usernames for all users
   const { data: profilesData } = await supabase
     .from('user_profiles')
     .select('id, username')
-    .in('id', creatorIds)
+    .in('id', allUserIds)
 
   // Create a map of user_id -> username
   const usernameMap = new Map<string, string | null>()
@@ -85,11 +92,43 @@ export async function getAllNotes(): Promise<Array<Note & { creator_username?: s
     })
   }
 
-  // Map notes to include creator_username
-  return notesData.map((note: Note) => ({
-    ...note,
-    creator_username: usernameMap.get(note.created_by) || null,
-  }))
+  // Get current user's partners
+  const partners = await getPartners(userId)
+  const partnerIds = partners.map(p => p.id)
+
+  // Map notes to include creator_username and partners
+  return notesData.map((note: any) => {
+    const topicOwnerId = note.topic?.owner_id
+    const creatorId = note.created_by
+    
+    // Determine which partners are involved in this note
+    const involvedPartners: string[] = []
+    
+    // If current user owns the topic, add their partners
+    if (topicOwnerId === userId) {
+      partners.forEach(partner => {
+        if (partner.username) {
+          involvedPartners.push(partner.username)
+        }
+      })
+    }
+    // If a partner owns the topic, add that partner
+    else if (topicOwnerId && partnerIds.includes(topicOwnerId)) {
+      const partner = partners.find(p => p.id === topicOwnerId)
+      if (partner?.username) {
+        involvedPartners.push(partner.username)
+      }
+    }
+    
+    // Always include current user's username if they're involved
+    const currentUserUsername = usernameMap.get(userId) || 'You'
+    
+    return {
+      ...note,
+      creator_username: usernameMap.get(creatorId) || null,
+      partners: involvedPartners.length > 0 ? [currentUserUsername, ...involvedPartners] : [currentUserUsername],
+    }
+  })
 }
 
 export async function getNotes(topicId: string): Promise<Note[]> {

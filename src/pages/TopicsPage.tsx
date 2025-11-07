@@ -24,7 +24,7 @@ export default function TopicsPage() {
     setLoading(true)
     try {
       const [notesData, partnersData] = await Promise.all([
-        getAllNotes(),
+        getAllNotes(user.id),
         getPartners(user.id),
       ])
       setNotes(notesData)

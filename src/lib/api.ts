@@ -941,7 +941,22 @@ export async function getUserPhotos(userId: string): Promise<Photo[]> {
     return []
   }
 
-  return (data || []) as Photo[]
+  // Generate signed URLs for each photo (works for both public and private buckets)
+  const photosWithUrls = await Promise.all(
+    (data || []).map(async (photo: Photo) => {
+      // Generate a signed URL that's valid for 1 hour
+      const { data: signedUrlData } = await supabase.storage
+        .from('photos')
+        .createSignedUrl(photo.storage_path, 3600)
+
+      return {
+        ...photo,
+        url: signedUrlData?.signedUrl || photo.url, // Use signed URL if available, fallback to stored URL
+      }
+    })
+  )
+
+  return photosWithUrls as Photo[]
 }
 
 export async function deletePhoto(photoId: string, storagePath: string): Promise<{ success: boolean; error: string | null }> {

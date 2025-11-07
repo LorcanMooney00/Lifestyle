@@ -134,10 +134,10 @@ export default function NotesPage() {
         </div>
       </nav>
 
-      <div className="flex-1 flex flex-col md:flex-row max-w-7xl mx-auto w-full">
+      <div className="flex-1 flex flex-col md:flex-row max-w-7xl mx-auto w-full overflow-hidden">
         {/* Notes List */}
-        <div className="w-full md:w-64 bg-white border-r flex flex-col">
-          <div className="p-4 border-b flex justify-between items-center">
+        <div className="w-full md:w-64 bg-white border-r flex flex-col h-full overflow-hidden">
+          <div className="p-4 border-b flex justify-between items-center flex-shrink-0">
             <h2 className="font-semibold text-gray-900">Notes</h2>
             <button
               onClick={handleCreateNote}
@@ -146,7 +146,7 @@ export default function NotesPage() {
               + New
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto min-h-0">
             {loading ? (
               <div className="p-4 text-sm text-gray-500">Loading...</div>
             ) : notes.length === 0 ? (

@@ -4,7 +4,6 @@ import { signOut } from '../lib/auth'
 import { useAuth } from '../lib/auth'
 import { getAllNotes, getEvents, getPartners, getTilePreferences } from '../lib/api'
 import type { Note, Event } from '../types'
-import PhotoGallery from '../components/PhotoGallery'
 import PhotoWidget from '../components/PhotoWidget'
 
 export default function TopicsPage() {

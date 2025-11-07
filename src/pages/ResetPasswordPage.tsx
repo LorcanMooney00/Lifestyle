@@ -42,7 +42,7 @@ export default function ResetPasswordPage() {
     setLoading(true)
 
     try {
-      const { success, error: updateError } = await updatePassword(newPassword)
+      const { error: updateError } = await updatePassword(newPassword)
       if (updateError) {
         setError(updateError)
       } else {

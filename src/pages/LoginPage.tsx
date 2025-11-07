@@ -54,7 +54,7 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const { success, error: resetError } = await resetPassword(email)
+      const { error: resetError } = await resetPassword(email)
       if (resetError) {
         setError(resetError)
       } else {

@@ -11,7 +11,7 @@ export default function PhotoGallery() {
   const [error, setError] = useState<string | null>(null)
   const [showUpload, setShowUpload] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const intervalRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (user) {
@@ -22,18 +22,18 @@ export default function PhotoGallery() {
   useEffect(() => {
     // Auto-rotate through photos every 3 seconds
     if (photos.length > 1) {
-      intervalRef.current = setInterval(() => {
+      intervalRef.current = window.setInterval(() => {
         setCurrentIndex((prev) => (prev + 1) % photos.length)
       }, 3000)
     } else {
       if (intervalRef.current) {
-        clearInterval(intervalRef.current)
+        window.clearInterval(intervalRef.current)
       }
     }
 
     return () => {
       if (intervalRef.current) {
-        clearInterval(intervalRef.current)
+        window.clearInterval(intervalRef.current)
       }
     }
   }, [photos.length])
@@ -85,11 +85,11 @@ export default function PhotoGallery() {
   const handleDelete = async (photo: Photo) => {
     if (!user || !confirm('Are you sure you want to delete this photo?')) return
 
-    const { success, error: deleteError } = await deletePhoto(photo.id, photo.storage_path)
+    const { error: deleteError } = await deletePhoto(photo.id, photo.storage_path)
 
     if (deleteError) {
       setError(deleteError)
-    } else if (success) {
+    } else {
       await loadPhotos()
     }
   }
@@ -98,9 +98,9 @@ export default function PhotoGallery() {
     setCurrentIndex((prev) => (prev - 1 + photos.length) % photos.length)
     // Reset auto-rotate timer
     if (intervalRef.current) {
-      clearInterval(intervalRef.current)
+      window.clearInterval(intervalRef.current)
     }
-    intervalRef.current = setInterval(() => {
+    intervalRef.current = window.setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % photos.length)
     }, 3000)
   }
@@ -109,9 +109,9 @@ export default function PhotoGallery() {
     setCurrentIndex((prev) => (prev + 1) % photos.length)
     // Reset auto-rotate timer
     if (intervalRef.current) {
-      clearInterval(intervalRef.current)
+      window.clearInterval(intervalRef.current)
     }
-    intervalRef.current = setInterval(() => {
+    intervalRef.current = window.setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % photos.length)
     }, 3000)
   }
@@ -233,9 +233,9 @@ export default function PhotoGallery() {
                     setCurrentIndex(index)
                     // Reset auto-rotate timer
                     if (intervalRef.current) {
-                      clearInterval(intervalRef.current)
+                      window.clearInterval(intervalRef.current)
                     }
-                    intervalRef.current = setInterval(() => {
+                    intervalRef.current = window.setInterval(() => {
                       setCurrentIndex((prev) => (prev + 1) % photos.length)
                     }, 3000)
                   }}

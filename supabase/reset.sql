@@ -138,32 +138,7 @@ CREATE POLICY "Users can delete notes in accessible topics"
 -- PART 1: DROP EVERYTHING
 -- ============================================
 
--- Drop all policies
--- Note: Triggers are automatically dropped when tables are dropped with CASCADE
-DROP POLICY IF EXISTS "Users can view all profiles" ON public.user_profiles CASCADE;
-DROP POLICY IF EXISTS "Users can update their own profile" ON public.user_profiles CASCADE;
-DROP POLICY IF EXISTS "Users can insert their own profile" ON public.user_profiles CASCADE;
-DROP POLICY IF EXISTS "Users can view topics they own or are members of" ON public.topics CASCADE;
-DROP POLICY IF EXISTS "Users can create topics" ON public.topics CASCADE;
-DROP POLICY IF EXISTS "Users can update topics they own" ON public.topics CASCADE;
-DROP POLICY IF EXISTS "Users can delete topics they own" ON public.topics CASCADE;
-DROP POLICY IF EXISTS "Users can view topic members for accessible topics" ON public.topic_members CASCADE;
-DROP POLICY IF EXISTS "Topic owners can add members" ON public.topic_members CASCADE;
-DROP POLICY IF EXISTS "Topic owners can update members" ON public.topic_members CASCADE;
-DROP POLICY IF EXISTS "Topic owners can remove members" ON public.topic_members CASCADE;
-DROP POLICY IF EXISTS "Users can view notes for accessible topics" ON public.notes CASCADE;
-DROP POLICY IF EXISTS "Users can create notes in accessible topics" ON public.notes CASCADE;
-DROP POLICY IF EXISTS "Users can update notes in accessible topics" ON public.notes CASCADE;
-DROP POLICY IF EXISTS "Users can delete notes in accessible topics" ON public.notes CASCADE;
-DROP POLICY IF EXISTS "Users can view their own partner links" ON public.partner_links CASCADE;
-DROP POLICY IF EXISTS "Users can create partner links" ON public.partner_links CASCADE;
-DROP POLICY IF EXISTS "Users can delete their own partner links" ON public.partner_links CASCADE;
-DROP POLICY IF EXISTS "Users can view shared events" ON public.events CASCADE;
-DROP POLICY IF EXISTS "Users can create events" ON public.events CASCADE;
-DROP POLICY IF EXISTS "Users can update their own events" ON public.events CASCADE;
-DROP POLICY IF EXISTS "Users can delete their own events" ON public.events CASCADE;
-
--- Drop tables (CASCADE will drop dependent objects)
+-- Drop tables first (CASCADE will automatically drop policies, triggers, and dependent objects)
 DROP TABLE IF EXISTS public.user_profiles CASCADE;
 DROP TABLE IF EXISTS public.events CASCADE;
 DROP TABLE IF EXISTS public.notes CASCADE;

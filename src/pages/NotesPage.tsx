@@ -78,7 +78,7 @@ export default function NotesPage() {
   const handleCreateNote = async () => {
     if (!user) return
 
-    const note = await createNote('Untitled Note', '', user.id)
+    const note = await createNote('Untitled Note', '', user.id, partnerId || undefined)
     if (note) {
       await loadNotes()
       setSelectedNote(note)

@@ -190,16 +190,42 @@ export async function getNotes(topicId: string): Promise<Note[]> {
 export async function createNote(
   title: string | null,
   content: string | null,
-  createdBy: string
+  createdBy: string,
+  partnerId?: string
 ): Promise<Note | null> {
-  // Get or create a default topic for the user
-  const topics = await getTopics()
-  let defaultTopic: Topic | null = topics.find((t) => t.name === 'General') || topics[0] || null
+  let defaultTopic: Topic | null = null
 
-  // If no topics exist, create a default "General" topic
-  if (!defaultTopic) {
-    const result = await createTopic('General', createdBy)
-    defaultTopic = result.topic
+  // If creating a note for a specific partner, find or create a topic for that partner
+  if (partnerId) {
+    // Get partner info to create a topic name
+    const partners = await getPartners(createdBy)
+    const partner = partners.find(p => p.id === partnerId)
+    const partnerName = partner?.username || 'Partner'
+    
+    // Look for an existing topic for this partner
+    const topics = await getTopics()
+    defaultTopic = topics.find((t) => t.name === `Notes with ${partnerName}`) || null
+    
+    // If no topic exists for this partner, create one
+    if (!defaultTopic) {
+      const result = await createTopic(`Notes with ${partnerName}`, createdBy)
+      defaultTopic = result.topic
+      
+      // Add the partner as a member of this topic
+      if (defaultTopic && partnerId) {
+        await addTopicMember(defaultTopic.id, partnerId, 'editor')
+      }
+    }
+  } else {
+    // Get or create a default topic for the user (general notes)
+    const topics = await getTopics()
+    defaultTopic = topics.find((t) => t.name === 'General') || topics[0] || null
+
+    // If no topics exist, create a default "General" topic
+    if (!defaultTopic) {
+      const result = await createTopic('General', createdBy)
+      defaultTopic = result.topic
+    }
   }
 
   if (!defaultTopic) {

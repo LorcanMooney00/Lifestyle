@@ -649,12 +649,17 @@ BEGIN
   -- Delete user's ingredients
   DELETE FROM public.user_ingredients WHERE user_id = p_user_id;
   
-  -- Delete user profile (this will trigger deletion of auth.users via trigger)
+  -- Delete user profile
   DELETE FROM public.user_profiles WHERE id = p_user_id;
+  
+  -- Delete the auth user account directly (SECURITY DEFINER allows this)
+  DELETE FROM auth.users WHERE id = p_user_id;
   
   RETURN TRUE;
 EXCEPTION
   WHEN OTHERS THEN
+    -- Log the error for debugging
+    RAISE WARNING 'Error deleting user account: %', SQLERRM;
     RETURN FALSE;
 END;
 $$;

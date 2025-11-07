@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { getAllNotes, createNote, updateNote, deleteNote } from '../lib/api'
 import type { Note } from '../types'
@@ -8,6 +8,7 @@ import { signOut } from '../lib/auth'
 export default function NotesPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const { partnerId } = useParams<{ partnerId?: string }>()
   const [notes, setNotes] = useState<Array<Note & { creator_username?: string | null; partners?: string[] }>>([])
   const [selectedNote, setSelectedNote] = useState<(Note & { creator_username?: string | null; partners?: string[] }) | null>(null)
   const [loading, setLoading] = useState(true)

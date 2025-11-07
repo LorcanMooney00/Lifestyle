@@ -12,7 +12,6 @@ export default function RecipesPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [filteredRecipes, setFilteredRecipes] = useState<Recipe[]>([])
   const [allIngredients, setAllIngredients] = useState<string[]>([])
-  const [userIngredients, setUserIngredients] = useState<UserIngredient[]>([])
   const [selectedIngredients, setSelectedIngredients] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null)
@@ -45,7 +44,6 @@ export default function RecipesPage() {
       setRecipes(recipesData)
       setFilteredRecipes(recipesData)
       setAllIngredients(ingredientsData)
-      setUserIngredients(userIngredientsData)
       // Pre-select user's ingredients
       const userIngredientNames = new Set(userIngredientsData.map(ui => ui.ingredient_name))
       setSelectedIngredients(userIngredientNames)

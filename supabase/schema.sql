@@ -27,6 +27,42 @@ $$;
 */
 
 -- ============================================
+-- QUICK UPDATE: Add tile_preferences column to user_profiles
+-- ============================================
+-- Copy and paste this into Supabase SQL Editor if the column doesn't exist:
+/*
+ALTER TABLE public.user_profiles 
+ADD COLUMN IF NOT EXISTS tile_preferences JSONB DEFAULT '{"shared-notes": true, "calendar": true, "recipes": true, "photo-gallery": true}'::jsonb;
+*/
+
+-- ============================================
+-- QUICK UPDATE: Add RLS policies for photos table
+-- ============================================
+-- Copy and paste this into Supabase SQL Editor if photos table exists but policies are missing:
+/*
+-- Enable RLS on photos table
+ALTER TABLE public.photos ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view their own photos" ON public.photos CASCADE;
+DROP POLICY IF EXISTS "Users can add their own photos" ON public.photos CASCADE;
+DROP POLICY IF EXISTS "Users can delete their own photos" ON public.photos CASCADE;
+
+-- Create RLS policies for photos
+CREATE POLICY "Users can view their own photos"
+  ON public.photos FOR SELECT
+  USING (user_id = auth.uid());
+
+CREATE POLICY "Users can add their own photos"
+  ON public.photos FOR INSERT
+  WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can delete their own photos"
+  ON public.photos FOR DELETE
+  USING (user_id = auth.uid());
+*/
+
+-- ============================================
 -- QUICK UPDATE: Run this SQL to enable partner notes sharing
 -- ============================================
 -- Copy and paste this section into Supabase SQL Editor to update existing database:

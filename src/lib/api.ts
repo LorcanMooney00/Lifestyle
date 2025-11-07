@@ -393,20 +393,23 @@ export async function getTilePreferences(userId: string): Promise<{ preferences:
 }
 
 export async function updateTilePreferences(userId: string, preferences: Record<string, boolean>): Promise<{ success: boolean; error: string | null }> {
+  // Use update instead of upsert to avoid issues with missing columns
   const { error } = await supabase
     .from('user_profiles')
-    .upsert(
-      {
-        id: userId,
-        tile_preferences: preferences,
-      },
-      {
-        onConflict: 'id',
-      }
-    )
+    .update({
+      tile_preferences: preferences,
+    })
+    .eq('id', userId)
 
   if (error) {
     console.error('Error updating tile preferences:', error)
+    // If column doesn't exist, provide helpful error message
+    if (error.message.includes('tile_preferences') || error.message.includes('column') || error.message.includes('schema cache')) {
+      return { 
+        success: false, 
+        error: 'Tile preferences column not found. Please run the SQL migration in Supabase SQL Editor to add the column.' 
+      }
+    }
     return { success: false, error: error.message }
   }
 
@@ -867,6 +870,14 @@ export async function uploadPhoto(userId: string, file: File): Promise<{ photo: 
     const { data: urlData } = supabase.storage.from('photos').getPublicUrl(filePath)
     const publicUrl = urlData.publicUrl
 
+    // Verify session is still valid before inserting
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError || !session || session.user.id !== authenticatedUserId) {
+      // Try to delete the uploaded file
+      await supabase.storage.from('photos').remove([filePath])
+      return { photo: null, error: 'Authentication session invalid. Please try again.' }
+    }
+
     // Save photo record to database (use authenticated user ID for RLS policy)
     const { data, error: dbError } = await supabase
       .from('photos')
@@ -882,6 +893,14 @@ export async function uploadPhoto(userId: string, file: File): Promise<{ photo: 
       console.error('Error saving photo record:', dbError)
       // Try to delete the uploaded file
       await supabase.storage.from('photos').remove([filePath])
+      
+      // Provide helpful error message for RLS violations
+      if (dbError.message.includes('row-level security') || dbError.message.includes('RLS')) {
+        return { 
+          photo: null, 
+          error: 'Permission denied. Please ensure you are logged in and the photos table RLS policies are set up correctly.' 
+        }
+      }
       return { photo: null, error: dbError.message }
     }
 

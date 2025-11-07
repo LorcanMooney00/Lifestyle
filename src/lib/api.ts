@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient'
 import type { Topic, Note, TopicMember, Event } from '../types'
 
-export async function getTopics(userId: string): Promise<Topic[]> {
+export async function getTopics(): Promise<Topic[]> {
   // RLS policies will automatically filter to topics user has access to
   // (owned, member of, or partner's topics)
   const { data, error } = await supabase
@@ -52,7 +52,7 @@ export async function createTopic(name: string, ownerId: string): Promise<{ topi
   return { topic: data, error: null }
 }
 
-export async function getAllNotes(userId: string): Promise<Note[]> {
+export async function getAllNotes(): Promise<Note[]> {
   // RLS policies will automatically filter to notes from topics user has access to
   // (owned, member of, or partner's topics)
   const { data, error } = await supabase
@@ -89,7 +89,7 @@ export async function createNote(
   createdBy: string
 ): Promise<Note | null> {
   // Get or create a default topic for the user
-  const topics = await getTopics(createdBy)
+  const topics = await getTopics()
   let defaultTopic: Topic | null = topics.find((t) => t.name === 'General') || topics[0] || null
 
   // If no topics exist, create a default "General" topic

@@ -23,7 +23,7 @@ export default function TopicsListPage() {
   const loadTopics = async () => {
     if (!user) return
     setLoading(true)
-    const data = await getTopics(user.id)
+    const data = await getTopics()
     setTopics(data)
     setLoading(false)
   }

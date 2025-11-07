@@ -136,40 +136,56 @@ export default function NotesPage() {
 
       <div className="flex-1 flex flex-col md:flex-row max-w-7xl mx-auto w-full overflow-hidden">
         {/* Notes List */}
-        <div className="w-full md:w-64 bg-white border-r flex flex-col h-full overflow-hidden">
-          <div className="p-4 border-b flex justify-between items-center flex-shrink-0">
-            <h2 className="font-semibold text-gray-900">Notes</h2>
+        <div className="w-full md:w-72 bg-white border-r flex flex-col h-full overflow-hidden shadow-sm">
+          <div className="p-4 border-b flex justify-between items-center flex-shrink-0 bg-gray-50">
+            <h2 className="font-semibold text-gray-900 text-lg">Notes</h2>
             <button
               onClick={handleCreateNote}
-              className="bg-indigo-600 text-white px-3 py-1.5 rounded text-sm hover:bg-indigo-700 font-medium"
+              className="bg-indigo-600 text-white px-4 py-1.5 rounded-md text-sm hover:bg-indigo-700 font-medium shadow-sm transition-colors"
             >
               + New
             </button>
           </div>
           <div className="flex-1 overflow-y-auto min-h-0">
             {loading ? (
-              <div className="p-4 text-sm text-gray-500">Loading...</div>
+              <div className="p-6 text-center text-sm text-gray-500">Loading...</div>
             ) : notes.length === 0 ? (
-              <div className="p-4 text-sm text-gray-500">
-                No notes yet. Create one to get started!
+              <div className="p-6 text-center">
+                <p className="text-sm text-gray-500 mb-4">No notes yet.</p>
+                <button
+                  onClick={handleCreateNote}
+                  className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+                >
+                  Create your first note →
+                </button>
               </div>
             ) : (
-              <div className="divide-y">
+              <div className="p-2">
                 {notes.map((note) => (
                   <button
                     key={note.id}
                     onClick={() => setSelectedNote(note)}
-                    className={`w-full text-left p-4 hover:bg-gray-50 transition-colors ${
-                      selectedNote?.id === note.id ? 'bg-indigo-50 border-l-4 border-indigo-600' : ''
+                    className={`w-full text-left p-3 rounded-lg mb-1 transition-all ${
+                      selectedNote?.id === note.id
+                        ? 'bg-indigo-100 border border-indigo-300 shadow-sm'
+                        : 'hover:bg-gray-50 border border-transparent'
                     }`}
                   >
                     <div className="flex justify-between items-start gap-2">
-                      <div className="flex-1 min-w-0 overflow-hidden">
-                        <h3 className="font-medium text-gray-900 truncate text-sm">
+                      <div className="flex-1 min-w-0">
+                        <h3 className={`font-medium truncate text-sm mb-1 ${
+                          selectedNote?.id === note.id ? 'text-indigo-900' : 'text-gray-900'
+                        }`}>
                           {note.title || 'Untitled Note'}
                         </h3>
-                        <p className="text-xs text-gray-500 mt-1 truncate">
-                          {new Date(note.updated_at).toLocaleDateString()}
+                        <p className={`text-xs ${
+                          selectedNote?.id === note.id ? 'text-indigo-600' : 'text-gray-500'
+                        }`}>
+                          {new Date(note.updated_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
                         </p>
                       </div>
                       <button
@@ -177,9 +193,14 @@ export default function NotesPage() {
                           e.stopPropagation()
                           handleDeleteNote(note.id)
                         }}
-                        className="ml-2 text-red-600 hover:text-red-800 text-xs flex-shrink-0"
+                        className={`flex-shrink-0 p-1 rounded hover:bg-red-100 transition-colors ${
+                          selectedNote?.id === note.id ? 'text-red-600' : 'text-gray-400'
+                        }`}
+                        title="Delete note"
                       >
-                        ×
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                       </button>
                     </div>
                   </button>

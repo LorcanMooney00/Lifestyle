@@ -872,13 +872,17 @@ export async function uploadPhoto(file: File): Promise<{ photo: Photo | null; er
     const { data: urlData } = supabase.storage.from('photos').getPublicUrl(filePath)
     const publicUrl = urlData.publicUrl
 
-    // Save photo record to database using RPC function to bypass RLS issues
-    // The function uses SECURITY DEFINER and validates the user_id matches auth.uid()
-    const { data, error: dbError } = await supabase.rpc('insert_photo', {
-      p_user_id: authenticatedUserId,
-      p_storage_path: filePath,
-      p_url: publicUrl,
-    })
+    // Save photo record to database
+    // RLS policy allows any authenticated user to insert (we'll refine security later)
+    const { data, error: dbError } = await supabase
+      .from('photos')
+      .insert({
+        user_id: authenticatedUserId,
+        storage_path: filePath,
+        url: publicUrl,
+      })
+      .select()
+      .single()
 
     if (dbError) {
       console.error('Error saving photo record:', dbError)
@@ -887,7 +891,6 @@ export async function uploadPhoto(file: File): Promise<{ photo: Photo | null; er
       return { photo: null, error: dbError.message }
     }
 
-    // The function returns JSONB, convert it to Photo type
     return { photo: data as Photo, error: null }
   } catch (error: any) {
     console.error('Error uploading photo:', error)

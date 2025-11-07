@@ -100,8 +100,8 @@ export default function NotesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <nav className="bg-white shadow-sm border-b">
+    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
+      <nav className="bg-white shadow-sm border-b flex-shrink-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
@@ -134,9 +134,9 @@ export default function NotesPage() {
         </div>
       </nav>
 
-      <div className="flex-1 flex flex-col md:flex-row max-w-7xl mx-auto w-full overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row max-w-7xl mx-auto w-full overflow-hidden min-h-0">
         {/* Notes List */}
-        <div className="w-full md:w-72 bg-white border-r flex flex-col h-full overflow-hidden shadow-sm">
+        <div className="w-full md:w-72 bg-white border-r flex flex-col overflow-hidden shadow-sm">
           <div className="p-4 border-b flex justify-between items-center flex-shrink-0 bg-gray-50">
             <h2 className="font-semibold text-gray-900 text-lg">Notes</h2>
             <button
@@ -146,7 +146,7 @@ export default function NotesPage() {
               + New
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="flex-1 overflow-y-auto min-h-0" style={{ maxHeight: 'calc(100vh - 80px)' }}>
             {loading ? (
               <div className="p-6 text-center text-sm text-gray-500">Loading...</div>
             ) : notes.length === 0 ? (

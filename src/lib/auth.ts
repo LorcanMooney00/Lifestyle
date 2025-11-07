@@ -36,9 +36,15 @@ export async function signIn(email: string, password: string) {
 }
 
 export async function signUp(email: string, password: string) {
+  // Use the current origin for redirect (works for both localhost and production)
+  const redirectTo = `${window.location.origin}/app/topics`
+  
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      emailRedirectTo: redirectTo,
+    },
   })
   return { data, error }
 }

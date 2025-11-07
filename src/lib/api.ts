@@ -878,7 +878,13 @@ export async function uploadPhoto(file: File): Promise<{ photo: Photo | null; er
       return { photo: null, error: 'Authentication session invalid. Please try again.' }
     }
 
+    // Debug: Log the user ID we're trying to insert
+    console.log('Attempting to insert photo with user_id:', authenticatedUserId)
+    console.log('Session user ID:', session.user.id)
+    console.log('Session access token exists:', !!session.access_token)
+
     // Save photo record to database (use authenticated user ID for RLS policy)
+    // The RLS policy checks: user_id = auth.uid()
     const { data, error: dbError } = await supabase
       .from('photos')
       .insert({

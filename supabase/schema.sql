@@ -36,10 +36,23 @@ ADD COLUMN IF NOT EXISTS tile_preferences JSONB DEFAULT '{"shared-notes": true, 
 */
 
 -- ============================================
--- QUICK UPDATE: Add RLS policies for photos table
+-- QUICK UPDATE: Create photos table and add RLS policies
 -- ============================================
--- Copy and paste this into Supabase SQL Editor if photos table exists but policies are missing:
+-- Copy and paste this into Supabase SQL Editor to create photos table and set up RLS:
 /*
+-- Create photos table if it doesn't exist
+CREATE TABLE IF NOT EXISTS public.photos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  storage_path TEXT NOT NULL,
+  url TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create indexes for photos table
+CREATE INDEX IF NOT EXISTS idx_photos_user_id ON public.photos(user_id);
+CREATE INDEX IF NOT EXISTS idx_photos_created_at ON public.photos(created_at);
+
 -- Enable RLS on photos table
 ALTER TABLE public.photos ENABLE ROW LEVEL SECURITY;
 
@@ -60,6 +73,11 @@ CREATE POLICY "Users can add their own photos"
 CREATE POLICY "Users can delete their own photos"
   ON public.photos FOR DELETE
   USING (user_id = auth.uid());
+
+-- Verify RLS policies are active (run this to check):
+-- SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
+-- FROM pg_policies 
+-- WHERE tablename = 'photos';
 */
 
 -- ============================================
@@ -762,3 +780,7 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+
+ALTER TABLE public.user_profiles 
+ADD COLUMN IF NOT EXISTS tile_preferences JSONB DEFAULT '{"shared-notes": true, "calendar": true, "recipes": true, "photo-gallery": true}'::jsonb;

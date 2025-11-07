@@ -3,6 +3,138 @@
 -- Run this in Supabase SQL Editor
 
 -- ============================================
+-- QUICK UPDATE: Run this SQL to enable partner notes sharing
+-- ============================================
+-- Copy and paste this section into Supabase SQL Editor to update existing database:
+/*
+-- Create the is_topic_member function (if it doesn't exist)
+CREATE OR REPLACE FUNCTION is_topic_member(p_topic_id UUID, p_user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.topic_members
+    WHERE topic_id = p_topic_id AND user_id = p_user_id
+  );
+$$;
+
+-- Create the are_partners function
+CREATE OR REPLACE FUNCTION are_partners(p_user_id UUID, p_partner_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.partner_links
+    WHERE (user_id = p_user_id AND partner_id = p_partner_id)
+    OR (user_id = p_partner_id AND partner_id = p_user_id)
+  );
+$$;
+
+-- Update topics SELECT policy
+DROP POLICY IF EXISTS "Users can view topics they own or are members of" ON public.topics CASCADE;
+CREATE POLICY "Users can view topics they own or are members of"
+  ON public.topics FOR SELECT
+  USING (
+    owner_id = auth.uid() OR
+    is_topic_member(id, auth.uid()) OR
+    are_partners(auth.uid(), owner_id)
+  );
+
+-- Update notes SELECT policy
+DROP POLICY IF EXISTS "Users can view notes for accessible topics" ON public.notes CASCADE;
+CREATE POLICY "Users can view notes for accessible topics"
+  ON public.notes FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.topics
+      WHERE topics.id = notes.topic_id
+      AND (
+        topics.owner_id = auth.uid() OR
+        EXISTS (
+          SELECT 1 FROM public.topic_members
+          WHERE topic_members.topic_id = topics.id
+          AND topic_members.user_id = auth.uid()
+        ) OR
+        are_partners(auth.uid(), topics.owner_id)
+      )
+    )
+  );
+
+-- Update notes INSERT policy
+DROP POLICY IF EXISTS "Users can create notes in accessible topics" ON public.notes CASCADE;
+CREATE POLICY "Users can create notes in accessible topics"
+  ON public.notes FOR INSERT
+  WITH CHECK (
+    created_by = auth.uid() AND
+    EXISTS (
+      SELECT 1 FROM public.topics
+      WHERE topics.id = notes.topic_id
+      AND (
+        topics.owner_id = auth.uid() OR
+        EXISTS (
+          SELECT 1 FROM public.topic_members
+          WHERE topic_members.topic_id = topics.id
+          AND topic_members.user_id = auth.uid()
+          AND topic_members.role IN ('owner', 'editor')
+        ) OR
+        are_partners(auth.uid(), topics.owner_id)
+      )
+    )
+  );
+
+-- Update notes UPDATE policy
+DROP POLICY IF EXISTS "Users can update notes in accessible topics" ON public.notes CASCADE;
+CREATE POLICY "Users can update notes in accessible topics"
+  ON public.notes FOR UPDATE
+  USING (
+    created_by = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM public.topics
+      WHERE topics.id = notes.topic_id
+      AND (
+        topics.owner_id = auth.uid() OR
+        EXISTS (
+          SELECT 1 FROM public.topic_members
+          WHERE topic_members.topic_id = topics.id
+          AND topic_members.user_id = auth.uid()
+          AND topic_members.role IN ('owner', 'editor')
+        ) OR
+        are_partners(auth.uid(), topics.owner_id)
+      )
+    )
+  );
+
+-- Update notes DELETE policy
+DROP POLICY IF EXISTS "Users can delete notes in accessible topics" ON public.notes CASCADE;
+CREATE POLICY "Users can delete notes in accessible topics"
+  ON public.notes FOR DELETE
+  USING (
+    created_by = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM public.topics
+      WHERE topics.id = notes.topic_id
+      AND (
+        topics.owner_id = auth.uid() OR
+        EXISTS (
+          SELECT 1 FROM public.topic_members
+          WHERE topic_members.topic_id = topics.id
+          AND topic_members.user_id = auth.uid()
+          AND topic_members.role IN ('owner', 'editor')
+        ) OR
+        are_partners(auth.uid(), topics.owner_id)
+      )
+    )
+  );
+*/
+-- ============================================
+-- END QUICK UPDATE SECTION
+-- ============================================
+
+-- ============================================
 -- PART 1: DROP EVERYTHING
 -- ============================================
 
@@ -337,6 +469,23 @@ CREATE POLICY "Users can delete their own events"
 -- ============================================
 -- FUNCTIONS AND TRIGGERS
 -- ============================================
+
+-- Function to get partners with emails
+CREATE FUNCTION get_partners_with_emails(p_user_id UUID)
+RETURNS TABLE(partner_id UUID, email TEXT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    pl.partner_id,
+    au.email
+  FROM public.partner_links pl
+  JOIN auth.users au ON au.id = pl.partner_id
+  WHERE pl.user_id = p_user_id;
+END;
+$$;
 
 -- Function to link partners by email
 CREATE FUNCTION link_partner_by_email(

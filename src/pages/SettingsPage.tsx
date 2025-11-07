@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
-import { getPartnerId, linkPartner, unlinkPartner } from '../lib/api'
+import { getPartners, linkPartner, unlinkPartner } from '../lib/api'
 import { signOut } from '../lib/auth'
 
 export default function SettingsPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [partnerEmail, setPartnerEmail] = useState('')
-  const [linkedPartnerId, setLinkedPartnerId] = useState<string | null>(null)
+  const [partners, setPartners] = useState<Array<{ id: string; email: string }>>([])
   const [loading, setLoading] = useState(true)
   const [linking, setLinking] = useState(false)
   const [unlinking, setUnlinking] = useState(false)
@@ -24,8 +24,8 @@ export default function SettingsPage() {
   const loadPartnerStatus = async () => {
     if (!user) return
     setLoading(true)
-    const partnerId = await getPartnerId(user.id)
-    setLinkedPartnerId(partnerId)
+    const data = await getPartners(user.id)
+    setPartners(data)
     setLoading(false)
   }
 
@@ -49,28 +49,6 @@ export default function SettingsPage() {
     setLinking(false)
   }
 
-  const handleUnlinkPartner = async () => {
-    if (!user) return
-    
-    if (!confirm('Are you sure you want to unlink from your partner? You will no longer be able to see each other\'s notes.')) {
-      return
-    }
-
-    setUnlinking(true)
-    setError(null)
-    setSuccess(null)
-
-    const success = await unlinkPartner(user.id)
-    if (success) {
-      setSuccess('Partner unlinked successfully.')
-      setLinkedPartnerId(null)
-    } else {
-      setError('Failed to unlink partner. Please try again.')
-    }
-
-    setUnlinking(false)
-  }
-
   const handleSignOut = async () => {
     await signOut()
     navigate('/login')
@@ -83,10 +61,10 @@ export default function SettingsPage() {
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <button
-                onClick={() => navigate('/app/topics')}
+                onClick={() => navigate('/app/partners')}
                 className="text-gray-600 hover:text-gray-900 mr-4"
               >
-                ← Dashboard
+                ← Partners
               </button>
               <h1 className="text-xl font-bold text-gray-900">Settings</h1>
             </div>
@@ -110,24 +88,46 @@ export default function SettingsPage() {
 
           {loading ? (
             <div className="text-gray-600">Loading...</div>
-          ) : linkedPartnerId ? (
+          ) : partners.length > 0 ? (
             <div className="space-y-4">
               <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-                <p className="font-medium">Partner Linked</p>
+                <p className="font-medium">Linked Partners</p>
                 <p className="text-sm mt-1">
-                  Your account is linked with your partner. You can now share topics and notes together.
+                  You have {partners.length} partner{partners.length !== 1 ? 's' : ''} linked.
                 </p>
               </div>
-              <p className="text-sm text-gray-600">
-                Partner ID: {linkedPartnerId}
-              </p>
-              <button
-                onClick={handleUnlinkPartner}
-                disabled={unlinking}
-                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-              >
-                {unlinking ? 'Unlinking...' : 'Unlink Partner'}
-              </button>
+              <div className="space-y-2">
+                {partners.map((partner) => (
+                  <div
+                    key={partner.id}
+                    className="flex items-center justify-between bg-gray-50 p-3 rounded border"
+                  >
+                    <div>
+                      <p className="font-medium text-gray-900">{partner.email.split('@')[0]}</p>
+                      <p className="text-sm text-gray-600">{partner.email}</p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (confirm(`Are you sure you want to unlink from ${partner.email}?`)) {
+                          setUnlinking(true)
+                          const success = await unlinkPartner(user.id, partner.id)
+                          if (success) {
+                            setSuccess('Partner unlinked successfully.')
+                            await loadPartnerStatus()
+                          } else {
+                            setError('Failed to unlink partner. Please try again.')
+                          }
+                          setUnlinking(false)
+                        }
+                      }}
+                      disabled={unlinking}
+                      className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 disabled:opacity-50"
+                    >
+                      Unlink
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="space-y-4">

@@ -178,23 +178,30 @@ export async function addTopicMember(
   return data
 }
 
-export async function getPartnerId(userId: string): Promise<string | null> {
-  const { data, error } = await supabase
-    .from('partner_links')
-    .select('partner_id')
-    .eq('user_id', userId)
-    .single()
+export async function getPartners(userId: string): Promise<Array<{ id: string; email: string }>> {
+  // Use RPC function to get partners with emails
+  const { data, error } = await supabase.rpc('get_partners_with_emails', {
+    p_user_id: userId,
+  })
 
   if (error) {
-    if (error.code === 'PGRST116') {
-      // No partner linked
-      return null
-    }
-    console.error('Error fetching partner:', error)
-    return null
+    console.error('Error fetching partners:', error)
+    // Fallback: get partner IDs only
+    const { data: links } = await supabase
+      .from('partner_links')
+      .select('partner_id')
+      .eq('user_id', userId)
+
+    return (links || []).map((link: any) => ({
+      id: link.partner_id,
+      email: `Partner ${link.partner_id.slice(0, 8)}`,
+    }))
   }
 
-  return data?.partner_id || null
+  return (data || []).map((row: any) => ({
+    id: row.partner_id,
+    email: row.email || 'Unknown',
+  }))
 }
 
 export async function linkPartner(userId: string, partnerEmail: string): Promise<boolean> {
@@ -212,21 +219,43 @@ export async function linkPartner(userId: string, partnerEmail: string): Promise
   return data === true
 }
 
-export async function unlinkPartner(userId: string): Promise<boolean> {
-  // Delete both directions of the partner link
-  const { error: error1 } = await supabase
-    .from('partner_links')
-    .delete()
-    .eq('user_id', userId)
+export async function unlinkPartner(userId: string, partnerId?: string): Promise<boolean> {
+  // If partnerId is provided, unlink that specific partner
+  // Otherwise, unlink all partners (for backward compatibility)
+  if (partnerId) {
+    // Delete both directions of the specific partner link
+    const { error: error1 } = await supabase
+      .from('partner_links')
+      .delete()
+      .eq('user_id', userId)
+      .eq('partner_id', partnerId)
 
-  const { error: error2 } = await supabase
-    .from('partner_links')
-    .delete()
-    .eq('partner_id', userId)
+    const { error: error2 } = await supabase
+      .from('partner_links')
+      .delete()
+      .eq('user_id', partnerId)
+      .eq('partner_id', userId)
 
-  if (error1 || error2) {
-    console.error('Error unlinking partner:', error1 || error2)
-    return false
+    if (error1 || error2) {
+      console.error('Error unlinking partner:', error1 || error2)
+      return false
+    }
+  } else {
+    // Delete all partner links for this user (backward compatibility)
+    const { error: error1 } = await supabase
+      .from('partner_links')
+      .delete()
+      .eq('user_id', userId)
+
+    const { error: error2 } = await supabase
+      .from('partner_links')
+      .delete()
+      .eq('partner_id', userId)
+
+    if (error1 || error2) {
+      console.error('Error unlinking partners:', error1 || error2)
+      return false
+    }
   }
 
   return true

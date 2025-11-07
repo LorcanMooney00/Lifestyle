@@ -2,47 +2,19 @@ import { supabase } from './supabaseClient'
 import type { Topic, Note, TopicMember, Event } from '../types'
 
 export async function getTopics(userId: string): Promise<Topic[]> {
-  // Get topics where user is owner
-  const { data: ownedTopics, error: ownedError } = await supabase
+  // RLS policies will automatically filter to topics user has access to
+  // (owned, member of, or partner's topics)
+  const { data, error } = await supabase
     .from('topics')
     .select('*')
-    .eq('owner_id', userId)
+    .order('created_at', { ascending: false })
 
-  // Get topics where user is a member
-  const { data: memberTopics, error: memberError } = await supabase
-    .from('topic_members')
-    .select('topic_id, topics(*)')
-    .eq('user_id', userId)
-
-  if (ownedError || memberError) {
-    console.error('Error fetching topics:', ownedError || memberError)
+  if (error) {
+    console.error('Error fetching topics:', error)
     return []
   }
 
-  // Combine and deduplicate topics
-  const topicsMap = new Map<string, Topic>()
-  
-  if (ownedTopics) {
-    ownedTopics.forEach((topic: Topic) => {
-      topicsMap.set(topic.id, topic)
-    })
-  }
-
-  if (memberTopics) {
-    memberTopics.forEach((member: any) => {
-      if (member.topics) {
-        const topic = Array.isArray(member.topics) ? member.topics[0] : member.topics
-        if (topic && typeof topic === 'object' && 'id' in topic) {
-          topicsMap.set(topic.id, topic as Topic)
-        }
-      }
-    })
-  }
-
-  // Sort by created_at descending
-  return Array.from(topicsMap.values()).sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  )
+  return data || []
 }
 
 export async function createTopic(name: string, ownerId: string): Promise<{ topic: Topic | null; error: string | null }> {
@@ -81,18 +53,11 @@ export async function createTopic(name: string, ownerId: string): Promise<{ topi
 }
 
 export async function getAllNotes(userId: string): Promise<Note[]> {
-  // Get all topics user has access to
-  const topics = await getTopics(userId)
-  if (topics.length === 0) {
-    return []
-  }
-
-  // Get notes from all accessible topics
-  const topicIds = topics.map((t) => t.id)
+  // RLS policies will automatically filter to notes from topics user has access to
+  // (owned, member of, or partner's topics)
   const { data, error } = await supabase
     .from('notes')
     .select('*')
-    .in('topic_id', topicIds)
     .order('updated_at', { ascending: false })
 
   if (error) {

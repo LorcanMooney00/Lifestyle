@@ -40,6 +40,7 @@ DROP TABLE IF EXISTS public.partner_links CASCADE;
 
 -- Drop functions
 DROP FUNCTION IF EXISTS is_topic_member(UUID, UUID) CASCADE;
+DROP FUNCTION IF EXISTS are_partners(UUID, UUID) CASCADE;
 DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;
 DROP FUNCTION IF EXISTS link_partner_by_email(UUID, TEXT) CASCADE;
 
@@ -134,6 +135,20 @@ AS $$
   );
 $$;
 
+-- Function to check if two users are partners (bypasses RLS)
+CREATE FUNCTION are_partners(p_user_id UUID, p_partner_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.partner_links
+    WHERE (user_id = p_user_id AND partner_id = p_partner_id)
+    OR (user_id = p_partner_id AND partner_id = p_user_id)
+  );
+$$;
+
 -- ============================================
 -- ROW-LEVEL SECURITY POLICIES
 -- ============================================
@@ -144,7 +159,8 @@ CREATE POLICY "Users can view topics they own or are members of"
   ON public.topics FOR SELECT
   USING (
     owner_id = auth.uid() OR
-    is_topic_member(id, auth.uid())
+    is_topic_member(id, auth.uid()) OR
+    are_partners(auth.uid(), owner_id)
   );
 
 CREATE POLICY "Users can create topics"
@@ -215,7 +231,8 @@ CREATE POLICY "Users can view notes for accessible topics"
           SELECT 1 FROM public.topic_members
           WHERE topic_members.topic_id = topics.id
           AND topic_members.user_id = auth.uid()
-        )
+        ) OR
+        are_partners(auth.uid(), topics.owner_id)
       )
     )
   );
@@ -234,7 +251,8 @@ CREATE POLICY "Users can create notes in accessible topics"
           WHERE topic_members.topic_id = topics.id
           AND topic_members.user_id = auth.uid()
           AND topic_members.role IN ('owner', 'editor')
-        )
+        ) OR
+        are_partners(auth.uid(), topics.owner_id)
       )
     )
   );
@@ -253,7 +271,8 @@ CREATE POLICY "Users can update notes in accessible topics"
           WHERE topic_members.topic_id = topics.id
           AND topic_members.user_id = auth.uid()
           AND topic_members.role IN ('owner', 'editor')
-        )
+        ) OR
+        are_partners(auth.uid(), topics.owner_id)
       )
     )
   );
@@ -272,7 +291,8 @@ CREATE POLICY "Users can delete notes in accessible topics"
           WHERE topic_members.topic_id = topics.id
           AND topic_members.user_id = auth.uid()
           AND topic_members.role IN ('owner', 'editor')
-        )
+        ) OR
+        are_partners(auth.uid(), topics.owner_id)
       )
     )
   );

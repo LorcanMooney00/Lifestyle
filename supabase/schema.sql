@@ -86,6 +86,20 @@ AS $$
   );
 $$;
 
+-- Function to check if two users are partners (bypasses RLS)
+CREATE OR REPLACE FUNCTION are_partners(p_user_id UUID, p_partner_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.partner_links
+    WHERE (user_id = p_user_id AND partner_id = p_partner_id)
+    OR (user_id = p_partner_id AND partner_id = p_user_id)
+  );
+$$;
+
 -- Topics policies
 -- Use SECURITY DEFINER function to avoid RLS recursion
 DROP POLICY IF EXISTS "Users can view topics they own or are members of" ON public.topics CASCADE;
@@ -93,7 +107,8 @@ CREATE POLICY "Users can view topics they own or are members of"
   ON public.topics FOR SELECT
   USING (
     owner_id = auth.uid() OR
-    is_topic_member(id, auth.uid())
+    is_topic_member(id, auth.uid()) OR
+    are_partners(auth.uid(), owner_id)
   );
 
 DROP POLICY IF EXISTS "Users can create topics" ON public.topics CASCADE;
@@ -171,7 +186,8 @@ CREATE POLICY "Users can view notes for accessible topics"
           SELECT 1 FROM public.topic_members
           WHERE topic_members.topic_id = topics.id
           AND topic_members.user_id = auth.uid()
-        )
+        ) OR
+        are_partners(auth.uid(), topics.owner_id)
       )
     )
   );
@@ -191,7 +207,8 @@ CREATE POLICY "Users can create notes in accessible topics"
           WHERE topic_members.topic_id = topics.id
           AND topic_members.user_id = auth.uid()
           AND topic_members.role IN ('owner', 'editor')
-        )
+        ) OR
+        are_partners(auth.uid(), topics.owner_id)
       )
     )
   );
@@ -211,7 +228,8 @@ CREATE POLICY "Users can update notes in accessible topics"
           WHERE topic_members.topic_id = topics.id
           AND topic_members.user_id = auth.uid()
           AND topic_members.role IN ('owner', 'editor')
-        )
+        ) OR
+        are_partners(auth.uid(), topics.owner_id)
       )
     )
   );
@@ -231,7 +249,8 @@ CREATE POLICY "Users can delete notes in accessible topics"
           WHERE topic_members.topic_id = topics.id
           AND topic_members.user_id = auth.uid()
           AND topic_members.role IN ('owner', 'editor')
-        )
+        ) OR
+        are_partners(auth.uid(), topics.owner_id)
       )
     )
   );
@@ -280,18 +299,19 @@ CREATE POLICY "Users can delete their own events"
   ON public.events FOR DELETE
   USING (created_by = auth.uid());
 
--- Function to check if user is member of topic (bypasses RLS to avoid recursion)
-CREATE OR REPLACE FUNCTION is_topic_member(p_topic_id UUID, p_user_id UUID)
-RETURNS BOOLEAN
-LANGUAGE sql
-SECURITY DEFINER
-STABLE
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.topic_members
-    WHERE topic_id = p_topic_id AND user_id = p_user_id
-  );
-$$;
+-- Trigger to automatically update updated_at on events
+DROP TRIGGER IF EXISTS update_events_updated_at ON public.events;
+CREATE TRIGGER update_events_updated_at
+  BEFORE UPDATE ON public.events
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Trigger to automatically update updated_at on notes
+DROP TRIGGER IF EXISTS update_notes_updated_at ON public.notes;
+CREATE TRIGGER update_notes_updated_at
+  BEFORE UPDATE ON public.notes
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
 
 -- Function to link partners by email
 CREATE OR REPLACE FUNCTION link_partner_by_email(
@@ -341,17 +361,3 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
--- Trigger to automatically update updated_at on notes
-DROP TRIGGER IF EXISTS update_notes_updated_at ON public.notes;
-CREATE TRIGGER update_notes_updated_at
-  BEFORE UPDATE ON public.notes
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
-
--- Trigger to automatically update updated_at on events
-DROP TRIGGER IF EXISTS update_events_updated_at ON public.events;
-CREATE TRIGGER update_events_updated_at
-  BEFORE UPDATE ON public.events
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();

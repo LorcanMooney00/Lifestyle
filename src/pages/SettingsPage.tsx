@@ -71,6 +71,11 @@ export default function SettingsPage() {
     setUnlinking(false)
   }
 
+  const handleSignOut = async () => {
+    await signOut()
+    navigate('/login')
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm border-b">

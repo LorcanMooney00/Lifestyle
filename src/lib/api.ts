@@ -197,6 +197,21 @@ export async function getPartnerId(userId: string): Promise<string | null> {
   return data?.partner_id || null
 }
 
+export async function linkPartner(userId: string, partnerEmail: string): Promise<boolean> {
+  // Call the database function to find partner and create links
+  const { data, error } = await supabase.rpc('link_partner_by_email', {
+    p_user_id: userId,
+    p_partner_email: partnerEmail,
+  })
+
+  if (error) {
+    console.error('Error linking partner:', error)
+    return false
+  }
+
+  return data === true
+}
+
 export async function unlinkPartner(userId: string): Promise<boolean> {
   // Delete both directions of the partner link
   const { error: error1 } = await supabase

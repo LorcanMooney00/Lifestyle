@@ -161,10 +161,27 @@ export async function getAllNotes(userId: string, filterPartnerId?: string): Pro
 
   // If filtering by partner, only return notes involving that partner
   if (filterPartnerId) {
+    // Get all topics that the partner is a member of
+    const { data: partnerTopicMembers } = await supabase
+      .from('topic_members')
+      .select('topic_id')
+      .eq('user_id', filterPartnerId)
+    
+    const partnerTopicIds = partnerTopicMembers?.map(tm => tm.topic_id) || []
+    
     return mappedNotes.filter((note: any) => {
-      // Check if the note involves the specific partner
-      return note.created_by === filterPartnerId || 
-             note.topic?.owner_id === filterPartnerId ||
+      const topicId = note.topic_id
+      const topicOwnerId = note.topic?.owner_id
+      const creatorId = note.created_by
+      
+      // Check if the note involves the specific partner:
+      // 1. Partner created the note
+      // 2. Partner owns the topic
+      // 3. Partner is a member of the topic
+      // 4. Partner is identified as the "other person" in the note
+      return creatorId === filterPartnerId || 
+             topicOwnerId === filterPartnerId ||
+             partnerTopicIds.includes(topicId) ||
              note.otherPersonId === filterPartnerId
     })
   }

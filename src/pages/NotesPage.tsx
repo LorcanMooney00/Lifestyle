@@ -36,6 +36,8 @@ export default function NotesPage() {
     if (!user) return
     setLoading(true)
     const data = await getAllNotes()
+    console.log('Loaded notes:', data)
+    console.log('User ID:', user.id)
     setNotes(data)
     setLoading(false)
     if (data.length > 0 && !selectedNote) {

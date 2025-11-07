@@ -649,11 +649,8 @@ BEGIN
   -- Delete user's ingredients
   DELETE FROM public.user_ingredients WHERE user_id = p_user_id;
   
-  -- Delete user profile
+  -- Delete user profile (this will trigger deletion of auth.users via trigger)
   DELETE FROM public.user_profiles WHERE id = p_user_id;
-  
-  -- Note: The auth.users account deletion should be handled manually through Supabase dashboard
-  -- or via a database trigger. We can't delete auth.users directly from here without admin privileges.
   
   RETURN TRUE;
 EXCEPTION
@@ -661,6 +658,31 @@ EXCEPTION
     RETURN FALSE;
 END;
 $$;
+
+-- Function to delete auth user when profile is deleted
+CREATE OR REPLACE FUNCTION delete_auth_user_on_profile_delete()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- Delete the auth user account
+  DELETE FROM auth.users WHERE id = OLD.id;
+  RETURN OLD;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Log error but don't fail the transaction
+    RAISE WARNING 'Failed to delete auth user: %', SQLERRM;
+    RETURN OLD;
+END;
+$$;
+
+-- Trigger to automatically delete auth user when profile is deleted
+DROP TRIGGER IF EXISTS trigger_delete_auth_user ON public.user_profiles;
+CREATE TRIGGER trigger_delete_auth_user
+  AFTER DELETE ON public.user_profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION delete_auth_user_on_profile_delete();
 
 -- Function to automatically update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()

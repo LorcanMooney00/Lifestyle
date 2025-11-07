@@ -37,8 +37,9 @@ export async function signIn(email: string, password: string) {
 }
 
 export async function signUp(email: string, password: string, username: string): Promise<{ data: any; error: any }> {
-  // Use the current origin for redirect (works for both localhost and production)
-  const redirectTo = `${window.location.origin}/app/topics`
+  // Use environment variable for production URL, fallback to current origin for development
+  const productionUrl = import.meta.env.VITE_SITE_URL || window.location.origin
+  const redirectTo = `${productionUrl}/app/topics`
   
   const { data, error } = await supabase.auth.signUp({
     email,

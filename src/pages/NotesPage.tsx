@@ -8,8 +8,8 @@ import { signOut } from '../lib/auth'
 export default function NotesPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [notes, setNotes] = useState<Note[]>([])
-  const [selectedNote, setSelectedNote] = useState<Note | null>(null)
+  const [notes, setNotes] = useState<Array<Note & { creator_username?: string | null }>>([])
+  const [selectedNote, setSelectedNote] = useState<(Note & { creator_username?: string | null }) | null>(null)
   const [loading, setLoading] = useState(true)
   const [noteTitle, setNoteTitle] = useState('')
   const [noteContent, setNoteContent] = useState('')
@@ -187,15 +187,24 @@ export default function NotesPage() {
                             {note.content.length > 60 ? `${note.content.substring(0, 60)}...` : note.content}
                           </p>
                         )}
-                        <p className={`text-xs ${
-                          selectedNote?.id === note.id ? 'text-indigo-400' : 'text-gray-500'
-                        }`}>
-                          {new Date(note.updated_at).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
-                        </p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className={`text-xs ${
+                            selectedNote?.id === note.id ? 'text-indigo-400' : 'text-gray-500'
+                          }`}>
+                            {new Date(note.updated_at).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
+                          </p>
+                          {note.creator_username && (
+                            <p className={`text-xs truncate ${
+                              selectedNote?.id === note.id ? 'text-indigo-400' : 'text-gray-500'
+                            }`}>
+                              {note.created_by === user?.id ? 'You' : note.creator_username}
+                            </p>
+                          )}
+                        </div>
                       </div>
                       <button
                         onClick={(e) => {
@@ -236,36 +245,43 @@ export default function NotesPage() {
                   </button>
                   <span className="text-sm text-gray-300">Back to Notes</span>
                 </div>
-                <input
-                  type="text"
-                  value={noteTitle}
-                  onChange={(e) => {
-                    const newTitle = e.target.value
-                    setNoteTitle(newTitle)
-                    if (saveTimeout) {
-                      clearTimeout(saveTimeout)
-                    }
-                    const timeout = setTimeout(async () => {
-                      if (selectedNote && user) {
-                        setSaving(true)
-                        // Use the latest state values by reading them in the timeout
-                        const currentContent = noteContent
-                        const updated = await updateNote(selectedNote.id, {
-                          title: newTitle || null,
-                          content: currentContent || null,
-                        })
-                        if (updated) {
-                          setSelectedNote(updated)
-                          setNotes(notes.map((n) => (n.id === updated.id ? updated : n)))
-                        }
-                        setSaving(false)
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={noteTitle}
+                    onChange={(e) => {
+                      const newTitle = e.target.value
+                      setNoteTitle(newTitle)
+                      if (saveTimeout) {
+                        clearTimeout(saveTimeout)
                       }
-                    }, 2000)
-                    setSaveTimeout(timeout)
-                  }}
-                  placeholder="Note title"
-                  className="w-full text-xl font-semibold border-none focus:outline-none focus:ring-0 bg-transparent text-gray-100 placeholder-gray-500"
-                />
+                      const timeout = setTimeout(async () => {
+                        if (selectedNote && user) {
+                          setSaving(true)
+                          // Use the latest state values by reading them in the timeout
+                          const currentContent = noteContent
+                          const updated = await updateNote(selectedNote.id, {
+                            title: newTitle || null,
+                            content: currentContent || null,
+                          })
+                          if (updated) {
+                            setSelectedNote(updated)
+                            setNotes(notes.map((n) => (n.id === updated.id ? updated : n)))
+                          }
+                          setSaving(false)
+                        }
+                      }, 2000)
+                      setSaveTimeout(timeout)
+                    }}
+                    placeholder="Note title"
+                    className="flex-1 text-xl font-semibold border-none focus:outline-none focus:ring-0 bg-transparent text-gray-100 placeholder-gray-500"
+                  />
+                  {selectedNote.creator_username && (
+                    <span className="text-sm text-gray-400 whitespace-nowrap">
+                      by {selectedNote.created_by === user?.id ? 'You' : selectedNote.creator_username}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex-1 p-4 overflow-y-auto min-h-0">
                 <textarea

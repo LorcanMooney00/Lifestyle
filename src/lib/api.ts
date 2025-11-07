@@ -52,12 +52,16 @@ export async function createTopic(name: string, ownerId: string): Promise<{ topi
   return { topic: data, error: null }
 }
 
-export async function getAllNotes(): Promise<Note[]> {
+export async function getAllNotes(): Promise<Array<Note & { creator_username?: string | null }>> {
   // RLS policies will automatically filter to notes from topics user has access to
   // (owned, member of, or partner's topics)
+  // Join with user_profiles to get creator username
   const { data, error } = await supabase
     .from('notes')
-    .select('*')
+    .select(`
+      *,
+      creator:user_profiles!notes_created_by_fkey(username)
+    `)
     .order('updated_at', { ascending: false })
 
   if (error) {
@@ -65,7 +69,13 @@ export async function getAllNotes(): Promise<Note[]> {
     return []
   }
 
-  return data || []
+  if (!data) return []
+
+  // Map the data to include creator_username
+  return data.map((note: any) => ({
+    ...note,
+    creator_username: note.creator?.username || null,
+  }))
 }
 
 export async function getNotes(topicId: string): Promise<Note[]> {

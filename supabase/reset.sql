@@ -408,8 +408,7 @@ CREATE POLICY "Users can create notes in accessible topics"
           WHERE topic_members.topic_id = topics.id
           AND topic_members.user_id = auth.uid()
           AND topic_members.role IN ('owner', 'editor')
-        ) OR
-        are_partners(auth.uid(), topics.owner_id)
+        )
       )
     )
   );
@@ -428,8 +427,7 @@ CREATE POLICY "Users can update notes in accessible topics"
           WHERE topic_members.topic_id = topics.id
           AND topic_members.user_id = auth.uid()
           AND topic_members.role IN ('owner', 'editor')
-        ) OR
-        are_partners(auth.uid(), topics.owner_id)
+        )
       )
     )
   );
@@ -448,8 +446,7 @@ CREATE POLICY "Users can delete notes in accessible topics"
           WHERE topic_members.topic_id = topics.id
           AND topic_members.user_id = auth.uid()
           AND topic_members.role IN ('owner', 'editor')
-        ) OR
-        are_partners(auth.uid(), topics.owner_id)
+        )
       )
     )
   );

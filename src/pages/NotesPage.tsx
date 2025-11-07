@@ -163,12 +163,12 @@ export default function NotesPage() {
                       selectedNote?.id === note.id ? 'bg-indigo-50 border-l-4 border-indigo-600' : ''
                     }`}
                   >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex-1 min-w-0 overflow-hidden">
                         <h3 className="font-medium text-gray-900 truncate text-sm">
                           {note.title || 'Untitled Note'}
                         </h3>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 mt-1 truncate">
                           {new Date(note.updated_at).toLocaleDateString()}
                         </p>
                       </div>
@@ -177,7 +177,7 @@ export default function NotesPage() {
                           e.stopPropagation()
                           handleDeleteNote(note.id)
                         }}
-                        className="ml-2 text-red-600 hover:text-red-800 text-xs"
+                        className="ml-2 text-red-600 hover:text-red-800 text-xs flex-shrink-0"
                       >
                         ×
                       </button>

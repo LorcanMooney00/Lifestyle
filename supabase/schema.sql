@@ -75,7 +75,41 @@ CREATE POLICY "Users can delete their own photos"
   ON public.photos FOR DELETE
   USING (user_id = auth.uid());
 
--- Step 6: Verify RLS is enabled and policies exist (should return 3 rows)
+-- Step 6: Create a function to insert photos (bypasses RLS issues)
+CREATE OR REPLACE FUNCTION insert_photo(
+  p_user_id UUID,
+  p_storage_path TEXT,
+  p_url TEXT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_photo_id UUID;
+  v_result JSONB;
+BEGIN
+  -- Validate that the user_id matches the authenticated user
+  IF p_user_id != auth.uid() THEN
+    RAISE EXCEPTION 'User ID does not match authenticated user';
+  END IF;
+  
+  -- Insert the photo
+  INSERT INTO public.photos (user_id, storage_path, url)
+  VALUES (p_user_id, p_storage_path, p_url)
+  RETURNING id INTO v_photo_id;
+  
+  -- Return the inserted photo as JSONB
+  SELECT row_to_json(p.*)::jsonb INTO v_result
+  FROM public.photos p
+  WHERE p.id = v_photo_id;
+  
+  RETURN v_result;
+END;
+$$;
+
+-- Step 7: Verify RLS is enabled and policies exist (should return 3 rows)
 SELECT 
   tablename, 
   policyname, 

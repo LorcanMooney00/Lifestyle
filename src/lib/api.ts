@@ -872,34 +872,22 @@ export async function uploadPhoto(file: File): Promise<{ photo: Photo | null; er
     const { data: urlData } = supabase.storage.from('photos').getPublicUrl(filePath)
     const publicUrl = urlData.publicUrl
 
-    // Save photo record to database
-    // The RLS policy checks: user_id = auth.uid()
-    // We use the authenticated user's ID, and Supabase client automatically includes auth token
-    const { data, error: dbError } = await supabase
-      .from('photos')
-      .insert({
-        user_id: authenticatedUserId,
-        storage_path: filePath,
-        url: publicUrl,
-      })
-      .select()
-      .single()
+    // Save photo record to database using RPC function to bypass RLS issues
+    // The function uses SECURITY DEFINER and validates the user_id matches auth.uid()
+    const { data, error: dbError } = await supabase.rpc('insert_photo', {
+      p_user_id: authenticatedUserId,
+      p_storage_path: filePath,
+      p_url: publicUrl,
+    })
 
     if (dbError) {
       console.error('Error saving photo record:', dbError)
       // Try to delete the uploaded file
       await supabase.storage.from('photos').remove([filePath])
-      
-      // Provide helpful error message for RLS violations
-      if (dbError.message.includes('row-level security') || dbError.message.includes('RLS')) {
-        return { 
-          photo: null, 
-          error: 'Permission denied. Please ensure you are logged in and the photos table RLS policies are set up correctly.' 
-        }
-      }
       return { photo: null, error: dbError.message }
     }
 
+    // The function returns JSONB, convert it to Photo type
     return { photo: data as Photo, error: null }
   } catch (error: any) {
     console.error('Error uploading photo:', error)

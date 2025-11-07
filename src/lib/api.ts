@@ -167,7 +167,7 @@ export async function getAllNotes(userId: string, filterPartnerId?: string): Pro
       .select('topic_id')
       .eq('user_id', filterPartnerId)
     
-    const partnerTopicIds = partnerTopicMembers?.map(tm => tm.topic_id) || []
+    const partnerTopicIds = partnerTopicMembers?.map((tm: any) => tm.topic_id) || []
     
     return mappedNotes.filter((note: any) => {
       const topicId = note.topic_id

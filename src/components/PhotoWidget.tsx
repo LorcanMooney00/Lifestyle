@@ -5,9 +5,10 @@ import type { Photo } from '../types'
 
 interface PhotoWidgetProps {
   photoIndex?: number // Which photo to show (0, 1, 2, etc.)
+  tall?: boolean // If true, widget will be taller (2:1 aspect ratio instead of 1:1)
 }
 
-export default function PhotoWidget({ photoIndex = 0 }: PhotoWidgetProps) {
+export default function PhotoWidget({ photoIndex = 0, tall = false }: PhotoWidgetProps) {
   const { user } = useAuth()
   const [photos, setPhotos] = useState<Photo[]>([])
   const [uploading, setUploading] = useState(false)
@@ -74,12 +75,14 @@ export default function PhotoWidget({ photoIndex = 0 }: PhotoWidgetProps) {
     }
   }
 
-  // Get the photo to display (cycle through available photos based on photoIndex)
-  const displayPhoto = photos.length > 0 ? photos[photoIndex % photos.length] : null
+  // Get the photo to display - each widget shows a specific position (0, 1, 2)
+  // Widget 1 shows photos[0], Widget 2 shows photos[1], Widget 3 shows photos[2]
+  // If the photo at that index doesn't exist, show null (empty state)
+  const displayPhoto = photos.length > photoIndex ? photos[photoIndex] : null
 
   if (photos.length === 0 && !showUpload) {
     return (
-      <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-lg p-3 sm:p-4 aspect-square flex flex-col items-center justify-center overflow-hidden">
+      <div className={`bg-gray-800 border border-gray-700 rounded-xl shadow-lg p-3 sm:p-4 ${tall ? 'aspect-[2/1]' : 'aspect-square'} flex flex-col items-center justify-center overflow-hidden`}>
         <div className="text-3xl sm:text-4xl mb-2">📸</div>
         <button
           onClick={() => setShowUpload(true)}
@@ -92,7 +95,7 @@ export default function PhotoWidget({ photoIndex = 0 }: PhotoWidgetProps) {
   }
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-lg overflow-hidden aspect-square flex flex-col group">
+    <div className={`bg-gray-800 border border-gray-700 rounded-xl shadow-lg overflow-hidden ${tall ? 'aspect-[2/1]' : 'aspect-square'} flex flex-col group`}>
       {/* Compact header overlay when showing photo */}
       {displayPhoto && !showUpload && (
         <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-end p-2 bg-gradient-to-b from-black/60 to-transparent backdrop-blur-sm">

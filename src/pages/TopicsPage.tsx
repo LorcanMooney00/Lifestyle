@@ -122,32 +122,40 @@ export default function TopicsPage() {
           <p className="text-gray-400">Choose an app or select a partner to get started</p>
         </div>
 
-        {/* Partner Selection */}
+        {/* Partner Selection with Photo Widget 1 on the right */}
         {!loading && partners.length > 0 && (
           <div className="mb-4 sm:mb-6 md:mb-8">
             <h3 className="text-base sm:text-lg md:text-xl lg:text-lg xl:text-xl 2xl:text-lg font-semibold text-gray-100 mb-2 sm:mb-3 md:mb-4">Your Partners</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3 mb-3 sm:mb-4 md:mb-6">
-              {partners.map((partner) => (
-                <button
-                  key={partner.id}
-                  onClick={() => navigate(`/app/partner/${partner.id}`)}
-                  className="bg-gray-800 p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left border-2 border-transparent hover:border-indigo-500 group aspect-square flex flex-col justify-center overflow-hidden"
-                >
-                  <div className="text-xl sm:text-2xl md:text-3xl lg:text-2xl xl:text-3xl 2xl:text-2xl mb-1 sm:mb-2 md:mb-3 flex-shrink-0">👤</div>
-                  <h4 className="text-xs sm:text-sm md:text-base lg:text-sm xl:text-base 2xl:text-sm font-bold mb-1 text-gray-100 group-hover:text-indigo-400 transition-colors truncate">
-                    {partner.username}
-                  </h4>
-                  <p className="text-gray-400 text-xs sm:text-sm truncate">{partner.email}</p>
-                  <div className="mt-1 sm:mt-2 md:mt-3 text-indigo-400 font-medium text-xs sm:text-sm group-hover:text-indigo-300">
-                    View shared content →
-                  </div>
-                </button>
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3 mb-3 sm:mb-4 md:mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3 md:col-span-3 lg:col-span-4 xl:col-span-5 2xl:col-span-6">
+                {partners.map((partner) => (
+                  <button
+                    key={partner.id}
+                    onClick={() => navigate(`/app/partner/${partner.id}`)}
+                    className="bg-gray-800 p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left border-2 border-transparent hover:border-indigo-500 group aspect-square flex flex-col justify-center overflow-hidden"
+                  >
+                    <div className="text-xl sm:text-2xl md:text-3xl lg:text-2xl xl:text-3xl 2xl:text-2xl mb-1 sm:mb-2 md:mb-3 flex-shrink-0">👤</div>
+                    <h4 className="text-xs sm:text-sm md:text-base lg:text-sm xl:text-base 2xl:text-sm font-bold mb-1 text-gray-100 group-hover:text-indigo-400 transition-colors truncate">
+                      {partner.username}
+                    </h4>
+                    <p className="text-gray-400 text-xs sm:text-sm truncate">{partner.email}</p>
+                    <div className="mt-1 sm:mt-2 md:mt-3 text-indigo-400 font-medium text-xs sm:text-sm group-hover:text-indigo-300">
+                      View shared content →
+                    </div>
+                  </button>
+                ))}
+              </div>
+              {/* Photo Widget 1 - Large area to the right of Partners */}
+              {tilePreferences['photo-gallery'] !== false && (
+                <div className="md:col-span-1 row-span-2">
+                  <PhotoWidget photoIndex={0} />
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Quick Stats with Photo Widget 1 */}
+        {/* Quick Stats with Photo Widget 3 */}
         {!loading && (
           <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-2 mb-4 sm:mb-6 md:mb-8">
             <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-2.5 aspect-square flex flex-col justify-center">
@@ -177,49 +185,57 @@ export default function TopicsPage() {
                 <div className="text-xl sm:text-2xl md:text-3xl lg:text-2xl xl:text-3xl 2xl:text-xl flex-shrink-0 ml-1">👥</div>
               </div>
             </div>
-            {/* Photo Widget 1 */}
+            {/* Photo Widget 3 - After Linked Partners */}
             {tilePreferences['photo-gallery'] !== false && (
-              <div className="hidden md:block">
-                <PhotoWidget photoIndex={0} />
+              <div className="md:col-span-1">
+                <PhotoWidget photoIndex={2} />
               </div>
             )}
           </div>
         )}
 
-        {/* App Cards with Photo Widget 2 */}
+        {/* App Cards and Recent Activity with Photo Widget 2 on the left */}
         <div className="mb-4 sm:mb-6 md:mb-8">
           <h3 className="text-base sm:text-lg md:text-xl lg:text-lg xl:text-xl 2xl:text-lg font-semibold text-gray-100 mb-2 sm:mb-3 md:mb-4">Apps</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3">
-            {appCards
-              .filter((app) => tilePreferences[app.id] !== false)
-              .map((app) => (
-                <button
-                  key={app.id}
-                  onClick={() => navigate(app.route)}
-                  className={`${app.color} ${app.hoverColor} text-white p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left group aspect-square flex flex-col justify-center`}
-                >
-                  <div className="text-2xl sm:text-3xl md:text-4xl lg:text-3xl xl:text-4xl 2xl:text-3xl mb-1 sm:mb-2 md:mb-3 lg:mb-2 xl:mb-3 2xl:mb-2">{app.icon}</div>
-                  <h3 className="text-sm sm:text-base md:text-lg lg:text-base xl:text-lg 2xl:text-base font-bold mb-1 sm:mb-2">{app.title}</h3>
-                  <p className="text-xs sm:text-sm text-indigo-100 group-hover:text-white transition-colors line-clamp-2">
-                    {app.description}
-                  </p>
-                </button>
-              ))}
-            {/* Photo Widget 2 - integrated into app cards grid */}
+          <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3">
+            {/* Photo Widget 2 - Vertical area on the left covering Share Notes and Upcoming Events */}
             {tilePreferences['photo-gallery'] !== false && (
-              <div className="hidden lg:block">
-                <PhotoWidget photoIndex={1} />
+              <div className="md:col-span-1 row-span-3">
+                <PhotoWidget photoIndex={1} tall={true} />
               </div>
             )}
+
+            {/* App Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3 md:col-span-3 lg:col-span-4 xl:col-span-5 2xl:col-span-6">
+              {appCards
+                .filter((app) => tilePreferences[app.id] !== false)
+                .map((app) => (
+                  <button
+                    key={app.id}
+                    onClick={() => navigate(app.route)}
+                    className={`${app.color} ${app.hoverColor} text-white p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left group aspect-square flex flex-col justify-center`}
+                  >
+                    <div className="text-2xl sm:text-3xl md:text-4xl lg:text-3xl xl:text-4xl 2xl:text-3xl mb-1 sm:mb-2 md:mb-3 lg:mb-2 xl:mb-3 2xl:mb-2">{app.icon}</div>
+                    <h3 className="text-sm sm:text-base md:text-lg lg:text-base xl:text-lg 2xl:text-base font-bold mb-1 sm:mb-2">{app.title}</h3>
+                    <p className="text-xs sm:text-sm text-indigo-100 group-hover:text-white transition-colors line-clamp-2">
+                      {app.description}
+                    </p>
+                  </button>
+                ))}
+            </div>
           </div>
         </div>
 
-
-        {/* Recent Activity with Photo Widget 3 */}
+        {/* Recent Activity */}
         {!loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 2xl:gap-3">
+            {/* Photo Widget 2 spacer - keeps alignment with above */}
+            {tilePreferences['photo-gallery'] !== false && (
+              <div className="hidden md:block md:col-span-1"></div>
+            )}
+
             {/* Upcoming Events */}
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 aspect-square flex flex-col overflow-hidden">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 aspect-square flex flex-col overflow-hidden md:col-span-1">
               <div className="flex items-center justify-between mb-2 sm:mb-3 md:mb-4 flex-shrink-0">
                 <h3 className="text-sm sm:text-base md:text-lg lg:text-base xl:text-lg 2xl:text-base font-bold text-gray-100 truncate">Upcoming Events</h3>
                 <button
@@ -261,7 +277,7 @@ export default function TopicsPage() {
             </div>
 
             {/* Recent Notes */}
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 aspect-square flex flex-col overflow-hidden">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 sm:p-4 md:p-5 lg:p-4 xl:p-5 2xl:p-4 aspect-square flex flex-col overflow-hidden md:col-span-1">
               <div className="flex items-center justify-between mb-2 sm:mb-3 md:mb-4 flex-shrink-0">
                 <h3 className="text-sm sm:text-base md:text-lg lg:text-base xl:text-lg 2xl:text-base font-bold text-gray-100 truncate">Recent Notes</h3>
                 <button
@@ -307,13 +323,6 @@ export default function TopicsPage() {
                 )}
               </div>
             </div>
-
-            {/* Photo Widget 3 - integrated into recent activity grid */}
-            {tilePreferences['photo-gallery'] !== false && (
-              <div className="hidden lg:block">
-                <PhotoWidget photoIndex={2} />
-              </div>
-            )}
           </div>
         )}
       </main>

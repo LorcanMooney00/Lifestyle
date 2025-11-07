@@ -163,11 +163,11 @@ export default function CalendarPage() {
         <div
           key={day}
           onClick={() => handleDayClick(day)}
-          className={`aspect-square p-2 border border-gray-200 hover:bg-gray-50 cursor-pointer ${
-            isToday ? 'bg-indigo-100 border-indigo-500' : ''
+          className={`aspect-square p-2 border border-gray-700 hover:bg-gray-700 cursor-pointer ${
+            isToday ? 'bg-indigo-900 border-indigo-500' : ''
           }`}
         >
-          <div className={`text-sm mb-1 ${isToday ? 'font-bold text-indigo-700' : 'text-gray-700'}`}>
+          <div className={`text-sm mb-1 ${isToday ? 'font-bold text-indigo-200' : 'text-gray-300'}`}>
             {day}
           </div>
           <div className="space-y-0.5">
@@ -178,7 +178,7 @@ export default function CalendarPage() {
                   e.stopPropagation()
                   setSelectedEvent(event)
                 }}
-                className="text-xs bg-indigo-500 text-white px-1 py-0.5 rounded truncate hover:bg-indigo-600"
+                className="text-xs bg-indigo-600 text-white px-1 py-0.5 rounded truncate hover:bg-indigo-500"
                 title={event.title}
               >
                 {event.title}
@@ -198,29 +198,29 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-gray-900">
+      <nav className="bg-gray-800 shadow-sm border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <button
                 onClick={() => navigate('/app/topics')}
-                className="text-gray-600 hover:text-gray-900 mr-4"
+                className="text-gray-300 hover:text-gray-100 mr-4"
               >
                 ← Dashboard
               </button>
-              <h1 className="text-xl font-bold text-gray-900">Calendar</h1>
+              <h1 className="text-xl font-bold text-gray-100">Calendar</h1>
             </div>
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => navigate('/app/settings')}
-                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                className="text-gray-300 hover:text-gray-100 px-3 py-2 rounded-md text-sm font-medium"
               >
                 Settings
               </button>
               <button
                 onClick={handleSignOut}
-                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                className="text-gray-300 hover:text-gray-100 px-3 py-2 rounded-md text-sm font-medium"
               >
                 Sign Out
               </button>
@@ -230,29 +230,29 @@ export default function CalendarPage() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-sm border">
+        <div className="bg-gray-800 rounded-lg shadow-sm border border-gray-700">
           {/* Calendar Header */}
-          <div className="p-6 border-b flex justify-between items-center">
+          <div className="p-6 border-b border-gray-700 flex justify-between items-center">
             <div className="flex items-center space-x-4">
               <button
                 onClick={goToPreviousMonth}
-                className="p-2 hover:bg-gray-100 rounded-md"
+                className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-gray-100"
               >
                 ←
               </button>
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h2 className="text-2xl font-bold text-gray-100">
                 {monthNames[month]} {year}
               </h2>
               <button
                 onClick={goToNextMonth}
-                className="p-2 hover:bg-gray-100 rounded-md"
+                className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-gray-100"
               >
                 →
               </button>
             </div>
             <button
               onClick={goToToday}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-sm font-medium"
+              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500 text-sm font-medium"
             >
               Today
             </button>
@@ -263,7 +263,7 @@ export default function CalendarPage() {
             {/* Day Names Header */}
             <div className="grid grid-cols-7 gap-0 mb-2">
               {dayNames.map((day) => (
-                <div key={day} className="text-center text-sm font-semibold text-gray-700 py-2">
+                <div key={day} className="text-center text-sm font-semibold text-gray-400 py-2">
                   {day}
                 </div>
               ))}
@@ -278,11 +278,11 @@ export default function CalendarPage() {
 
         {/* Event Form Modal */}
         {showEventForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-gray-700">
               <div className="p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold text-gray-900">
+                  <h3 className="text-xl font-bold text-gray-100">
                     {selectedEvent ? 'Edit Event' : 'New Event'}
                   </h3>
                   <button
@@ -290,7 +290,7 @@ export default function CalendarPage() {
                       setShowEventForm(false)
                       setSelectedEvent(null)
                     }}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-gray-400 hover:text-gray-200"
                   >
                     ×
                   </button>
@@ -298,7 +298,7 @@ export default function CalendarPage() {
 
                 <form onSubmit={handleSaveEvent} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
                       Title *
                     </label>
                     <input
@@ -306,13 +306,13 @@ export default function CalendarPage() {
                       value={eventTitle}
                       onChange={(e) => setEventTitle(e.target.value)}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       placeholder="Event title"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
                       Date *
                     </label>
                     <input
@@ -320,31 +320,31 @@ export default function CalendarPage() {
                       value={eventDate}
                       onChange={(e) => setEventDate(e.target.value)}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
                       Time (optional)
                     </label>
                     <input
                       type="time"
                       value={eventTime}
                       onChange={(e) => setEventTime(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
                       Description (optional)
                     </label>
                     <textarea
                       value={eventDescription}
                       onChange={(e) => setEventDescription(e.target.value)}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       placeholder="Event description"
                     />
                   </div>
@@ -354,7 +354,7 @@ export default function CalendarPage() {
                       <button
                         type="button"
                         onClick={handleDeleteEvent}
-                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium"
+                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-500 text-sm font-medium"
                       >
                         Delete
                       </button>
@@ -366,14 +366,14 @@ export default function CalendarPage() {
                           setShowEventForm(false)
                           setSelectedEvent(null)
                         }}
-                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm font-medium"
+                        className="px-4 py-2 bg-gray-700 text-gray-300 rounded-md hover:bg-gray-600 text-sm font-medium"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
                         disabled={saving || !eventTitle.trim() || !eventDate}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                       >
                         {saving ? 'Saving...' : 'Save'}
                       </button>

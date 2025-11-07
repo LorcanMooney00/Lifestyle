@@ -94,23 +94,23 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-gray-900">
+      <nav className="bg-gray-800 shadow-sm border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <button
                 onClick={() => navigate('/app/partners')}
-                className="text-gray-600 hover:text-gray-900 mr-4"
+                className="text-gray-300 hover:text-gray-100 mr-4"
               >
                 ← Partners
               </button>
-              <h1 className="text-xl font-bold text-gray-900">Settings</h1>
+              <h1 className="text-xl font-bold text-gray-100">Settings</h1>
             </div>
             <div className="flex items-center">
               <button
                 onClick={handleSignOut}
-                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                className="text-gray-300 hover:text-gray-100 px-3 py-2 rounded-md text-sm font-medium"
               >
                 Sign Out
               </button>
@@ -120,19 +120,19 @@ export default function SettingsPage() {
       </nav>
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white shadow-sm rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+        <div className="bg-gray-800 shadow-sm rounded-lg p-6 border border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-100 mb-6">
             Partner Linking
           </h2>
 
           {loading ? (
-            <div className="text-gray-600">Loading...</div>
+            <div className="text-gray-400">Loading...</div>
           ) : (
             <div className="space-y-6">
               {/* Show existing partners if any */}
               {partners.length > 0 && (
                 <div className="space-y-4">
-                  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+                  <div className="bg-green-900 border border-green-700 text-green-200 px-4 py-3 rounded">
                     <p className="font-medium">Linked Partners</p>
                     <p className="text-sm mt-1">
                       You have {partners.length} partner{partners.length !== 1 ? 's' : ''} linked.
@@ -142,11 +142,11 @@ export default function SettingsPage() {
                     {partners.map((partner) => (
                       <div
                         key={partner.id}
-                        className="flex items-center justify-between bg-gray-50 p-3 rounded border"
+                        className="flex items-center justify-between bg-gray-700 p-3 rounded border border-gray-600"
                       >
                         <div>
-                          <p className="font-medium text-gray-900">{partner.username}</p>
-                          <p className="text-sm text-gray-600">{partner.email}</p>
+                          <p className="font-medium text-gray-100">{partner.username}</p>
+                          <p className="text-sm text-gray-400">{partner.email}</p>
                         </div>
                         <button
                           onClick={async () => {
@@ -164,7 +164,7 @@ export default function SettingsPage() {
                             }
                           }}
                           disabled={unlinking || !user}
-                          className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 disabled:opacity-50"
+                          className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-500 disabled:opacity-50"
                         >
                           Unlink
                         </button>
@@ -175,23 +175,23 @@ export default function SettingsPage() {
               )}
 
               {/* Always show the form to add more partners */}
-              <div className="space-y-4 border-t pt-6">
-                <h3 className="text-lg font-semibold text-gray-900">
+              <div className="space-y-4 border-t border-gray-700 pt-6">
+                <h3 className="text-lg font-semibold text-gray-100">
                   {partners.length > 0 ? 'Add Another Partner' : 'Link a Partner'}
                 </h3>
-                <p className="text-gray-600 text-sm">
+                <p className="text-gray-400 text-sm">
                   Link your account with a partner's account to share notes and calendar events together.
                   Your partner needs to have an account with the email address you provide.
                 </p>
 
                 {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                  <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded">
                     {error}
                   </div>
                 )}
 
                 {success && (
-                  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+                  <div className="bg-green-900 border border-green-700 text-green-200 px-4 py-3 rounded">
                     {success}
                   </div>
                 )}
@@ -200,7 +200,7 @@ export default function SettingsPage() {
                   <div>
                     <label
                       htmlFor="partner-email"
-                      className="block text-sm font-medium text-gray-700 mb-2"
+                      className="block text-sm font-medium text-gray-300 mb-2"
                     >
                       Partner's Email Address
                     </label>
@@ -211,13 +211,13 @@ export default function SettingsPage() {
                       onChange={(e) => setPartnerEmail(e.target.value)}
                       placeholder="partner@example.com"
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={linking || !partnerEmail.trim()}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                   >
                     {linking ? 'Linking...' : 'Link Partner'}
                   </button>
@@ -227,21 +227,21 @@ export default function SettingsPage() {
           )}
         </div>
 
-        <div className="bg-white shadow-sm rounded-lg p-6 mt-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+        <div className="bg-gray-800 shadow-sm rounded-lg p-6 mt-6 border border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-100 mb-4">
             Username
           </h2>
           
           {usernameEditing ? (
             <form onSubmit={handleUpdateUsername} className="space-y-4">
               {usernameError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded">
                   {usernameError}
                 </div>
               )}
               
               {usernameSuccess && (
-                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+                <div className="bg-green-900 border border-green-700 text-green-200 px-4 py-3 rounded">
                   {usernameSuccess}
                 </div>
               )}
@@ -249,7 +249,7 @@ export default function SettingsPage() {
               <div>
                 <label
                   htmlFor="username"
-                  className="block text-sm font-medium text-gray-700 mb-2"
+                  className="block text-sm font-medium text-gray-300 mb-2"
                 >
                   Username
                 </label>
@@ -260,7 +260,7 @@ export default function SettingsPage() {
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Enter your username"
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   disabled={usernameLoading}
                 />
               </div>
@@ -269,7 +269,7 @@ export default function SettingsPage() {
                 <button
                   type="submit"
                   disabled={usernameLoading || !username.trim()}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                 >
                   {usernameLoading ? 'Saving...' : 'Save'}
                 </button>
@@ -282,7 +282,7 @@ export default function SettingsPage() {
                     loadUsername()
                   }}
                   disabled={usernameLoading}
-                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 disabled:opacity-50 text-sm font-medium"
+                  className="bg-gray-700 text-gray-300 px-4 py-2 rounded-md hover:bg-gray-600 disabled:opacity-50 text-sm font-medium"
                 >
                   Cancel
                 </button>
@@ -292,10 +292,10 @@ export default function SettingsPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-400">
                     <span className="font-medium">Username:</span>{' '}
                     {username || (
-                      <span className="text-gray-400 italic">Not set</span>
+                      <span className="text-gray-500 italic">Not set</span>
                     )}
                   </p>
                   {!username && (
@@ -310,7 +310,7 @@ export default function SettingsPage() {
                     setUsernameError(null)
                     setUsernameSuccess(null)
                   }}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 text-sm font-medium"
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-500 text-sm font-medium"
                 >
                   {username ? 'Change' : 'Add'} Username
                 </button>
@@ -319,15 +319,15 @@ export default function SettingsPage() {
           )}
         </div>
 
-        <div className="bg-white shadow-sm rounded-lg p-6 mt-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+        <div className="bg-gray-800 shadow-sm rounded-lg p-6 mt-6 border border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-100 mb-4">
             Account Information
           </h2>
           <div className="space-y-2">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-400">
               <span className="font-medium">Email:</span> {user?.email}
             </p>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-400">
               <span className="font-medium">User ID:</span> {user?.id}
             </p>
           </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
-import { getPartners, linkPartner, unlinkPartner } from '../lib/api'
+import { getPartners, linkPartner, unlinkPartner, getUserProfile, updateUserProfile } from '../lib/api'
 import { signOut } from '../lib/auth'
 
 export default function SettingsPage() {
@@ -14,12 +14,26 @@ export default function SettingsPage() {
   const [unlinking, setUnlinking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  
+  // Username state
+  const [username, setUsername] = useState('')
+  const [usernameLoading, setUsernameLoading] = useState(false)
+  const [usernameEditing, setUsernameEditing] = useState(false)
+  const [usernameError, setUsernameError] = useState<string | null>(null)
+  const [usernameSuccess, setUsernameSuccess] = useState<string | null>(null)
 
   useEffect(() => {
     if (user) {
       loadPartnerStatus()
+      loadUsername()
     }
   }, [user])
+
+  const loadUsername = async () => {
+    if (!user) return
+    const { username: currentUsername } = await getUserProfile(user.id)
+    setUsername(currentUsername || '')
+  }
 
   const loadPartnerStatus = async () => {
     if (!user) return
@@ -27,6 +41,31 @@ export default function SettingsPage() {
     const data = await getPartners(user.id)
     setPartners(data)
     setLoading(false)
+  }
+
+  const handleUpdateUsername = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user || !username.trim()) {
+      setUsernameError('Username cannot be empty')
+      return
+    }
+
+    setUsernameLoading(true)
+    setUsernameError(null)
+    setUsernameSuccess(null)
+
+    const { success, error } = await updateUserProfile(user.id, username.trim())
+    
+    if (success) {
+      setUsernameSuccess('Username updated successfully!')
+      setUsernameEditing(false)
+      // Reload partners to show updated username
+      await loadPartnerStatus()
+    } else {
+      setUsernameError(error || 'Failed to update username')
+    }
+
+    setUsernameLoading(false)
   }
 
   const handleLinkPartner = async (e: React.FormEvent) => {
@@ -175,6 +214,98 @@ export default function SettingsPage() {
                   {linking ? 'Linking...' : 'Link Partner'}
                 </button>
               </form>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white shadow-sm rounded-lg p-6 mt-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Username
+          </h2>
+          
+          {usernameEditing ? (
+            <form onSubmit={handleUpdateUsername} className="space-y-4">
+              {usernameError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                  {usernameError}
+                </div>
+              )}
+              
+              {usernameSuccess && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+                  {usernameSuccess}
+                </div>
+              )}
+              
+              <div>
+                <label
+                  htmlFor="username"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Username
+                </label>
+                <input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter your username"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  disabled={usernameLoading}
+                />
+              </div>
+              
+              <div className="flex space-x-2">
+                <button
+                  type="submit"
+                  disabled={usernameLoading || !username.trim()}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                >
+                  {usernameLoading ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUsernameEditing(false)
+                    setUsernameError(null)
+                    setUsernameSuccess(null)
+                    loadUsername()
+                  }}
+                  disabled={usernameLoading}
+                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 disabled:opacity-50 text-sm font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">Username:</span>{' '}
+                    {username || (
+                      <span className="text-gray-400 italic">Not set</span>
+                    )}
+                  </p>
+                  {!username && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Set a username so partners can easily identify you
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    setUsernameEditing(true)
+                    setUsernameError(null)
+                    setUsernameSuccess(null)
+                  }}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 text-sm font-medium"
+                >
+                  {username ? 'Change' : 'Add'} Username
+                </button>
+              </div>
             </div>
           )}
         </div>

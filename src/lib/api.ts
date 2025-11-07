@@ -178,6 +178,51 @@ export async function addTopicMember(
   return data
 }
 
+export async function getUserProfile(userId: string): Promise<{ username: string | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('username')
+    .eq('id', userId)
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // No profile found
+      return { username: null, error: null }
+    }
+    console.error('Error fetching user profile:', error)
+    return { username: null, error: error.message }
+  }
+
+  return { username: data?.username || null, error: null }
+}
+
+export async function updateUserProfile(userId: string, username: string): Promise<{ success: boolean; error: string | null }> {
+  // Use upsert to either update existing profile or create new one
+  const { error } = await supabase
+    .from('user_profiles')
+    .upsert(
+      {
+        id: userId,
+        username,
+      },
+      {
+        onConflict: 'id',
+      }
+    )
+
+  if (error) {
+    console.error('Error updating user profile:', error)
+    // Check for unique constraint violation (username already taken)
+    if (error.code === '23505' || error.message.includes('unique')) {
+      return { success: false, error: 'This username is already taken. Please choose another.' }
+    }
+    return { success: false, error: error.message }
+  }
+
+  return { success: true, error: null }
+}
+
 export async function getPartners(userId: string): Promise<Array<{ id: string; email: string; username: string }>> {
   // Use RPC function to get partners with emails
   const { data, error } = await supabase.rpc('get_partners_with_emails', {

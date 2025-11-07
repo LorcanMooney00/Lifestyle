@@ -99,8 +99,33 @@ export default function TopicsPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-100 mb-2">Dashboard</h2>
-          <p className="text-gray-400">Choose an app to get started</p>
+          <p className="text-gray-400">Choose an app or select a partner to get started</p>
         </div>
+
+        {/* Partner Selection */}
+        {!loading && partners.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-xl font-semibold text-gray-100 mb-4">Your Partners</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              {partners.map((partner) => (
+                <button
+                  key={partner.id}
+                  onClick={() => navigate(`/app/partner/${partner.id}`)}
+                  className="bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left border-2 border-transparent hover:border-indigo-500 group"
+                >
+                  <div className="text-4xl mb-3">👤</div>
+                  <h4 className="text-lg font-bold mb-1 text-gray-100 group-hover:text-indigo-400 transition-colors">
+                    {partner.username}
+                  </h4>
+                  <p className="text-gray-400 text-sm">{partner.email}</p>
+                  <div className="mt-3 text-indigo-400 font-medium text-sm group-hover:text-indigo-300">
+                    View shared content →
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Quick Stats */}
         {!loading && (
@@ -136,20 +161,23 @@ export default function TopicsPage() {
         )}
 
         {/* App Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {appCards.map((app) => (
-            <button
-              key={app.id}
-              onClick={() => navigate(app.route)}
-              className={`${app.color} ${app.hoverColor} text-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left group`}
-            >
-              <div className="text-5xl mb-4">{app.icon}</div>
-              <h3 className="text-2xl font-bold mb-2">{app.title}</h3>
-              <p className="text-indigo-100 group-hover:text-white transition-colors">
-                {app.description}
-              </p>
-            </button>
-          ))}
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold text-gray-100 mb-4">Apps</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {appCards.map((app) => (
+              <button
+                key={app.id}
+                onClick={() => navigate(app.route)}
+                className={`${app.color} ${app.hoverColor} text-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left group`}
+              >
+                <div className="text-5xl mb-4">{app.icon}</div>
+                <h3 className="text-2xl font-bold mb-2">{app.title}</h3>
+                <p className="text-indigo-100 group-hover:text-white transition-colors">
+                  {app.description}
+                </p>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Recent Activity */}

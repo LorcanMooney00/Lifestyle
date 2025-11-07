@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
-import { getPartners } from '../lib/api'
+import { getPartners, getTilePreferences } from '../lib/api'
 import { useState, useEffect } from 'react'
 import { signOut } from '../lib/auth'
 
@@ -11,6 +11,11 @@ export default function PartnerDashboardPage() {
   const [partnerEmail, setPartnerEmail] = useState<string>('')
   const [partnerUsername, setPartnerUsername] = useState<string>('')
   const [loading, setLoading] = useState(true)
+  const [tilePreferences, setTilePreferences] = useState<Record<string, boolean>>({
+    'shared-notes': true,
+    'calendar': true,
+    'recipes': true,
+  })
 
   useEffect(() => {
     if (user && partnerId) {
@@ -21,11 +26,17 @@ export default function PartnerDashboardPage() {
   const loadPartnerInfo = async () => {
     if (!user || !partnerId) return
     setLoading(true)
-    const partners = await getPartners(user.id)
+    const [partners, preferencesData] = await Promise.all([
+      getPartners(user.id),
+      getTilePreferences(user.id),
+    ])
     const partner = partners.find((p) => p.id === partnerId)
     if (partner) {
       setPartnerEmail(partner.email)
       setPartnerUsername(partner.username)
+    }
+    if (preferencesData.preferences) {
+      setTilePreferences(preferencesData.preferences)
     }
     setLoading(false)
   }
@@ -115,19 +126,21 @@ export default function PartnerDashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {appCards.map((app) => (
-            <button
-              key={app.id}
-              onClick={() => navigate(app.route)}
-              className={`${app.color} ${app.hoverColor} text-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left group`}
-            >
-              <div className="text-5xl mb-4">{app.icon}</div>
-              <h3 className="text-2xl font-bold mb-2">{app.title}</h3>
-              <p className="text-indigo-100 group-hover:text-white transition-colors">
-                {app.description}
-              </p>
-            </button>
-          ))}
+          {appCards
+            .filter((app) => tilePreferences[app.id] !== false)
+            .map((app) => (
+              <button
+                key={app.id}
+                onClick={() => navigate(app.route)}
+                className={`${app.color} ${app.hoverColor} text-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left group`}
+              >
+                <div className="text-5xl mb-4">{app.icon}</div>
+                <h3 className="text-2xl font-bold mb-2">{app.title}</h3>
+                <p className="text-indigo-100 group-hover:text-white transition-colors">
+                  {app.description}
+                </p>
+              </button>
+            ))}
         </div>
       </main>
     </div>

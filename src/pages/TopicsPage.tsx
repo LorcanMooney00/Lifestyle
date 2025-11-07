@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signOut } from '../lib/auth'
 import { useAuth } from '../lib/auth'
-import { getAllNotes, getEvents, getPartners } from '../lib/api'
+import { getAllNotes, getEvents, getPartners, getTilePreferences } from '../lib/api'
 import type { Note, Event } from '../types'
+import PhotoGallery from '../components/PhotoGallery'
 
 export default function TopicsPage() {
   const navigate = useNavigate()
@@ -12,6 +13,12 @@ export default function TopicsPage() {
   const [events, setEvents] = useState<Event[]>([])
   const [partners, setPartners] = useState<Array<{ id: string; email: string; username: string }>>([])
   const [loading, setLoading] = useState(true)
+  const [tilePreferences, setTilePreferences] = useState<Record<string, boolean>>({
+    'shared-notes': true,
+    'calendar': true,
+    'recipes': true,
+    'photo-gallery': true,
+  })
 
   useEffect(() => {
     if (user) {
@@ -23,12 +30,16 @@ export default function TopicsPage() {
     if (!user) return
     setLoading(true)
     try {
-      const [notesData, partnersData] = await Promise.all([
+      const [notesData, partnersData, preferencesData] = await Promise.all([
         getAllNotes(user.id),
         getPartners(user.id),
+        getTilePreferences(user.id),
       ])
       setNotes(notesData)
       setPartners(partnersData)
+      if (preferencesData.preferences) {
+        setTilePreferences(preferencesData.preferences)
+      }
 
       // Get upcoming events (next 30 days)
       const today = new Date()
@@ -173,21 +184,30 @@ export default function TopicsPage() {
         <div className="mb-8">
           <h3 className="text-xl font-semibold text-gray-100 mb-4">Apps</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {appCards.map((app) => (
-              <button
-                key={app.id}
-                onClick={() => navigate(app.route)}
-                className={`${app.color} ${app.hoverColor} text-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left group`}
-              >
-                <div className="text-5xl mb-4">{app.icon}</div>
-                <h3 className="text-2xl font-bold mb-2">{app.title}</h3>
-                <p className="text-indigo-100 group-hover:text-white transition-colors">
-                  {app.description}
-                </p>
-              </button>
-            ))}
+            {appCards
+              .filter((app) => tilePreferences[app.id] !== false)
+              .map((app) => (
+                <button
+                  key={app.id}
+                  onClick={() => navigate(app.route)}
+                  className={`${app.color} ${app.hoverColor} text-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-left group`}
+                >
+                  <div className="text-5xl mb-4">{app.icon}</div>
+                  <h3 className="text-2xl font-bold mb-2">{app.title}</h3>
+                  <p className="text-indigo-100 group-hover:text-white transition-colors">
+                    {app.description}
+                  </p>
+                </button>
+              ))}
           </div>
         </div>
+
+        {/* Photo Gallery Widget */}
+        {tilePreferences['photo-gallery'] !== false && (
+          <div className="mb-8">
+            <PhotoGallery />
+          </div>
+        )}
 
         {/* Recent Activity */}
         {!loading && (

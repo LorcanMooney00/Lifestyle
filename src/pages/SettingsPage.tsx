@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
-import { getPartners, linkPartner, unlinkPartner, getUserProfile, updateUserProfile } from '../lib/api'
+import { getPartners, linkPartner, unlinkPartner, getUserProfile, updateUserProfile, getTilePreferences, updateTilePreferences } from '../lib/api'
 import { signOut, changePassword, deleteAccount } from '../lib/auth'
 
 export default function SettingsPage() {
@@ -36,10 +36,22 @@ export default function SettingsPage() {
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
+  // Tile preferences state
+  const [tilePreferences, setTilePreferences] = useState<Record<string, boolean>>({
+    'shared-notes': true,
+    'calendar': true,
+    'recipes': true,
+    'photo-gallery': true,
+  })
+  const [tilePreferencesLoading, setTilePreferencesLoading] = useState(false)
+  const [tilePreferencesError, setTilePreferencesError] = useState<string | null>(null)
+  const [tilePreferencesSuccess, setTilePreferencesSuccess] = useState<string | null>(null)
+
   useEffect(() => {
     if (user) {
       loadPartnerStatus()
       loadUsername()
+      loadTilePreferences()
     }
   }, [user])
 
@@ -47,6 +59,44 @@ export default function SettingsPage() {
     if (!user) return
     const { username: currentUsername } = await getUserProfile(user.id)
     setUsername(currentUsername || '')
+  }
+
+  const loadTilePreferences = async () => {
+    if (!user) return
+    const { preferences, error } = await getTilePreferences(user.id)
+    if (error) {
+      setTilePreferencesError(error)
+    } else if (preferences) {
+      setTilePreferences(preferences)
+    }
+  }
+
+  const handleToggleTile = async (tileId: string) => {
+    if (!user) return
+
+    const oldPreferences = { ...tilePreferences }
+    const newPreferences = {
+      ...tilePreferences,
+      [tileId]: !tilePreferences[tileId],
+    }
+    
+    setTilePreferences(newPreferences)
+    setTilePreferencesLoading(true)
+    setTilePreferencesError(null)
+    setTilePreferencesSuccess(null)
+
+    const { success, error } = await updateTilePreferences(user.id, newPreferences)
+    
+    if (success) {
+      setTilePreferencesSuccess('Preferences updated!')
+      setTimeout(() => setTilePreferencesSuccess(null), 3000)
+    } else {
+      setTilePreferencesError(error || 'Failed to update preferences')
+      // Revert on error
+      setTilePreferences(oldPreferences)
+    }
+    
+    setTilePreferencesLoading(false)
   }
 
   const loadPartnerStatus = async () => {
@@ -389,6 +439,125 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
+        </div>
+
+        <div className="bg-gray-800 shadow-sm rounded-lg p-6 mt-6 border border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-100 mb-4">
+            Tile Visibility
+          </h2>
+          <p className="text-sm text-gray-400 mb-4">
+            Choose which tiles to show on your dashboard
+          </p>
+
+          {tilePreferencesError && (
+            <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded mb-4">
+              {tilePreferencesError}
+            </div>
+          )}
+
+          {tilePreferencesSuccess && (
+            <div className="bg-green-900 border border-green-700 text-green-200 px-4 py-3 rounded mb-4">
+              {tilePreferencesSuccess}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {/* Shared Notes Toggle */}
+            <div className="flex items-center justify-between bg-gray-700 p-4 rounded border border-gray-600">
+              <div className="flex items-center space-x-3">
+                <span className="text-2xl">📝</span>
+                <div>
+                  <p className="font-medium text-gray-100">Shared Notes</p>
+                  <p className="text-sm text-gray-400">Create and share notes with your partner</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleToggleTile('shared-notes')}
+                disabled={tilePreferencesLoading}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 ${
+                  tilePreferences['shared-notes'] ? 'bg-indigo-600' : 'bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    tilePreferences['shared-notes'] ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Calendar Toggle */}
+            <div className="flex items-center justify-between bg-gray-700 p-4 rounded border border-gray-600">
+              <div className="flex items-center space-x-3">
+                <span className="text-2xl">📅</span>
+                <div>
+                  <p className="font-medium text-gray-100">Calendar</p>
+                  <p className="text-sm text-gray-400">Shared calendar and events</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleToggleTile('calendar')}
+                disabled={tilePreferencesLoading}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 ${
+                  tilePreferences['calendar'] ? 'bg-indigo-600' : 'bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    tilePreferences['calendar'] ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Recipes Toggle */}
+            <div className="flex items-center justify-between bg-gray-700 p-4 rounded border border-gray-600">
+              <div className="flex items-center space-x-3">
+                <span className="text-2xl">🍳</span>
+                <div>
+                  <p className="font-medium text-gray-100">Recipes</p>
+                  <p className="text-sm text-gray-400">Find recipes based on ingredients you have</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleToggleTile('recipes')}
+                disabled={tilePreferencesLoading}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 ${
+                  tilePreferences['recipes'] ? 'bg-indigo-600' : 'bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    tilePreferences['recipes'] ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Photo Gallery Toggle */}
+            <div className="flex items-center justify-between bg-gray-700 p-4 rounded border border-gray-600">
+              <div className="flex items-center space-x-3">
+                <span className="text-2xl">📸</span>
+                <div>
+                  <p className="font-medium text-gray-100">Photo Gallery</p>
+                  <p className="text-sm text-gray-400">Upload and view your photos</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleToggleTile('photo-gallery')}
+                disabled={tilePreferencesLoading}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 ${
+                  tilePreferences['photo-gallery'] ? 'bg-indigo-600' : 'bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    tilePreferences['photo-gallery'] ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="bg-gray-800 shadow-sm rounded-lg p-6 mt-6 border border-gray-700">

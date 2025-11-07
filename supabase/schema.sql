@@ -193,6 +193,7 @@ CREATE TABLE IF NOT EXISTS public.notes (
 CREATE TABLE IF NOT EXISTS public.user_profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   username TEXT UNIQUE NOT NULL,
+  tile_preferences JSONB DEFAULT '{"shared-notes": true, "calendar": true, "recipes": true, "photo-gallery": true}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -250,6 +251,15 @@ CREATE TABLE IF NOT EXISTS public.user_ingredients (
   UNIQUE(user_id, ingredient_name)
 );
 
+-- Photos table (for photo gallery widget)
+CREATE TABLE IF NOT EXISTS public.photos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  storage_path TEXT NOT NULL,
+  url TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_user_profiles_username ON public.user_profiles(username);
 CREATE INDEX IF NOT EXISTS idx_topics_owner_id ON public.topics(owner_id);
@@ -265,6 +275,8 @@ CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_recipe_id ON public.recipe_ing
 CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_ingredient_name ON public.recipe_ingredients(ingredient_name);
 CREATE INDEX IF NOT EXISTS idx_user_ingredients_user_id ON public.user_ingredients(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_ingredients_ingredient_name ON public.user_ingredients(ingredient_name);
+CREATE INDEX IF NOT EXISTS idx_photos_user_id ON public.photos(user_id);
+CREATE INDEX IF NOT EXISTS idx_photos_created_at ON public.photos(created_at);
 
 -- Enable Row-Level Security on all tables
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
@@ -276,6 +288,7 @@ ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.recipes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.recipe_ingredients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_ingredients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.photos ENABLE ROW LEVEL SECURITY;
 
 -- Function to check if user is member of topic (bypasses RLS to avoid recursion)
 -- Must be created before policies that use it
@@ -547,6 +560,22 @@ CREATE POLICY "Users can add their own ingredients"
 DROP POLICY IF EXISTS "Users can delete their own ingredients" ON public.user_ingredients CASCADE;
 CREATE POLICY "Users can delete their own ingredients"
   ON public.user_ingredients FOR DELETE
+  USING (user_id = auth.uid());
+
+-- Photos policies
+DROP POLICY IF EXISTS "Users can view their own photos" ON public.photos CASCADE;
+CREATE POLICY "Users can view their own photos"
+  ON public.photos FOR SELECT
+  USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can add their own photos" ON public.photos CASCADE;
+CREATE POLICY "Users can add their own photos"
+  ON public.photos FOR INSERT
+  WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can delete their own photos" ON public.photos CASCADE;
+CREATE POLICY "Users can delete their own photos"
+  ON public.photos FOR DELETE
   USING (user_id = auth.uid());
 
 -- Trigger to automatically update updated_at on events

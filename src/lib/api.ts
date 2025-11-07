@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient'
-import type { Topic, Note, TopicMember, Event, Recipe, RecipeIngredient, UserIngredient } from '../types'
+import type { Topic, Note, TopicMember, Event, Recipe, RecipeIngredient, UserIngredient, Photo } from '../types'
 
 export async function getTopics(): Promise<Topic[]> {
   // RLS policies will automatically filter to topics user has access to
@@ -369,6 +369,48 @@ export async function getUserProfile(userId: string): Promise<{ username: string
   }
 
   return { username: data?.username || null, error: null }
+}
+
+export async function getTilePreferences(userId: string): Promise<{ preferences: Record<string, boolean> | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('tile_preferences')
+    .eq('id', userId)
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // No profile found, return default preferences
+      return { preferences: { 'shared-notes': true, 'calendar': true, 'recipes': true, 'photo-gallery': true }, error: null }
+    }
+    console.error('Error fetching tile preferences:', error)
+    return { preferences: null, error: error.message }
+  }
+
+  // If no preferences exist, return defaults
+  const preferences = data?.tile_preferences || { 'shared-notes': true, 'calendar': true, 'recipes': true, 'photo-gallery': true }
+  return { preferences, error: null }
+}
+
+export async function updateTilePreferences(userId: string, preferences: Record<string, boolean>): Promise<{ success: boolean; error: string | null }> {
+  const { error } = await supabase
+    .from('user_profiles')
+    .upsert(
+      {
+        id: userId,
+        tile_preferences: preferences,
+      },
+      {
+        onConflict: 'id',
+      }
+    )
+
+  if (error) {
+    console.error('Error updating tile preferences:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true, error: null }
 }
 
 export async function updateUserProfile(userId: string, username: string): Promise<{ success: boolean; error: string | null }> {
@@ -788,5 +830,100 @@ export async function removeUserIngredient(userId: string, ingredientName: strin
   }
 
   return true
+}
+
+// Photo functions
+export async function uploadPhoto(userId: string, file: File): Promise<{ photo: Photo | null; error: string | null }> {
+  try {
+    // Generate a unique filename
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+    const filePath = `${userId}/${fileName}`
+
+    // Upload to Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from('photos')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      })
+
+    if (uploadError) {
+      console.error('Error uploading photo:', uploadError)
+      return { photo: null, error: uploadError.message }
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage.from('photos').getPublicUrl(filePath)
+    const publicUrl = urlData.publicUrl
+
+    // Save photo record to database
+    const { data, error: dbError } = await supabase
+      .from('photos')
+      .insert({
+        user_id: userId,
+        storage_path: filePath,
+        url: publicUrl,
+      })
+      .select()
+      .single()
+
+    if (dbError) {
+      console.error('Error saving photo record:', dbError)
+      // Try to delete the uploaded file
+      await supabase.storage.from('photos').remove([filePath])
+      return { photo: null, error: dbError.message }
+    }
+
+    return { photo: data as Photo, error: null }
+  } catch (error: any) {
+    console.error('Error uploading photo:', error)
+    return { photo: null, error: error.message || 'Failed to upload photo' }
+  }
+}
+
+export async function getUserPhotos(userId: string): Promise<Photo[]> {
+  const { data, error } = await supabase
+    .from('photos')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching photos:', error)
+    return []
+  }
+
+  return (data || []) as Photo[]
+}
+
+export async function deletePhoto(photoId: string, storagePath: string): Promise<{ success: boolean; error: string | null }> {
+  try {
+    // Delete from storage
+    const { error: storageError } = await supabase.storage
+      .from('photos')
+      .remove([storagePath])
+
+    if (storageError) {
+      console.error('Error deleting photo from storage:', storageError)
+      // Continue to delete from database even if storage deletion fails
+    }
+
+    // Delete from database
+    const { error: dbError } = await supabase
+      .from('photos')
+      .delete()
+      .eq('id', photoId)
+
+    if (dbError) {
+      console.error('Error deleting photo record:', dbError)
+      return { success: false, error: dbError.message }
+    }
+
+    return { success: true, error: null }
+  } catch (error: any) {
+    console.error('Error deleting photo:', error)
+    return { success: false, error: error.message || 'Failed to delete photo' }
+  }
 }
 

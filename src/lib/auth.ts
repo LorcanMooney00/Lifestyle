@@ -88,6 +88,36 @@ export async function changePassword(newPassword: string): Promise<{ success: bo
   return { success: true, error: null }
 }
 
+export async function resetPassword(email: string): Promise<{ success: boolean; error: string | null }> {
+  // Use environment variable for production URL, fallback to current origin for development
+  const productionUrl = import.meta.env.VITE_SITE_URL || window.location.origin
+  const redirectTo = `${productionUrl}/reset-password`
+  
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: redirectTo,
+  })
+
+  if (error) {
+    console.error('Error sending password reset email:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true, error: null }
+}
+
+export async function updatePassword(newPassword: string): Promise<{ success: boolean; error: string | null }> {
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword,
+  })
+
+  if (error) {
+    console.error('Error updating password:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true, error: null }
+}
+
 export async function deleteAccount(): Promise<{ success: boolean; error: string | null }> {
   // First, delete all user data through a database function
   // Then delete the auth account

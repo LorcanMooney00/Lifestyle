@@ -74,3 +74,11 @@ export interface PartnerLink {
   created_at: string
 }
 
+export interface Photo {
+  id: string
+  user_id: string
+  storage_path: string
+  url: string
+  created_at: string
+}
+

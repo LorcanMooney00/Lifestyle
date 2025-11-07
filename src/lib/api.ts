@@ -55,26 +55,40 @@ export async function createTopic(name: string, ownerId: string): Promise<{ topi
 export async function getAllNotes(): Promise<Array<Note & { creator_username?: string | null }>> {
   // RLS policies will automatically filter to notes from topics user has access to
   // (owned, member of, or partner's topics)
-  // Join with user_profiles to get creator username
-  const { data, error } = await supabase
+  // First get all notes
+  const { data: notesData, error: notesError } = await supabase
     .from('notes')
-    .select(`
-      *,
-      creator:user_profiles!notes_created_by_fkey(username)
-    `)
+    .select('*')
     .order('updated_at', { ascending: false })
 
-  if (error) {
-    console.error('Error fetching notes:', error)
+  if (notesError) {
+    console.error('Error fetching notes:', notesError)
     return []
   }
 
-  if (!data) return []
+  if (!notesData || notesData.length === 0) return []
 
-  // Map the data to include creator_username
-  return data.map((note: any) => ({
+  // Get unique creator IDs
+  const creatorIds = [...new Set(notesData.map((note: Note) => note.created_by))]
+
+  // Fetch usernames for all creators
+  const { data: profilesData } = await supabase
+    .from('user_profiles')
+    .select('id, username')
+    .in('id', creatorIds)
+
+  // Create a map of user_id -> username
+  const usernameMap = new Map<string, string | null>()
+  if (profilesData) {
+    profilesData.forEach((profile: any) => {
+      usernameMap.set(profile.id, profile.username || null)
+    })
+  }
+
+  // Map notes to include creator_username
+  return notesData.map((note: Note) => ({
     ...note,
-    creator_username: note.creator?.username || null,
+    creator_username: usernameMap.get(note.created_by) || null,
   }))
 }
 

@@ -716,7 +716,7 @@ export async function getAllIngredients(): Promise<string[]> {
 
   // Get unique ingredient names
   const ingredientNames = data.map((ing: any) => String(ing.ingredient_name))
-  const uniqueIngredients = Array.from(new Set(ingredientNames))
+  const uniqueIngredients: string[] = Array.from(new Set(ingredientNames))
   return uniqueIngredients.sort()
 }
 

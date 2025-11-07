@@ -138,12 +138,8 @@ CREATE POLICY "Users can delete notes in accessible topics"
 -- PART 1: DROP EVERYTHING
 -- ============================================
 
--- Drop triggers
-DROP TRIGGER IF EXISTS update_user_profiles_updated_at ON public.user_profiles CASCADE;
-DROP TRIGGER IF EXISTS update_notes_updated_at ON public.notes CASCADE;
-DROP TRIGGER IF EXISTS update_events_updated_at ON public.events CASCADE;
-
 -- Drop all policies
+-- Note: Triggers are automatically dropped when tables are dropped with CASCADE
 DROP POLICY IF EXISTS "Users can view all profiles" ON public.user_profiles CASCADE;
 DROP POLICY IF EXISTS "Users can update their own profile" ON public.user_profiles CASCADE;
 DROP POLICY IF EXISTS "Users can insert their own profile" ON public.user_profiles CASCADE;

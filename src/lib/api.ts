@@ -841,14 +841,22 @@ export async function uploadPhoto(file: File): Promise<{ photo: Photo | null; er
     // Get the current session to ensure we have an authenticated user
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
+    console.log('=== PHOTO UPLOAD DEBUG START ===')
+    console.log('Session error:', sessionError)
+    console.log('Session exists:', !!session)
+    console.log('Session user exists:', !!session?.user)
+    console.log('Session user ID:', session?.user?.id)
+    console.log('Session access token exists:', !!session?.access_token)
+    console.log('Session access token (first 20 chars):', session?.access_token?.substring(0, 20))
+    
     if (sessionError || !session || !session.user) {
+      console.error('=== AUTHENTICATION FAILED ===')
       return { photo: null, error: 'You must be logged in to upload photos' }
     }
 
     // Use the authenticated user's ID from the session
-    // The RLS policy checks: user_id = auth.uid()
-    // The Supabase client automatically includes the auth token in requests
     const authenticatedUserId = session.user.id
+    console.log('Using authenticated user ID:', authenticatedUserId)
     
     // Generate a unique filename
     const fileExt = file.name.split('.').pop()
@@ -872,8 +880,23 @@ export async function uploadPhoto(file: File): Promise<{ photo: Photo | null; er
     const { data: urlData } = supabase.storage.from('photos').getPublicUrl(filePath)
     const publicUrl = urlData.publicUrl
 
+    // Test if we can query the photos table first (to verify RLS SELECT policy)
+    console.log('Testing SELECT access to photos table...')
+    const { data: testData, error: testError } = await supabase
+      .from('photos')
+      .select('id')
+      .limit(1)
+    
+    console.log('SELECT test - Error:', testError)
+    console.log('SELECT test - Data:', testData)
+    
     // Save photo record to database
     // RLS policy allows any authenticated user to insert (we'll refine security later)
+    console.log('Attempting to INSERT photo with:')
+    console.log('  - user_id:', authenticatedUserId)
+    console.log('  - storage_path:', filePath)
+    console.log('  - url:', publicUrl)
+    
     const { data, error: dbError } = await supabase
       .from('photos')
       .insert({
@@ -883,6 +906,14 @@ export async function uploadPhoto(file: File): Promise<{ photo: Photo | null; er
       })
       .select()
       .single()
+
+    console.log('INSERT result - Error:', dbError)
+    console.log('INSERT result - Error code:', dbError?.code)
+    console.log('INSERT result - Error message:', dbError?.message)
+    console.log('INSERT result - Error details:', dbError?.details)
+    console.log('INSERT result - Error hint:', dbError?.hint)
+    console.log('INSERT result - Data:', data)
+    console.log('=== PHOTO UPLOAD DEBUG END ===')
 
     if (dbError) {
       console.error('Error saving photo record:', dbError)

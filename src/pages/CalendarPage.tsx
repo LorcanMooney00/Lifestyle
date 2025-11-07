@@ -147,7 +147,7 @@ export default function CalendarPage() {
     // Empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
       days.push(
-        <div key={`empty-${i}`} className="aspect-square min-h-[60px] sm:min-h-[80px] p-1 sm:p-2"></div>
+        <div key={`empty-${i}`} className="min-h-[70px] sm:min-h-[100px] p-2"></div>
       )
     }
 
@@ -163,32 +163,32 @@ export default function CalendarPage() {
         <div
           key={day}
           onClick={() => handleDayClick(day)}
-          className={`aspect-square min-h-[60px] sm:min-h-[80px] p-1 sm:p-2 border border-gray-700 hover:bg-gray-700 active:bg-gray-600 cursor-pointer transition-colors ${
-            isToday ? 'bg-indigo-900 border-indigo-500' : ''
+          className={`min-h-[70px] sm:min-h-[100px] p-2 border border-gray-700 hover:bg-gray-700 active:bg-gray-600 cursor-pointer transition-colors flex flex-col ${
+            isToday ? 'bg-indigo-900/50 border-indigo-500' : 'bg-gray-800/50'
           }`}
         >
-          <div className={`text-sm sm:text-base mb-0.5 sm:mb-1 font-medium ${
-            isToday ? 'font-bold text-indigo-200' : 'text-gray-300'
+          <div className={`text-base sm:text-lg mb-1 font-semibold ${
+            isToday ? 'text-indigo-200' : 'text-gray-200'
           }`}>
             {day}
           </div>
-          <div className="space-y-0.5 sm:space-y-1 flex flex-col">
-            {dayEvents.slice(0, 2).map((event) => (
+          <div className="flex-1 flex flex-col gap-1 overflow-hidden">
+            {dayEvents.slice(0, 3).map((event) => (
               <div
                 key={event.id}
                 onClick={(e) => {
                   e.stopPropagation()
                   setSelectedEvent(event)
                 }}
-                className="text-[10px] sm:text-xs bg-indigo-600 text-white px-1 py-0.5 sm:py-1 rounded truncate hover:bg-indigo-500 active:bg-indigo-400 min-h-[16px] sm:min-h-[20px] flex items-center"
+                className="text-xs bg-indigo-600 text-white px-2 py-1 rounded-md truncate hover:bg-indigo-500 active:bg-indigo-400 flex items-center shadow-sm"
                 title={event.title}
               >
                 {event.title}
               </div>
             ))}
-            {dayEvents.length > 2 && (
-              <div className="text-[10px] sm:text-xs text-gray-500 px-1 font-medium">
-                +{dayEvents.length - 2}
+            {dayEvents.length > 3 && (
+              <div className="text-xs text-indigo-400 px-2 font-medium">
+                +{dayEvents.length - 3} more
               </div>
             )}
           </div>
@@ -263,18 +263,18 @@ export default function CalendarPage() {
           </div>
 
           {/* Calendar Grid */}
-          <div className="p-2 sm:p-6">
+          <div className="p-3 sm:p-6">
             {/* Day Names Header */}
-            <div className="grid grid-cols-7 gap-0 mb-1 sm:mb-2">
+            <div className="grid grid-cols-7 gap-1 mb-2">
               {dayNames.map((day) => (
-                <div key={day} className="text-center text-xs sm:text-sm font-semibold text-gray-400 py-1 sm:py-2">
+                <div key={day} className="text-center text-sm font-bold text-gray-300 py-2">
                   {day}
                 </div>
               ))}
             </div>
 
             {/* Calendar Days */}
-            <div className="grid grid-cols-7 gap-0">
+            <div className="grid grid-cols-7 gap-1">
               {renderCalendarDays()}
             </div>
           </div>

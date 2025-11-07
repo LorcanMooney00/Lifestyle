@@ -147,7 +147,7 @@ export default function CalendarPage() {
     // Empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
       days.push(
-        <div key={`empty-${i}`} className="aspect-square p-2"></div>
+        <div key={`empty-${i}`} className="aspect-square min-h-[60px] sm:min-h-[80px] p-1 sm:p-2"></div>
       )
     }
 
@@ -163,14 +163,16 @@ export default function CalendarPage() {
         <div
           key={day}
           onClick={() => handleDayClick(day)}
-          className={`aspect-square p-2 border border-gray-700 hover:bg-gray-700 cursor-pointer ${
+          className={`aspect-square min-h-[60px] sm:min-h-[80px] p-1 sm:p-2 border border-gray-700 hover:bg-gray-700 active:bg-gray-600 cursor-pointer transition-colors ${
             isToday ? 'bg-indigo-900 border-indigo-500' : ''
           }`}
         >
-          <div className={`text-sm mb-1 ${isToday ? 'font-bold text-indigo-200' : 'text-gray-300'}`}>
+          <div className={`text-sm sm:text-base mb-0.5 sm:mb-1 font-medium ${
+            isToday ? 'font-bold text-indigo-200' : 'text-gray-300'
+          }`}>
             {day}
           </div>
-          <div className="space-y-0.5">
+          <div className="space-y-0.5 sm:space-y-1 flex flex-col">
             {dayEvents.slice(0, 2).map((event) => (
               <div
                 key={event.id}
@@ -178,15 +180,15 @@ export default function CalendarPage() {
                   e.stopPropagation()
                   setSelectedEvent(event)
                 }}
-                className="text-xs bg-indigo-600 text-white px-1 py-0.5 rounded truncate hover:bg-indigo-500"
+                className="text-[10px] sm:text-xs bg-indigo-600 text-white px-1 py-0.5 sm:py-1 rounded truncate hover:bg-indigo-500 active:bg-indigo-400 min-h-[16px] sm:min-h-[20px] flex items-center"
                 title={event.title}
               >
                 {event.title}
               </div>
             ))}
             {dayEvents.length > 2 && (
-              <div className="text-xs text-gray-500 px-1">
-                +{dayEvents.length - 2} more
+              <div className="text-[10px] sm:text-xs text-gray-500 px-1 font-medium">
+                +{dayEvents.length - 2}
               </div>
             )}
           </div>
@@ -278,11 +280,11 @@ export default function CalendarPage() {
 
         {/* Event Form Modal */}
         {showEventForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-gray-700">
-              <div className="p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold text-gray-100">
+          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+            <div className="bg-gray-800 rounded-t-xl sm:rounded-lg shadow-xl w-full sm:max-w-md sm:w-full max-h-[90vh] overflow-y-auto border-t sm:border border-gray-700">
+              <div className="p-4 sm:p-6">
+                <div className="flex justify-between items-center mb-4 sm:mb-6">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-100">
                     {selectedEvent ? 'Edit Event' : 'New Event'}
                   </h3>
                   <button
@@ -290,15 +292,16 @@ export default function CalendarPage() {
                       setShowEventForm(false)
                       setSelectedEvent(null)
                     }}
-                    className="text-gray-400 hover:text-gray-200"
+                    className="text-gray-400 hover:text-gray-200 text-2xl sm:text-xl min-w-[44px] min-h-[44px] flex items-center justify-center"
+                    aria-label="Close"
                   >
                     ×
                   </button>
                 </div>
 
-                <form onSubmit={handleSaveEvent} className="space-y-4">
+                <form onSubmit={handleSaveEvent} className="space-y-4 sm:space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
                       Title *
                     </label>
                     <input
@@ -306,13 +309,13 @@ export default function CalendarPage() {
                       value={eventTitle}
                       onChange={(e) => setEventTitle(e.target.value)}
                       required
-                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-4 py-3 text-base border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       placeholder="Event title"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
                       Date *
                     </label>
                     <input
@@ -320,60 +323,60 @@ export default function CalendarPage() {
                       value={eventDate}
                       onChange={(e) => setEventDate(e.target.value)}
                       required
-                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-4 py-3 text-base border border-gray-600 bg-gray-700 text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
                       Time (optional)
                     </label>
                     <input
                       type="time"
                       value={eventTime}
                       onChange={(e) => setEventTime(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-4 py-3 text-base border border-gray-600 bg-gray-700 text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
                       Description (optional)
                     </label>
                     <textarea
                       value={eventDescription}
                       onChange={(e) => setEventDescription(e.target.value)}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      rows={4}
+                      className="w-full px-4 py-3 text-base border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                       placeholder="Event description"
                     />
                   </div>
 
-                  <div className="flex justify-between pt-4">
+                  <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 sm:pt-4">
                     {selectedEvent && (
                       <button
                         type="button"
                         onClick={handleDeleteEvent}
-                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-500 text-sm font-medium"
+                        className="w-full sm:w-auto px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-500 active:bg-red-700 text-sm font-medium min-h-[44px] order-2 sm:order-1"
                       >
                         Delete
                       </button>
                     )}
-                    <div className="flex gap-2 ml-auto">
+                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto order-1 sm:order-2">
                       <button
                         type="button"
                         onClick={() => {
                           setShowEventForm(false)
                           setSelectedEvent(null)
                         }}
-                        className="px-4 py-2 bg-gray-700 text-gray-300 rounded-md hover:bg-gray-600 text-sm font-medium"
+                        className="w-full sm:w-auto px-6 py-3 bg-gray-700 text-gray-300 rounded-md hover:bg-gray-600 active:bg-gray-500 text-sm font-medium min-h-[44px]"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
                         disabled={saving || !eventTitle.trim() || !eventDate}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                        className="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium min-h-[44px]"
                       >
                         {saving ? 'Saving...' : 'Save'}
                       </button>

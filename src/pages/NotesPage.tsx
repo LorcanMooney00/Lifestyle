@@ -146,7 +146,7 @@ export default function NotesPage() {
               + New
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto min-h-0" style={{ maxHeight: 'calc(100vh - 80px)' }}>
+          <div className="flex-1 overflow-y-auto min-h-0">
             {loading ? (
               <div className="p-6 text-center text-sm text-gray-500">Loading...</div>
             ) : notes.length === 0 ? (

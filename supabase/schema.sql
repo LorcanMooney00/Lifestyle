@@ -16,8 +16,8 @@ BEGIN
   RETURN QUERY
   SELECT 
     pl.partner_id,
-    au.email,
-    COALESCE(up.username, au.email) as username
+    au.email::TEXT,
+    COALESCE(up.username, au.email::TEXT) as username
   FROM public.partner_links pl
   JOIN auth.users au ON au.id = pl.partner_id
   LEFT JOIN public.user_profiles up ON up.id = pl.partner_id

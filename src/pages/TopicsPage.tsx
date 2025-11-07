@@ -12,6 +12,15 @@ export default function TopicsPage() {
   // Dashboard app cards - easy to add more later!
   const appCards = [
     {
+      id: 'partners',
+      title: 'Partners',
+      description: 'View and manage your linked partners',
+      icon: '👥',
+      route: '/app/partners',
+      color: 'bg-purple-500',
+      hoverColor: 'hover:bg-purple-600',
+    },
+    {
       id: 'shared-notes',
       title: 'Shared Notes',
       description: 'Create and share notes with your partner',

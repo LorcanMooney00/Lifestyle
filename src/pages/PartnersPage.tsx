@@ -7,7 +7,7 @@ import { signOut } from '../lib/auth'
 export default function PartnersPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [partners, setPartners] = useState<Array<{ id: string; email: string }>>([])
+  const [partners, setPartners] = useState<Array<{ id: string; email: string; username: string }>>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -93,14 +93,9 @@ export default function PartnersPage() {
               >
                 <div className="text-5xl mb-4">👤</div>
                 <h3 className="text-2xl font-bold mb-2 text-gray-900 group-hover:text-indigo-600 transition-colors">
-                  {partner.email.includes('@') ? partner.email.split('@')[0] : partner.email}
+                  {partner.username}
                 </h3>
-                {partner.email.includes('@') && (
-                  <p className="text-gray-600 text-sm">{partner.email}</p>
-                )}
-                {!partner.email.includes('@') && (
-                  <p className="text-gray-500 text-xs italic">Email not available</p>
-                )}
+                <p className="text-gray-600 text-sm">{partner.email}</p>
                 <div className="mt-4 text-indigo-600 font-medium group-hover:text-indigo-700">
                   View shared content →
                 </div>

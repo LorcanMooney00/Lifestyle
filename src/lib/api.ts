@@ -178,7 +178,7 @@ export async function addTopicMember(
   return data
 }
 
-export async function getPartners(userId: string): Promise<Array<{ id: string; email: string }>> {
+export async function getPartners(userId: string): Promise<Array<{ id: string; email: string; username: string }>> {
   // Use RPC function to get partners with emails
   const { data, error } = await supabase.rpc('get_partners_with_emails', {
     p_user_id: userId,
@@ -200,6 +200,7 @@ export async function getPartners(userId: string): Promise<Array<{ id: string; e
     return (links || []).map((link: any) => ({
       id: link.partner_id,
       email: `Partner ${link.partner_id.slice(0, 8)}`,
+      username: `Partner ${link.partner_id.slice(0, 8)}`,
     }))
   }
 
@@ -210,6 +211,7 @@ export async function getPartners(userId: string): Promise<Array<{ id: string; e
   return data.map((row: any) => ({
     id: row.partner_id,
     email: row.email || 'Unknown',
+    username: row.username || row.email || 'Unknown',
   }))
 }
 

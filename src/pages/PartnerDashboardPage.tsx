@@ -9,6 +9,7 @@ export default function PartnerDashboardPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [partnerEmail, setPartnerEmail] = useState<string>('')
+  const [partnerUsername, setPartnerUsername] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -24,6 +25,7 @@ export default function PartnerDashboardPage() {
     const partner = partners.find((p) => p.id === partnerId)
     if (partner) {
       setPartnerEmail(partner.email)
+      setPartnerUsername(partner.username)
     }
     setLoading(false)
   }
@@ -76,7 +78,7 @@ export default function PartnerDashboardPage() {
                 ← Back to Partners
               </button>
               <h1 className="text-xl font-bold text-gray-900">
-                {partnerEmail ? partnerEmail.split('@')[0] : 'Partner'}
+                {partnerUsername || partnerEmail || 'Partner'}
               </h1>
             </div>
             <div className="flex items-center space-x-4">

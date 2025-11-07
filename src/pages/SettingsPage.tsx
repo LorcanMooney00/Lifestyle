@@ -8,7 +8,7 @@ export default function SettingsPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [partnerEmail, setPartnerEmail] = useState('')
-  const [partners, setPartners] = useState<Array<{ id: string; email: string }>>([])
+  const [partners, setPartners] = useState<Array<{ id: string; email: string; username: string }>>([])
   const [loading, setLoading] = useState(true)
   const [linking, setLinking] = useState(false)
   const [unlinking, setUnlinking] = useState(false)
@@ -103,7 +103,7 @@ export default function SettingsPage() {
                     className="flex items-center justify-between bg-gray-50 p-3 rounded border"
                   >
                     <div>
-                      <p className="font-medium text-gray-900">{partner.email.split('@')[0]}</p>
+                      <p className="font-medium text-gray-900">{partner.username}</p>
                       <p className="text-sm text-gray-600">{partner.email}</p>
                     </div>
                     <button

@@ -36,17 +36,36 @@ export async function signIn(email: string, password: string) {
   return { data, error }
 }
 
-export async function signUp(email: string, password: string) {
+export async function signUp(email: string, password: string, username: string): Promise<{ data: any; error: any }> {
   // Use the current origin for redirect (works for both localhost and production)
-  const redirectTo = `${window.location.origin}/app/topics`
+  const redirectTo = `${window.location.origin}/app/partners`
   
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       emailRedirectTo: redirectTo,
+      data: {
+        username: username,
+      },
     },
   })
+
+  // Create user profile after signup
+  if (data.user && !error) {
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .insert({
+        id: data.user.id,
+        username: username,
+      })
+
+    if (profileError) {
+      console.error('Error creating user profile:', profileError)
+      // Don't fail signup if profile creation fails - user can update it later
+    }
+  }
+
   return { data, error }
 }
 

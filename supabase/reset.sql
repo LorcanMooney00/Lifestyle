@@ -139,10 +139,14 @@ CREATE POLICY "Users can delete notes in accessible topics"
 -- ============================================
 
 -- Drop triggers
+DROP TRIGGER IF EXISTS update_user_profiles_updated_at ON public.user_profiles CASCADE;
 DROP TRIGGER IF EXISTS update_notes_updated_at ON public.notes CASCADE;
 DROP TRIGGER IF EXISTS update_events_updated_at ON public.events CASCADE;
 
 -- Drop all policies
+DROP POLICY IF EXISTS "Users can view all profiles" ON public.user_profiles CASCADE;
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.user_profiles CASCADE;
+DROP POLICY IF EXISTS "Users can insert their own profile" ON public.user_profiles CASCADE;
 DROP POLICY IF EXISTS "Users can view topics they own or are members of" ON public.topics CASCADE;
 DROP POLICY IF EXISTS "Users can create topics" ON public.topics CASCADE;
 DROP POLICY IF EXISTS "Users can update topics they own" ON public.topics CASCADE;
@@ -164,6 +168,7 @@ DROP POLICY IF EXISTS "Users can update their own events" ON public.events CASCA
 DROP POLICY IF EXISTS "Users can delete their own events" ON public.events CASCADE;
 
 -- Drop tables (CASCADE will drop dependent objects)
+DROP TABLE IF EXISTS public.user_profiles CASCADE;
 DROP TABLE IF EXISTS public.events CASCADE;
 DROP TABLE IF EXISTS public.notes CASCADE;
 DROP TABLE IF EXISTS public.topic_members CASCADE;
@@ -213,6 +218,14 @@ CREATE TABLE public.notes (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- User profiles table (for storing usernames)
+CREATE TABLE public.user_profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  username TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Partner links table (for linking accounts)
 CREATE TABLE public.partner_links (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -235,6 +248,7 @@ CREATE TABLE public.events (
 );
 
 -- Create indexes for better performance
+CREATE INDEX idx_user_profiles_username ON public.user_profiles(username);
 CREATE INDEX idx_topics_owner_id ON public.topics(owner_id);
 CREATE INDEX idx_topic_members_topic_id ON public.topic_members(topic_id);
 CREATE INDEX idx_topic_members_user_id ON public.topic_members(user_id);
@@ -245,6 +259,7 @@ CREATE INDEX idx_events_event_date ON public.events(event_date);
 CREATE INDEX idx_events_created_by ON public.events(created_by);
 
 -- Enable Row-Level Security on all tables
+ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.topics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.topic_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
@@ -285,6 +300,19 @@ $$;
 -- ============================================
 -- ROW-LEVEL SECURITY POLICIES
 -- ============================================
+
+-- User profiles policies
+CREATE POLICY "Users can view all profiles"
+  ON public.user_profiles FOR SELECT
+  USING (true);
+
+CREATE POLICY "Users can update their own profile"
+  ON public.user_profiles FOR UPDATE
+  USING (id = auth.uid());
+
+CREATE POLICY "Users can insert their own profile"
+  ON public.user_profiles FOR INSERT
+  WITH CHECK (id = auth.uid());
 
 -- Topics policies
 -- Use SECURITY DEFINER function to avoid RLS recursion
@@ -471,9 +499,9 @@ CREATE POLICY "Users can delete their own events"
 -- FUNCTIONS AND TRIGGERS
 -- ============================================
 
--- Function to get partners with emails
+-- Function to get partners with emails and usernames
 CREATE FUNCTION get_partners_with_emails(p_user_id UUID)
-RETURNS TABLE(partner_id UUID, email TEXT)
+RETURNS TABLE(partner_id UUID, email TEXT, username TEXT)
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
@@ -481,9 +509,11 @@ BEGIN
   RETURN QUERY
   SELECT 
     pl.partner_id,
-    au.email
+    au.email,
+    COALESCE(up.username, au.email) as username
   FROM public.partner_links pl
   JOIN auth.users au ON au.id = pl.partner_id
+  LEFT JOIN public.user_profiles up ON up.id = pl.partner_id
   WHERE pl.user_id = p_user_id;
 END;
 $$;
@@ -536,6 +566,12 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Trigger to automatically update updated_at on user_profiles
+CREATE TRIGGER update_user_profiles_updated_at
+  BEFORE UPDATE ON public.user_profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
 
 -- Trigger to automatically update updated_at on notes
 CREATE TRIGGER update_notes_updated_at

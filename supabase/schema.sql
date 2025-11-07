@@ -166,6 +166,14 @@ CREATE TABLE IF NOT EXISTS public.notes (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- User profiles table (for storing usernames)
+CREATE TABLE IF NOT EXISTS public.user_profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  username TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Partner links table (for linking accounts)
 CREATE TABLE IF NOT EXISTS public.partner_links (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -188,6 +196,7 @@ CREATE TABLE IF NOT EXISTS public.events (
 );
 
 -- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_user_profiles_username ON public.user_profiles(username);
 CREATE INDEX IF NOT EXISTS idx_topics_owner_id ON public.topics(owner_id);
 CREATE INDEX IF NOT EXISTS idx_topic_members_topic_id ON public.topic_members(topic_id);
 CREATE INDEX IF NOT EXISTS idx_topic_members_user_id ON public.topic_members(user_id);
@@ -198,6 +207,7 @@ CREATE INDEX IF NOT EXISTS idx_events_event_date ON public.events(event_date);
 CREATE INDEX IF NOT EXISTS idx_events_created_by ON public.events(created_by);
 
 -- Enable Row-Level Security on all tables
+ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.topics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.topic_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
@@ -231,6 +241,22 @@ AS $$
     OR (user_id = p_partner_id AND partner_id = p_user_id)
   );
 $$;
+
+-- User profiles policies
+DROP POLICY IF EXISTS "Users can view all profiles" ON public.user_profiles CASCADE;
+CREATE POLICY "Users can view all profiles"
+  ON public.user_profiles FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.user_profiles CASCADE;
+CREATE POLICY "Users can update their own profile"
+  ON public.user_profiles FOR UPDATE
+  USING (id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can insert their own profile" ON public.user_profiles CASCADE;
+CREATE POLICY "Users can insert their own profile"
+  ON public.user_profiles FOR INSERT
+  WITH CHECK (id = auth.uid());
 
 -- Topics policies
 -- Use SECURITY DEFINER function to avoid RLS recursion
@@ -438,6 +464,13 @@ CREATE TRIGGER update_events_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+-- Trigger to automatically update updated_at on user_profiles
+DROP TRIGGER IF EXISTS update_user_profiles_updated_at ON public.user_profiles;
+CREATE TRIGGER update_user_profiles_updated_at
+  BEFORE UPDATE ON public.user_profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
 -- Trigger to automatically update updated_at on notes
 DROP TRIGGER IF EXISTS update_notes_updated_at ON public.notes;
 CREATE TRIGGER update_notes_updated_at
@@ -445,9 +478,9 @@ CREATE TRIGGER update_notes_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
--- Function to get partners with emails
+-- Function to get partners with emails and usernames
 CREATE OR REPLACE FUNCTION get_partners_with_emails(p_user_id UUID)
-RETURNS TABLE(partner_id UUID, email TEXT)
+RETURNS TABLE(partner_id UUID, email TEXT, username TEXT)
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
@@ -455,9 +488,11 @@ BEGIN
   RETURN QUERY
   SELECT 
     pl.partner_id,
-    au.email
+    au.email,
+    COALESCE(up.username, au.email) as username
   FROM public.partner_links pl
   JOIN auth.users au ON au.id = pl.partner_id
+  LEFT JOIN public.user_profiles up ON up.id = pl.partner_id
   WHERE pl.user_id = p_user_id;
 END;
 $$;

@@ -5,6 +5,7 @@ import { signIn, signUp } from '../lib/auth'
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [username, setUsername] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -16,14 +17,25 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const { error: authError } = isSignUp
-        ? await signUp(email, password)
-        : await signIn(email, password)
-
-      if (authError) {
-        setError(authError.message)
+      if (isSignUp) {
+        if (!username.trim()) {
+          setError('Username is required')
+          setLoading(false)
+          return
+        }
+        const { error: authError } = await signUp(email, password, username.trim())
+        if (authError) {
+          setError(authError.message)
+        } else {
+          navigate('/app/partners')
+        }
       } else {
-        navigate('/app/topics')
+        const { error: authError } = await signIn(email, password)
+        if (authError) {
+          setError(authError.message)
+        } else {
+          navigate('/app/partners')
+        }
       }
     } catch (err) {
       setError('An unexpected error occurred')
@@ -52,6 +64,24 @@ export default function LoginPage() {
             </div>
           )}
           <div className="rounded-md shadow-sm -space-y-px">
+            {isSignUp && (
+              <div>
+                <label htmlFor="username" className="sr-only">
+                  Username
+                </label>
+                <input
+                  id="username"
+                  name="username"
+                  type="text"
+                  autoComplete="username"
+                  required
+                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                  placeholder="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
+            )}
             <div>
               <label htmlFor="email" className="sr-only">
                 Email address
@@ -62,7 +92,7 @@ export default function LoginPage() {
                 type="email"
                 autoComplete="email"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className={`appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 ${isSignUp ? '' : 'rounded-t-md'} focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -102,6 +132,7 @@ export default function LoginPage() {
               onClick={() => {
                 setIsSignUp(!isSignUp)
                 setError(null)
+                setUsername('')
               }}
               className="text-sm text-indigo-600 hover:text-indigo-500"
             >

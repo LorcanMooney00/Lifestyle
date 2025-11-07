@@ -179,6 +179,7 @@ DROP FUNCTION IF EXISTS are_partners(UUID, UUID) CASCADE;
 DROP FUNCTION IF EXISTS get_partners_with_emails(UUID) CASCADE;
 DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;
 DROP FUNCTION IF EXISTS link_partner_by_email(UUID, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS delete_user_account(UUID) CASCADE;
 
 -- ============================================
 -- PART 2: CREATE EVERYTHING
@@ -614,6 +615,39 @@ BEGIN
   ON CONFLICT (user_id, partner_id) DO NOTHING;
 
   RETURN TRUE;
+END;
+$$;
+
+-- Function to delete user account and all associated data
+CREATE FUNCTION delete_user_account(p_user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- Delete user's partner links (both directions)
+  DELETE FROM public.partner_links 
+  WHERE user_id = p_user_id OR partner_id = p_user_id;
+  
+  -- Delete user's topics (cascade will handle notes and topic_members)
+  DELETE FROM public.topics WHERE owner_id = p_user_id;
+  
+  -- Delete user's events
+  DELETE FROM public.events WHERE created_by = p_user_id;
+  
+  -- Delete user's ingredients
+  DELETE FROM public.user_ingredients WHERE user_id = p_user_id;
+  
+  -- Delete user profile
+  DELETE FROM public.user_profiles WHERE id = p_user_id;
+  
+  -- Note: The auth.users account deletion should be handled manually through Supabase dashboard
+  -- or via a database trigger. We can't delete auth.users directly from here without admin privileges.
+  
+  RETURN TRUE;
+EXCEPTION
+  WHEN OTHERS THEN
+    RETURN FALSE;
 END;
 $$;
 

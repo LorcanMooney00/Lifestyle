@@ -74,3 +74,41 @@ export async function signOut() {
   return { error }
 }
 
+export async function changePassword(newPassword: string): Promise<{ success: boolean; error: string | null }> {
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword,
+  })
+
+  if (error) {
+    console.error('Error changing password:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true, error: null }
+}
+
+export async function deleteAccount(): Promise<{ success: boolean; error: string | null }> {
+  // First, delete all user data through a database function
+  // Then delete the auth account
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    return { success: false, error: 'No user found' }
+  }
+
+  // Call a database function to delete all user data
+  const { error: deleteError } = await supabase.rpc('delete_user_account', {
+    p_user_id: user.id,
+  })
+
+  if (deleteError) {
+    console.error('Error deleting user data:', deleteError)
+    return { success: false, error: deleteError.message }
+  }
+
+  // Sign out the user (the auth account deletion will be handled by a database trigger)
+  await supabase.auth.signOut()
+
+  return { success: true, error: null }
+}
+

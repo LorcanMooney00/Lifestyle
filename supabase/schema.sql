@@ -629,6 +629,39 @@ BEGIN
 END;
 $$;
 
+-- Function to delete user account and all associated data
+CREATE OR REPLACE FUNCTION delete_user_account(p_user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- Delete user's partner links (both directions)
+  DELETE FROM public.partner_links 
+  WHERE user_id = p_user_id OR partner_id = p_user_id;
+  
+  -- Delete user's topics (cascade will handle notes and topic_members)
+  DELETE FROM public.topics WHERE owner_id = p_user_id;
+  
+  -- Delete user's events
+  DELETE FROM public.events WHERE created_by = p_user_id;
+  
+  -- Delete user's ingredients
+  DELETE FROM public.user_ingredients WHERE user_id = p_user_id;
+  
+  -- Delete user profile
+  DELETE FROM public.user_profiles WHERE id = p_user_id;
+  
+  -- Note: The auth.users account deletion should be handled manually through Supabase dashboard
+  -- or via a database trigger. We can't delete auth.users directly from here without admin privileges.
+  
+  RETURN TRUE;
+EXCEPTION
+  WHEN OTHERS THEN
+    RETURN FALSE;
+END;
+$$;
+
 -- Function to automatically update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { getPartners, linkPartner, unlinkPartner, getUserProfile, updateUserProfile } from '../lib/api'
-import { signOut } from '../lib/auth'
+import { signOut, changePassword, deleteAccount } from '../lib/auth'
 
 export default function SettingsPage() {
   const { user } = useAuth()
@@ -21,6 +21,20 @@ export default function SettingsPage() {
   const [usernameEditing, setUsernameEditing] = useState(false)
   const [usernameError, setUsernameError] = useState<string | null>(null)
   const [usernameSuccess, setUsernameSuccess] = useState<string | null>(null)
+
+  // Password change state
+  const [passwordEditing, setPasswordEditing] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordLoading, setPasswordLoading] = useState(false)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null)
+
+  // Account deletion state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     if (user) {
@@ -91,6 +105,64 @@ export default function SettingsPage() {
   const handleSignOut = async () => {
     await signOut()
     navigate('/login')
+  }
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user) return
+
+    // Validate passwords
+    if (newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters long')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match')
+      return
+    }
+
+    setPasswordLoading(true)
+    setPasswordError(null)
+    setPasswordSuccess(null)
+
+    // Note: Supabase doesn't require current password for password change
+    // If you want to add that, you'd need to verify it first
+    const { success, error } = await changePassword(newPassword)
+
+    if (success) {
+      setPasswordSuccess('Password changed successfully!')
+      setNewPassword('')
+      setConfirmPassword('')
+      setPasswordEditing(false)
+    } else {
+      setPasswordError(error || 'Failed to change password')
+    }
+
+    setPasswordLoading(false)
+  }
+
+  const handleDeleteAccount = async () => {
+    if (!user) return
+
+    // Final confirmation
+    if (deleteConfirmText !== 'DELETE') {
+      setDeleteError('Please type DELETE to confirm')
+      return
+    }
+
+    setDeleting(true)
+    setDeleteError(null)
+
+    const { success, error } = await deleteAccount()
+
+    if (success) {
+      // User will be signed out automatically
+      navigate('/login')
+    } else {
+      setDeleteError(error || 'Failed to delete account. Please try again.')
+      setDeleting(false)
+    }
   }
 
   return (
@@ -331,6 +403,176 @@ export default function SettingsPage() {
               <span className="font-medium">User ID:</span> {user?.id}
             </p>
           </div>
+        </div>
+
+        {/* Password Change Section */}
+        <div className="bg-gray-800 shadow-sm rounded-lg p-6 mt-6 border border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-100 mb-4">
+            Change Password
+          </h2>
+          
+          {passwordEditing ? (
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              {passwordError && (
+                <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded">
+                  {passwordError}
+                </div>
+              )}
+              
+              {passwordSuccess && (
+                <div className="bg-green-900 border border-green-700 text-green-200 px-4 py-3 rounded">
+                  {passwordSuccess}
+                </div>
+              )}
+              
+              <div>
+                <label
+                  htmlFor="new-password"
+                  className="block text-sm font-medium text-gray-300 mb-2"
+                >
+                  New Password
+                </label>
+                <input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password (min 6 characters)"
+                  required
+                  minLength={6}
+                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  disabled={passwordLoading}
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="confirm-password"
+                  className="block text-sm font-medium text-gray-300 mb-2"
+                >
+                  Confirm New Password
+                </label>
+                <input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                  required
+                  minLength={6}
+                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  disabled={passwordLoading}
+                />
+              </div>
+              
+              <div className="flex space-x-2">
+                <button
+                  type="submit"
+                  disabled={passwordLoading || !newPassword || !confirmPassword}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                >
+                  {passwordLoading ? 'Changing...' : 'Change Password'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPasswordEditing(false)
+                    setPasswordError(null)
+                    setPasswordSuccess(null)
+                    setNewPassword('')
+                    setConfirmPassword('')
+                  }}
+                  disabled={passwordLoading}
+                  className="bg-gray-700 text-gray-300 px-4 py-2 rounded-md hover:bg-gray-600 disabled:opacity-50 text-sm font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-400">
+                Change your account password to keep your account secure.
+              </p>
+              <button
+                onClick={() => {
+                  setPasswordEditing(true)
+                  setPasswordError(null)
+                  setPasswordSuccess(null)
+                }}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-500 text-sm font-medium"
+              >
+                Change Password
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Account Deletion Section */}
+        <div className="bg-gray-800 shadow-sm rounded-lg p-6 mt-6 border border-red-700">
+          <h2 className="text-xl font-semibold text-red-400 mb-4">
+            Delete Account
+          </h2>
+          
+          {!showDeleteConfirm ? (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-400">
+                Permanently delete your account and all associated data. This action cannot be undone.
+              </p>
+              <p className="text-xs text-red-400">
+                Warning: This will delete all your notes, events, recipes, and partner links.
+              </p>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-500 text-sm font-medium"
+              >
+                Delete Account
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {deleteError && (
+                <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded">
+                  {deleteError}
+                </div>
+              )}
+              
+              <div>
+                <p className="text-sm text-gray-300 mb-2">
+                  Type <span className="font-mono font-bold text-red-400">DELETE</span> to confirm:
+                </p>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="Type DELETE to confirm"
+                  className="w-full px-3 py-2 border border-red-600 bg-gray-700 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                  disabled={deleting}
+                />
+              </div>
+              
+              <div className="flex space-x-2">
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleting || deleteConfirmText !== 'DELETE'}
+                  className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                >
+                  {deleting ? 'Deleting...' : 'Permanently Delete Account'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false)
+                    setDeleteConfirmText('')
+                    setDeleteError(null)
+                  }}
+                  disabled={deleting}
+                  className="bg-gray-700 text-gray-300 px-4 py-2 rounded-md hover:bg-gray-600 disabled:opacity-50 text-sm font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>

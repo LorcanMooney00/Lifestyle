@@ -21,7 +21,7 @@ export default function NotesPage() {
     if (user) {
       loadNotes()
     }
-  }, [user])
+  }, [user, partnerId])
 
   useEffect(() => {
     if (selectedNote) {
@@ -36,13 +36,16 @@ export default function NotesPage() {
   const loadNotes = async () => {
     if (!user) return
     setLoading(true)
-    const data = await getAllNotes(user.id)
+    const data = await getAllNotes(user.id, partnerId || undefined)
     console.log('Loaded notes:', data)
     console.log('User ID:', user.id)
+    console.log('Partner ID filter:', partnerId)
     setNotes(data)
     setLoading(false)
     if (data.length > 0 && !selectedNote) {
       setSelectedNote(data[0])
+    } else if (data.length === 0) {
+      setSelectedNote(null)
     }
   }
 

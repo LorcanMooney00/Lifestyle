@@ -55,38 +55,38 @@ export default function PartnerDashboardPage() {
     {
       id: 'shared-notes',
       title: 'Shared Notes',
-      description: 'Create and share notes',
+      description: 'Capture ideas and keep discussions aligned.',
       icon: '📝',
       route: `/app/partner/${partnerId}/notes`,
-      color: 'bg-indigo-500',
-      hoverColor: 'hover:bg-indigo-600',
+      gradient: 'from-indigo-500/20 via-indigo-500/10 to-transparent',
+      iconBackground: 'bg-indigo-500/20 text-indigo-200',
+      borderHover: 'hover:border-indigo-400/60',
+      category: 'Collaboration',
+      categoryClass: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/20',
     },
     {
       id: 'calendar',
       title: 'Calendar',
-      description: 'Shared calendar and events',
+      description: 'Plan together with a shared schedule.',
       icon: '📅',
       route: `/app/partner/${partnerId}/calendar`,
-      color: 'bg-green-500',
-      hoverColor: 'hover:bg-green-600',
+      gradient: 'from-emerald-500/20 via-emerald-500/10 to-transparent',
+      iconBackground: 'bg-emerald-500/20 text-emerald-200',
+      borderHover: 'hover:border-emerald-400/60',
+      category: 'Planning',
+      categoryClass: 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/20',
     },
     {
       id: 'recipes',
       title: 'Recipes',
-      description: 'Find recipes based on ingredients',
+      description: 'Discover meals based on your ingredients.',
       icon: '🍳',
       route: `/app/partner/${partnerId}/recipes`,
-      color: 'bg-orange-500',
-      hoverColor: 'hover:bg-orange-600',
-    },
-    {
-      id: 'shared-todos',
-      title: 'Shared To-Do List',
-      description: 'Track tasks together',
-      icon: '✅',
-      route: `/app/partner/${partnerId}/todos`,
-      color: 'bg-purple-500',
-      hoverColor: 'hover:bg-purple-600',
+      gradient: 'from-amber-500/20 via-amber-500/10 to-transparent',
+      iconBackground: 'bg-amber-500/20 text-amber-200',
+      borderHover: 'hover:border-amber-400/60',
+      category: 'Meal Ideas',
+      categoryClass: 'bg-amber-500/15 text-amber-200 border border-amber-500/20',
     },
   ]
 
@@ -134,26 +134,42 @@ export default function PartnerDashboardPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8 sm:mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-2 bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">Dashboard</h2>
-          <p className="text-slate-400 text-sm sm:text-base">Choose an app to get started</p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-2 bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+            Workspace
+          </h2>
+          <p className="text-slate-400 text-sm sm:text-base">
+            Select a shared area to continue working together.
+          </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4 md:gap-4 lg:gap-4 xl:gap-4 2xl:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-5">
           {appCards
             .filter((app) => tilePreferences[app.id] !== false)
             .map((app) => (
               <button
                 key={app.id}
                 onClick={() => navigate(app.route)}
-                className={`${app.color} ${app.hoverColor} text-white p-4 sm:p-5 md:p-6 lg:p-5 xl:p-6 2xl:p-5 rounded-2xl shadow-lg card-hover text-left group aspect-square flex flex-col justify-center relative overflow-hidden`}
+                className={`relative overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 sm:p-6 text-left shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-2xl ${app.borderHover}`}
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div className="relative z-10">
-                  <div className="text-3xl sm:text-4xl md:text-5xl lg:text-4xl xl:text-5xl 2xl:text-4xl mb-2 sm:mb-3 md:mb-4 lg:mb-3 xl:mb-4 2xl:mb-3">{app.icon}</div>
-                  <h3 className="text-sm sm:text-base md:text-lg lg:text-base xl:text-lg 2xl:text-base font-bold mb-1 sm:mb-2">{app.title}</h3>
-                  <p className="text-xs sm:text-sm text-white/80 group-hover:text-white transition-colors line-clamp-2">
-                    {app.description}
-                  </p>
+                <div className={`absolute inset-0 bg-gradient-to-br ${app.gradient} opacity-0 transition-opacity duration-300 group-hover:opacity-100`}></div>
+                <div className="relative z-10 flex h-full flex-col justify-between gap-6">
+                  <div className="flex items-center justify-between text-xs font-medium uppercase tracking-wide text-slate-400">
+                    <span className={`rounded-full px-3 py-1 ${app.categoryClass}`}>
+                      {app.category}
+                    </span>
+                  </div>
+                  <div className={`w-12 h-12 rounded-xl ${app.iconBackground} flex items-center justify-center text-2xl`}>
+                    {app.icon}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-1">{app.title}</h3>
+                    <p className="text-sm text-slate-300 leading-relaxed">
+                      {app.description}
+                    </p>
+                  </div>
+                  <div className="text-xs font-medium text-indigo-300 group-hover:text-white transition-colors">
+                    Open →
+                  </div>
                 </div>
               </button>
             ))}

@@ -303,18 +303,22 @@ export default function CalendarPage() {
 
           {/* Calendar Grid */}
           <div className="p-3 sm:p-6">
-            {/* Day Names Header */}
-            <div className="grid grid-cols-7 gap-2 mb-3">
-              {dayNames.map((day) => (
-                <div key={day} className="text-center text-sm font-bold text-slate-300 py-2">
-                  {day}
-                </div>
-              ))}
-            </div>
+          <div className="overflow-x-auto -mx-2 sm:mx-0">
+            <div className="min-w-[560px] sm:min-w-0">
+              {/* Day Names Header */}
+              <div className="grid grid-cols-7 gap-2 mb-3 px-2 sm:px-0">
+                {dayNames.map((day) => (
+                  <div key={day} className="text-center text-xs sm:text-sm font-bold text-slate-300 py-2">
+                    {day}
+                  </div>
+                ))}
+              </div>
 
-            {/* Calendar Days */}
-            <div className="grid grid-cols-7 gap-2">
-              {renderCalendarDays()}
+              {/* Calendar Days */}
+              <div className="grid grid-cols-7 gap-2 px-2 sm:px-0">
+                {renderCalendarDays()}
+              </div>
+            </div>
             </div>
           </div>
         </div>

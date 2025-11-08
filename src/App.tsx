@@ -7,6 +7,7 @@ import TopicsPage from './pages/TopicsPage'
 import NotesPage from './pages/NotesPage'
 import CalendarPage from './pages/CalendarPage'
 import RecipesPage from './pages/RecipesPage'
+import TodosPage from './pages/TodosPage'
 import SettingsPage from './pages/SettingsPage'
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -98,10 +99,26 @@ function App() {
           }
         />
         <Route
+          path="/app/partner/:partnerId/todos"
+          element={
+            <AuthGate>
+              <TodosPage />
+            </AuthGate>
+          }
+        />
+        <Route
           path="/app/settings"
           element={
             <AuthGate>
               <SettingsPage />
+            </AuthGate>
+          }
+        />
+        <Route
+          path="/app/todos"
+          element={
+            <AuthGate>
+              <TodosPage />
             </AuthGate>
           }
         />

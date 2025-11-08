@@ -4,6 +4,14 @@ import { useAuth } from '../lib/auth'
 import { getUserProfile, updateUserProfile, getTilePreferences, updateTilePreferences, uploadProfilePicture, getProfilePictureUrl } from '../lib/api'
 import { signOut, changePassword, deleteAccount } from '../lib/auth'
 
+const defaultTilePreferences: Record<string, boolean> = {
+  'shared-notes': true,
+  'calendar': true,
+  'recipes': true,
+  'photo-gallery': true,
+  'shared-todos': true,
+}
+
 export default function SettingsPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -38,12 +46,7 @@ export default function SettingsPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
   // Tile preferences state
-  const [tilePreferences, setTilePreferences] = useState<Record<string, boolean>>({
-    'shared-notes': true,
-    'calendar': true,
-    'recipes': true,
-    'photo-gallery': true,
-  })
+  const [tilePreferences, setTilePreferences] = useState<Record<string, boolean>>(defaultTilePreferences)
   const [tilePreferencesLoading, setTilePreferencesLoading] = useState(false)
   const [tilePreferencesError, setTilePreferencesError] = useState<string | null>(null)
   const [tilePreferencesSuccess, setTilePreferencesSuccess] = useState<string | null>(null)
@@ -94,7 +97,7 @@ export default function SettingsPage() {
     if (error) {
       setTilePreferencesError(error)
     } else if (preferences) {
-      setTilePreferences(preferences)
+      setTilePreferences({ ...defaultTilePreferences, ...preferences })
     }
   }
 
@@ -554,6 +557,30 @@ export default function SettingsPage() {
                 <span
                   className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
                     tilePreferences['recipes'] ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Shared To-Do List Toggle */}
+            <div className="flex items-center justify-between bg-gray-700 p-4 rounded border border-gray-600">
+              <div className="flex items-center space-x-3">
+                <span className="text-2xl">✅</span>
+                <div>
+                  <p className="font-medium text-gray-100">Shared To-Do List</p>
+                  <p className="text-sm text-gray-400">Track shared tasks with your partners</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleToggleTile('shared-todos')}
+                disabled={tilePreferencesLoading}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 ${
+                  tilePreferences['shared-todos'] ? 'bg-indigo-600' : 'bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    tilePreferences['shared-todos'] ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
               </button>

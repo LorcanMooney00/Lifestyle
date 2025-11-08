@@ -11,11 +11,13 @@ export default function PartnerDashboardPage() {
   const [partnerEmail, setPartnerEmail] = useState<string>('')
   const [partnerUsername, setPartnerUsername] = useState<string>('')
   const [loading, setLoading] = useState(true)
-  const [tilePreferences, setTilePreferences] = useState<Record<string, boolean>>({
+  const defaultTilePreferences: Record<string, boolean> = {
     'shared-notes': true,
     'calendar': true,
     'recipes': true,
-  })
+    'shared-todos': true,
+  }
+  const [tilePreferences, setTilePreferences] = useState<Record<string, boolean>>(defaultTilePreferences)
 
   useEffect(() => {
     if (user && partnerId) {
@@ -36,7 +38,9 @@ export default function PartnerDashboardPage() {
       setPartnerUsername(partner.username)
     }
     if (preferencesData.preferences) {
-      setTilePreferences(preferencesData.preferences)
+      setTilePreferences({ ...defaultTilePreferences, ...preferencesData.preferences })
+    } else {
+      setTilePreferences(defaultTilePreferences)
     }
     setLoading(false)
   }
@@ -74,6 +78,15 @@ export default function PartnerDashboardPage() {
       route: `/app/partner/${partnerId}/recipes`,
       color: 'bg-orange-500',
       hoverColor: 'hover:bg-orange-600',
+    },
+    {
+      id: 'shared-todos',
+      title: 'Shared To-Do List',
+      description: 'Track tasks together',
+      icon: '✅',
+      route: `/app/partner/${partnerId}/todos`,
+      color: 'bg-purple-500',
+      hoverColor: 'hover:bg-purple-600',
     },
   ]
 

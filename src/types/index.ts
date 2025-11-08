@@ -65,6 +65,16 @@ export interface Note {
   partners?: string[]
 }
 
+export interface Todo {
+  id: string
+  user_id: string
+  partner_id: string | null
+  content: string
+  completed: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface User {
   id: string
   email?: string

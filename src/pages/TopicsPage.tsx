@@ -2,9 +2,18 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signOut } from '../lib/auth'
 import { useAuth } from '../lib/auth'
-import { getAllNotes, getEvents, getPartners, getTilePreferences, linkPartner, unlinkPartner } from '../lib/api'
-import type { Note, Event } from '../types'
+import { getAllNotes, getEvents, getPartners, getTilePreferences, linkPartner, unlinkPartner, getTodos, createTodo, toggleTodoCompletion, deleteTodo } from '../lib/api'
+import type { Note, Event, Todo } from '../types'
 import PhotoWidget from '../components/PhotoWidget'
+import TodoWidget from '../components/TodoWidget'
+
+const defaultTilePreferences: Record<string, boolean> = {
+  'shared-notes': true,
+  'calendar': true,
+  'recipes': true,
+  'photo-gallery': true,
+  'shared-todos': true,
+}
 
 export default function TopicsPage() {
   const navigate = useNavigate()
@@ -13,9 +22,11 @@ export default function TopicsPage() {
   const [events, setEvents] = useState<Event[]>([])
   const [partners, setPartners] = useState<Array<{ id: string; email: string; username: string; profilePictureUrl?: string | null }>>([])
   const [loading, setLoading] = useState(true)
-  const [tilePreferences, setTilePreferences] = useState<Record<string, boolean>>({
-    'photo-gallery': true,
-  })
+  const [tilePreferences, setTilePreferences] = useState<Record<string, boolean>>(defaultTilePreferences)
+  const [todos, setTodos] = useState<Todo[]>([])
+  const [creatingTodo, setCreatingTodo] = useState(false)
+  const [todoActionIds, setTodoActionIds] = useState<string[]>([])
+  const [todoError, setTodoError] = useState<string | null>(null)
   const [showAddPartnerModal, setShowAddPartnerModal] = useState(false)
   const [partnerEmail, setPartnerEmail] = useState('')
   const [linking, setLinking] = useState(false)
@@ -35,27 +46,88 @@ export default function TopicsPage() {
     if (!user) return
     setLoading(true)
     try {
-      const [notesData, partnersData, preferencesData] = await Promise.all([
-        getAllNotes(user.id),
-        getPartners(user.id),
-        getTilePreferences(user.id),
-      ])
-      setNotes(notesData)
-      setPartners(partnersData)
-      if (preferencesData.preferences) {
-        setTilePreferences(preferencesData.preferences)
-      }
-
-      // Get upcoming events (next 30 days)
       const today = new Date()
       const nextMonth = new Date(today)
       nextMonth.setDate(today.getDate() + 30)
-      const eventsData = await getEvents(today, nextMonth)
+
+      const [notesData, partnersData, preferencesData, todosData, eventsData] = await Promise.all([
+        getAllNotes(user.id),
+        getPartners(user.id),
+        getTilePreferences(user.id),
+        getTodos(user.id),
+        getEvents(today, nextMonth),
+      ])
+
+      setNotes(notesData)
+      setPartners(partnersData)
+      if (preferencesData.preferences) {
+        setTilePreferences({ ...defaultTilePreferences, ...preferencesData.preferences })
+      } else {
+        setTilePreferences(defaultTilePreferences)
+      }
+      setTodos(todosData)
       setEvents(eventsData)
+      setTodoError(null)
     } catch (error) {
       console.error('Error loading dashboard data:', error)
+      setTodoError('Could not load shared to-do list. Please try again later.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleCreateTodo = async (content: string) => {
+    if (!user) return
+    setCreatingTodo(true)
+    setTodoError(null)
+    try {
+      const { todo, error } = await createTodo(user.id, content, null)
+      if (error || !todo) {
+        setTodoError(error || 'Failed to create to-do. Please try again.')
+        return
+      }
+      setTodos((prev) => [...prev, todo])
+    } catch (error) {
+      console.error('Error creating todo:', error)
+      setTodoError('Failed to create to-do. Please try again.')
+    } finally {
+      setCreatingTodo(false)
+    }
+  }
+
+  const handleToggleTodo = async (todoId: string, completed: boolean) => {
+    setTodoActionIds((prev) => [...prev, todoId])
+    setTodoError(null)
+    try {
+      const { todo, error } = await toggleTodoCompletion(todoId, completed)
+      if (error || !todo) {
+        setTodoError(error || 'Failed to update to-do. Please try again.')
+        return
+      }
+      setTodos((prev) => prev.map((item) => (item.id === todo.id ? todo : item)))
+    } catch (error) {
+      console.error('Error toggling todo:', error)
+      setTodoError('Failed to update to-do. Please try again.')
+    } finally {
+      setTodoActionIds((prev) => prev.filter((id) => id !== todoId))
+    }
+  }
+
+  const handleDeleteTodo = async (todoId: string) => {
+    setTodoActionIds((prev) => [...prev, todoId])
+    setTodoError(null)
+    try {
+      const { success, error } = await deleteTodo(todoId)
+      if (!success) {
+        setTodoError(error || 'Failed to delete to-do. Please try again.')
+        return
+      }
+      setTodos((prev) => prev.filter((todo) => todo.id !== todoId))
+    } catch (error) {
+      console.error('Error deleting todo:', error)
+      setTodoError('Failed to delete to-do. Please try again.')
+    } finally {
+      setTodoActionIds((prev) => prev.filter((id) => id !== todoId))
     }
   }
 
@@ -438,8 +510,44 @@ export default function TopicsPage() {
                     <div className="text-2xl sm:text-3xl flex-shrink-0 ml-2">👥</div>
                   </div>
                 </div>
+                {tilePreferences['shared-todos'] !== false && (
+                  <div className="glass backdrop-blur-sm border border-slate-600/40 rounded-2xl p-3 sm:p-4 aspect-square flex flex-col justify-center card-hover shadow-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] sm:text-xs text-slate-400 mb-1 truncate">Open To-Dos</p>
+                        <p className="text-lg sm:text-xl md:text-2xl lg:text-xl xl:text-2xl 2xl:text-lg font-bold text-white">
+                          {todos.filter((todo) => !todo.completed).length}
+                        </p>
+                      </div>
+                      <div className="text-2xl sm:text-3xl flex-shrink-0 ml-2">✅</div>
+                    </div>
+                    <button
+                      onClick={() => navigate('/app/todos')}
+                      className="mt-3 rounded-lg bg-indigo-600/80 px-3 py-1 text-xs font-medium text-white transition-all hover:bg-indigo-500"
+                    >
+                      View List
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Shared To-Do List */}
+        {!loading && tilePreferences['shared-todos'] !== false && (
+          <div className="mb-6 sm:mb-8 md:mb-10">
+            <TodoWidget
+              todos={todos}
+              partners={partners}
+              creating={creatingTodo}
+              actionIds={todoActionIds}
+              error={todoError}
+              sharingLabel={partners.length > 0 ? 'all linked partners' : 'your account'}
+              onCreate={handleCreateTodo}
+              onToggle={handleToggleTodo}
+              onDelete={handleDeleteTodo}
+            />
           </div>
         )}
 

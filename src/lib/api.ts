@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient'
-import type { Topic, Note, TopicMember, Event, Recipe, RecipeIngredient, UserIngredient, Photo } from '../types'
+import type { Topic, Note, TopicMember, Event, Recipe, RecipeIngredient, UserIngredient, Photo, Todo } from '../types'
 
 export async function getTopics(): Promise<Topic[]> {
   // RLS policies will automatically filter to topics user has access to
@@ -381,14 +381,21 @@ export async function getTilePreferences(userId: string): Promise<{ preferences:
   if (error) {
     if (error.code === 'PGRST116') {
       // No profile found, return default preferences
-      return { preferences: { 'shared-notes': true, 'calendar': true, 'recipes': true, 'photo-gallery': true }, error: null }
+      return { preferences: { 'shared-notes': true, 'calendar': true, 'recipes': true, 'photo-gallery': true, 'shared-todos': true }, error: null }
     }
     console.error('Error fetching tile preferences:', error)
     return { preferences: null, error: error.message }
   }
 
   // If no preferences exist, return defaults
-  const preferences = data?.tile_preferences || { 'shared-notes': true, 'calendar': true, 'recipes': true, 'photo-gallery': true }
+  const preferences = {
+    'shared-notes': true,
+    'calendar': true,
+    'recipes': true,
+    'photo-gallery': true,
+    'shared-todos': true,
+    ...(data?.tile_preferences ?? {}),
+  }
   return { preferences, error: null }
 }
 
@@ -986,6 +993,94 @@ export async function deleteEvent(eventId: string): Promise<boolean> {
   }
 
   return true
+}
+
+// ============================================
+// TODOS API
+// ============================================
+
+export async function getTodos(userId: string): Promise<Todo[]> {
+  const { data, error } = await supabase
+    .from('todos')
+    .select('*')
+    .or(`user_id.eq.${userId},partner_id.eq.${userId}`)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching todos:', error)
+    return []
+  }
+
+  return (data as Todo[]) || []
+}
+
+export async function createTodo(
+  userId: string,
+  content: string,
+  partnerId: string | null
+): Promise<{ todo: Todo | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('todos')
+    .insert({
+      user_id: userId,
+      content,
+      partner_id: partnerId,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error creating todo:', error)
+    return { todo: null, error: error.message }
+  }
+
+  return { todo: data as Todo, error: null }
+}
+
+export async function updateTodoContent(todoId: string, content: string): Promise<{ todo: Todo | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('todos')
+    .update({ content, updated_at: new Date().toISOString() })
+    .eq('id', todoId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error updating todo content:', error)
+    return { todo: null, error: error.message }
+  }
+
+  return { todo: data as Todo, error: null }
+}
+
+export async function toggleTodoCompletion(todoId: string, completed: boolean): Promise<{ todo: Todo | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('todos')
+    .update({ completed, updated_at: new Date().toISOString() })
+    .eq('id', todoId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error toggling todo:', error)
+    return { todo: null, error: error.message }
+  }
+
+  return { todo: data as Todo, error: null }
+}
+
+export async function deleteTodo(todoId: string): Promise<{ success: boolean; error: string | null }> {
+  const { error } = await supabase
+    .from('todos')
+    .delete()
+    .eq('id', todoId)
+
+  if (error) {
+    console.error('Error deleting todo:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true, error: null }
 }
 
 // ============================================

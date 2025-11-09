@@ -151,25 +151,7 @@ export default function TopicsPage() {
     }
   }, [highlightConfigs, highlightIndex])
 
-  const goToNextHighlight = () => {
-    if (highlightConfigs.length <= 1) return
-    setHighlightIndex((prev) => (prev + 1) % highlightConfigs.length)
-  }
-
-  const goToPrevHighlight = () => {
-    if (highlightConfigs.length <= 1) return
-    setHighlightIndex((prev) => (prev - 1 + highlightConfigs.length) % highlightConfigs.length)
-  }
-
   const currentHighlight = highlightConfigs[highlightIndex]
-  const previousHighlight =
-    highlightConfigs.length > 1
-      ? highlightConfigs[(highlightIndex - 1 + highlightConfigs.length) % highlightConfigs.length]
-      : null
-  const nextHighlight =
-    highlightConfigs.length > 1
-      ? highlightConfigs[(highlightIndex + 1) % highlightConfigs.length]
-      : null
 
   const handleCreateTodo = async (content: string) => {
     if (!user) return
@@ -357,60 +339,54 @@ export default function TopicsPage() {
         {/* Highlighted shared activity */}
         {!loading && currentHighlight && (
           <div className="mb-6 sm:mb-8 md:mb-10">
-            <div className={`${contentWidth} flex items-stretch gap-4`}>
-              {previousHighlight && (
-                <button
-                  onClick={goToPrevHighlight}
-                  className="hidden sm:flex w-44 flex-col justify-between rounded-2xl border border-slate-700/60 bg-slate-900/70 py-6 px-4 shadow-lg transition-all hover:-translate-x-1 hover:border-indigo-400/60"
-                >
-                  <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Previous</span>
-                  <div className="flex items-center gap-2 text-white">
-                    <span className="text-lg">{previousHighlight.icon}</span>
-                    <span className="text-sm font-semibold truncate">{previousHighlight.title}</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 line-clamp-3 leading-relaxed">{previousHighlight.subtitle}</p>
-                </button>
-              )}
+            <div className={`${contentWidth} space-y-4`}>
+              <div className="overflow-x-auto">
+                <div className="flex w-max max-w-full gap-2 rounded-2xl border border-slate-700/60 bg-slate-900/70 p-1 text-sm text-slate-300 sm:w-full">
+                  {highlightConfigs.map((config, index) => {
+                    const isActive = highlightIndex === index
+                    return (
+                      <button
+                        key={config.type}
+                        onClick={() => setHighlightIndex(index)}
+                        className={`flex min-w-[140px] flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 transition ${
+                          isActive
+                            ? 'bg-indigo-500/20 text-indigo-200 shadow-inner shadow-indigo-900/40'
+                            : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                        }`}
+                        aria-pressed={isActive}
+                      >
+                        <span>{config.icon}</span>
+                        <span className="truncate text-xs font-semibold uppercase tracking-wide sm:text-[13px]">
+                          {config.title}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
 
-              <div className="flex-1">
-                <div className="glass backdrop-blur-sm border border-slate-600/40 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden w-full">
-                  <div className="absolute inset-0 bg-gradient-to-br from-slate-800/40 via-slate-900/40 to-slate-900/10 pointer-events-none"></div>
-                  <div className="relative z-10 flex flex-col gap-5 min-h-[420px] sm:min-h-[400px] md:min-h-[440px]">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-3 text-white">
-                          <span className="text-2xl">{currentHighlight.icon}</span>
-                          <h3 className="text-xl font-semibold">{currentHighlight.title}</h3>
-                        </div>
-                        <p className="text-sm text-slate-400 mt-1">{currentHighlight.subtitle}</p>
+              <div className="glass backdrop-blur-sm border border-slate-600/40 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden w-full">
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-800/40 via-slate-900/40 to-slate-900/10 pointer-events-none"></div>
+                <div className="relative z-10 flex flex-col gap-5 min-h-[420px] sm:min-h-[400px] md:min-h-[440px]">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-3 text-white">
+                        <span className="text-2xl">{currentHighlight.icon}</span>
+                        <h3 className="text-xl font-semibold">{currentHighlight.title}</h3>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={goToPrevHighlight}
-                          disabled={highlightConfigs.length <= 1}
-                          className="rounded-full border border-slate-600/50 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 transition-all hover:bg-slate-700/60 disabled:opacity-40 disabled:cursor-not-allowed"
-                          aria-label="Previous"
-                        >
-                          ←
-                        </button>
-                        <button
-                          onClick={goToNextHighlight}
-                          disabled={highlightConfigs.length <= 1}
-                          className="rounded-full border border-slate-600/50 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 transition-all hover:bg-slate-700/60 disabled:opacity-40 disabled:cursor-not-allowed"
-                          aria-label="Next"
-                        >
-                          →
-                        </button>
-                        <button
-                          onClick={() => navigate(currentHighlight.viewAllPath)}
-                          className="rounded-full border border-indigo-500/40 bg-indigo-500/20 px-3 py-2 text-sm font-medium text-indigo-200 transition-all hover:bg-indigo-500/30"
-                        >
-                          View all →
-                        </button>
-                      </div>
+                      <p className="text-sm text-slate-400 mt-1">{currentHighlight.subtitle}</p>
                     </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => navigate(currentHighlight.viewAllPath)}
+                        className="rounded-full border border-indigo-500/40 bg-indigo-500/20 px-3 py-2 text-sm font-medium text-indigo-200 transition-all hover:bg-indigo-500/30"
+                      >
+                        View all →
+                      </button>
+                    </div>
+                  </div>
 
-                    <div className="space-y-2 flex-1 overflow-y-auto pr-1 pb-1 min-h-[360px]">
+                  <div className="space-y-2 flex-1 overflow-y-auto pr-1 pb-1 min-h-[360px]">
                       {currentHighlight.type === 'events' && (
                         <>
                           {events.length === 0 ? (
@@ -614,21 +590,6 @@ export default function TopicsPage() {
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {nextHighlight && (
-                <button
-                  onClick={goToNextHighlight}
-                  className="hidden sm:flex w-44 flex-col justify-between rounded-2xl border border-slate-700/60 bg-slate-900/70 py-6 px-4 shadow-lg transition-all hover:translate-x-1 hover:border-indigo-400/60 text-right"
-                >
-                  <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Next</span>
-                  <div className="flex items-center gap-2 text-white justify-end">
-                    <span className="text-sm font-semibold truncate">{nextHighlight.title}</span>
-                    <span className="text-lg">{nextHighlight.icon}</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 line-clamp-3 leading-relaxed">{nextHighlight.subtitle}</p>
-                </button>
-              )}
             </div>
           </div>
         )}

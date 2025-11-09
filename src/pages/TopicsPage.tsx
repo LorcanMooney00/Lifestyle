@@ -505,20 +505,24 @@ export default function TopicsPage() {
                                 return (
                                   <div
                                     key={note.id}
-                                    className="group rounded-2xl border border-slate-700/60 bg-gradient-to-r from-slate-900/85 via-slate-900/70 to-slate-900/40 px-5 py-4 text-sm text-white shadow-lg transition-all hover:-translate-y-0.5 hover:border-indigo-400/60 hover:shadow-indigo-900/30 cursor-pointer"
+                                    className="group rounded-2xl border border-slate-700/60 bg-gradient-to-r from-slate-900/85 via-slate-900/70 to-slate-900/40 px-4 py-4 text-sm text-white shadow-lg transition-all hover:-translate-y-0.5 hover:border-indigo-400/60 hover:shadow-indigo-900/30 cursor-pointer"
                                     onClick={() => navigate('/app/notes')}
                                   >
-                                    <div className="flex items-start justify-between gap-3">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                                       <div className="flex flex-1 items-start gap-3">
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/15 text-lg text-indigo-200 transition-all group-hover:bg-indigo-500/25">
+                                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-500/15 text-lg text-indigo-200 transition-all group-hover:bg-indigo-500/25">
                                           📝
                                         </div>
                                         <div className="min-w-0 space-y-2">
-                                          <div className="flex items-center justify-between gap-2">
-                                            <p className="truncate text-base font-semibold">{note.title || 'Untitled Note'}</p>
-                                            <span className="text-xs text-indigo-200/80">{relativeTime}</span>
+                                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                                            <p className="truncate text-base font-semibold">
+                                              {note.title || 'Untitled Note'}
+                                            </p>
+                                            <span className="flex-shrink-0 text-xs text-indigo-200/80">
+                                              {relativeTime}
+                                            </span>
                                           </div>
-                                          <p className="text-xs text-slate-300 line-clamp-2">
+                                          <p className="text-xs text-slate-300 line-clamp-2 break-words">
                                             {preview}
                                             {note.content && note.content.trim().length > 140 && '…'}
                                           </p>

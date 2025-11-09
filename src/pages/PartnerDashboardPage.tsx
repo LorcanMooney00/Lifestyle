@@ -167,7 +167,7 @@ export default function PartnerDashboardPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-5">
+        <div className="grid grid-cols-[repeat(auto-fit,_minmax(160px,_1fr))] gap-4 sm:gap-5">
           {appCards
             .filter((app) => tilePreferences[app.id] !== false)
             .map((app) => (

@@ -13,6 +13,7 @@ const defaultTilePreferences: Record<string, boolean> = {
   'recipes': true,
   'photo-gallery': true,
   'shared-todos': true,
+  'shopping-list': true,
 }
 
 export default function TopicsPage() {
@@ -28,7 +29,7 @@ export default function TopicsPage() {
   const [todoActionIds, setTodoActionIds] = useState<string[]>([])
   const [todoError, setTodoError] = useState<string | null>(null)
   const [highlightIndex, setHighlightIndex] = useState(0)
-const contentWidth = 'max-w-5xl mx-auto w-full'
+  const contentWidth = 'max-w-5xl mx-auto w-full'
 
   const [showAddPartnerModal, setShowAddPartnerModal] = useState(false)
   const [partnerEmail, setPartnerEmail] = useState('')
@@ -310,208 +311,214 @@ const contentWidth = 'max-w-5xl mx-auto w-full'
         {/* Highlighted shared activity */}
         {!loading && currentHighlight && (
           <div className="mb-6 sm:mb-8 md:mb-10">
-            <div className={`${contentWidth} relative`}>
-            {/* Peek previews */}
-            {previousHighlight && (
-              <button
-                onClick={goToPrevHighlight}
-                className="hidden sm:flex absolute -left-12 top-0 bottom-0 -translate-x-1/2 flex-col justify-between rounded-2xl border border-slate-700/60 bg-slate-900/70 py-6 px-5 pr-7 shadow-lg transition-all hover:-translate-x-5 hover:border-indigo-400/60"
-              >
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Previous</span>
-                <div className="flex items-center justify-between text-white">
-                  <span className="text-lg">{previousHighlight.icon}</span>
-                  <span className="ml-3 text-sm font-semibold">{previousHighlight.title}</span>
-                </div>
-                <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed">{previousHighlight.subtitle}</p>
-              </button>
-            )}
-            {nextHighlight && (
-              <button
-                onClick={goToNextHighlight}
-                className="hidden sm:flex absolute -right-12 top-0 bottom-0 translate-x-1/2 flex-col justify-between rounded-2xl border border-slate-700/60 bg-slate-900/70 py-6 px-5 pl-7 shadow-lg transition-all hover:translate-x-5 hover:border-indigo-400/60 text-right"
-              >
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Next</span>
-                <div className="flex items-center justify-end text-white gap-3">
-                  <span className="text-sm font-semibold">{nextHighlight.title}</span>
-                  <span className="text-lg">{nextHighlight.icon}</span>
-                </div>
-                <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed">{nextHighlight.subtitle}</p>
-              </button>
-            )}
+            <div className={`${contentWidth} flex items-stretch gap-4`}>
+              {previousHighlight && (
+                <button
+                  onClick={goToPrevHighlight}
+                  className="hidden sm:flex w-44 flex-col justify-between rounded-2xl border border-slate-700/60 bg-slate-900/70 py-6 px-4 shadow-lg transition-all hover:-translate-x-1 hover:border-indigo-400/60"
+                >
+                  <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Previous</span>
+                  <div className="flex items-center gap-2 text-white">
+                    <span className="text-lg">{previousHighlight.icon}</span>
+                    <span className="text-sm font-semibold truncate">{previousHighlight.title}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 line-clamp-3 leading-relaxed">{previousHighlight.subtitle}</p>
+                </button>
+              )}
 
-            <div className="glass backdrop-blur-sm border border-slate-600/40 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden w-full">
-              <div className="absolute inset-0 bg-gradient-to-br from-slate-800/40 via-slate-900/40 to-slate-900/10 pointer-events-none"></div>
-              <div className="relative z-10 flex flex-col gap-5 min-h-[420px] sm:min-h-[400px] md:min-h-[440px]">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-3 text-white">
-                      <span className="text-2xl">{currentHighlight.icon}</span>
-                      <h3 className="text-xl font-semibold">{currentHighlight.title}</h3>
+              <div className="flex-1">
+                <div className="glass backdrop-blur-sm border border-slate-600/40 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden w-full">
+                  <div className="absolute inset-0 bg-gradient-to-br from-slate-800/40 via-slate-900/40 to-slate-900/10 pointer-events-none"></div>
+                  <div className="relative z-10 flex flex-col gap-5 min-h-[420px] sm:min-h-[400px] md:min-h-[440px]">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-3 text-white">
+                          <span className="text-2xl">{currentHighlight.icon}</span>
+                          <h3 className="text-xl font-semibold">{currentHighlight.title}</h3>
+                        </div>
+                        <p className="text-sm text-slate-400 mt-1">{currentHighlight.subtitle}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={goToPrevHighlight}
+                          disabled={highlightConfigs.length <= 1}
+                          className="rounded-full border border-slate-600/50 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 transition-all hover:bg-slate-700/60 disabled:opacity-40 disabled:cursor-not-allowed"
+                          aria-label="Previous"
+                        >
+                          ←
+                        </button>
+                        <button
+                          onClick={goToNextHighlight}
+                          disabled={highlightConfigs.length <= 1}
+                          className="rounded-full border border-slate-600/50 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 transition-all hover:bg-slate-700/60 disabled:opacity-40 disabled:cursor-not-allowed"
+                          aria-label="Next"
+                        >
+                          →
+                        </button>
+                        <button
+                          onClick={() => navigate(currentHighlight.viewAllPath)}
+                          className="rounded-full border border-indigo-500/40 bg-indigo-500/20 px-3 py-2 text-sm font-medium text-indigo-200 transition-all hover:bg-indigo-500/30"
+                        >
+                          View all →
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-sm text-slate-400 mt-1">{currentHighlight.subtitle}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={goToPrevHighlight}
-                      disabled={highlightConfigs.length <= 1}
-                      className="rounded-full border border-slate-600/50 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 transition-all hover:bg-slate-700/60 disabled:opacity-40 disabled:cursor-not-allowed"
-                      aria-label="Previous"
-                    >
-                      ←
-                    </button>
-                    <button
-                      onClick={goToNextHighlight}
-                      disabled={highlightConfigs.length <= 1}
-                      className="rounded-full border border-slate-600/50 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 transition-all hover:bg-slate-700/60 disabled:opacity-40 disabled:cursor-not-allowed"
-                      aria-label="Next"
-                    >
-                      →
-                    </button>
-                    <button
-                      onClick={() => navigate(currentHighlight.viewAllPath)}
-                      className="rounded-full border border-indigo-500/40 bg-indigo-500/20 px-3 py-2 text-sm font-medium text-indigo-200 transition-all hover:bg-indigo-500/30"
-                    >
-                      View all →
-                    </button>
-                  </div>
-                </div>
 
-                <div className="space-y-2 flex-1 overflow-y-auto pr-1 pb-1 min-h-[360px]">
-                  {currentHighlight.type === 'events' && (
-                    <>
-                      {events.length === 0 ? (
-                        <p className="text-sm text-slate-400">No upcoming events</p>
-                      ) : (
-                        events
-                          .slice()
-                          .sort(
-                            (a, b) =>
-                              new Date(a.event_date).getTime() -
-                              new Date(b.event_date).getTime()
-                          )
-                          .slice(0, 5)
-                          .map((event) => {
-                          const eventDate = new Date(event.event_date)
-                          const today = new Date()
-                          today.setHours(0, 0, 0, 0)
-                          const eventDateOnly = new Date(eventDate)
-                          eventDateOnly.setHours(0, 0, 0, 0)
-                          const diffTime = eventDateOnly.getTime() - today.getTime()
-                          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                    <div className="space-y-2 flex-1 overflow-y-auto pr-1 pb-1 min-h-[360px]">
+                      {currentHighlight.type === 'events' && (
+                        <>
+                          {events.length === 0 ? (
+                            <p className="text-sm text-slate-400">No upcoming events</p>
+                          ) : (
+                            events
+                              .slice()
+                              .sort(
+                                (a, b) =>
+                                  new Date(a.event_date).getTime() -
+                                  new Date(b.event_date).getTime()
+                              )
+                              .slice(0, 5)
+                              .map((event) => {
+                                const eventDate = new Date(event.event_date)
+                                const today = new Date()
+                                today.setHours(0, 0, 0, 0)
+                                const eventDateOnly = new Date(eventDate)
+                                eventDateOnly.setHours(0, 0, 0, 0)
+                                const diffTime = eventDateOnly.getTime() - today.getTime()
+                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
-                          let timeLabel = ''
-                          if (diffDays === 0) {
-                            timeLabel = 'Today'
-                          } else if (diffDays === 1) {
-                            timeLabel = 'Tomorrow'
-                          } else if (diffDays > 1 && diffDays <= 30) {
-                            timeLabel = `In ${diffDays} days`
-                          } else {
-                            timeLabel = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                          }
+                                let timeLabel = ''
+                                if (diffDays === 0) {
+                                  timeLabel = 'Today'
+                                } else if (diffDays === 1) {
+                                  timeLabel = 'Tomorrow'
+                                } else if (diffDays > 1 && diffDays <= 30) {
+                                  timeLabel = `In ${diffDays} days`
+                                } else {
+                                  timeLabel = eventDate.toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                  })
+                                }
 
-                          return (
-                          <div
-                            key={event.id}
-                            className="rounded-xl border border-slate-700/60 bg-slate-800/60 px-4 py-3 text-sm text-white transition-colors hover:border-indigo-400/50 cursor-pointer"
-                            onClick={() => navigate('/app/calendar')}
-                          >
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="flex-1 min-w-0 flex items-center gap-3">
-                                <span className="text-lg">📅</span>
-                                <div className="min-w-0">
-                                  <p className="font-medium truncate">{event.title}</p>
-                                  {event.description && (
-                                    <p className="mt-1 text-xs text-slate-400 line-clamp-1">{event.description}</p>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex flex-col items-end gap-1 text-xs text-slate-300 whitespace-nowrap">
-                                {event.event_time && <span>{event.event_time}</span>}
-                                <span className="rounded-md border border-slate-600/50 bg-slate-700/60 px-2 py-0.5">
-                                  {timeLabel}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          )
-                        })
+                                return (
+                                  <div
+                                    key={event.id}
+                                    className="rounded-xl border border-slate-700/60 bg-slate-800/60 px-4 py-3 text-sm text-white transition-colors hover:border-indigo-400/50 cursor-pointer"
+                                    onClick={() => navigate('/app/calendar')}
+                                  >
+                                    <div className="flex items-center justify-between gap-3">
+                                      <div className="flex-1 min-w-0 flex items-center gap-3">
+                                        <span className="text-lg">📅</span>
+                                        <div className="min-w-0">
+                                          <p className="font-medium truncate">{event.title}</p>
+                                          {event.description && (
+                                            <p className="mt-1 text-xs text-slate-400 line-clamp-1">
+                                              {event.description}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="flex flex-col items-end gap-1 text-xs text-slate-300 whitespace-nowrap">
+                                        {event.event_time && <span>{event.event_time}</span>}
+                                        <span className="rounded-md border border-slate-600/50 bg-slate-700/60 px-2 py-0.5">
+                                          {timeLabel}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              })
+                          )}
+                        </>
                       )}
-                    </>
-                  )}
 
-                  {currentHighlight.type === 'notes' && (
-                    <>
-                      {notes.length === 0 ? (
-                        <p className="text-sm text-slate-400">No recent notes</p>
-                      ) : (
-                        notes
-                          .slice()
-                          .sort(
-                            (a, b) =>
-                              new Date(b.updated_at).getTime() -
-                              new Date(a.updated_at).getTime()
-                          )
-                          .slice(0, 5)
-                          .map((note) => (
-                            <div
-                              key={note.id}
-                              className="rounded-xl border border-slate-700/60 bg-slate-800/60 px-4 py-3 text-sm text-white transition-colors hover:border-indigo-400/50 cursor-pointer"
-                              onClick={() => navigate('/app/notes')}
-                            >
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="flex-1 min-w-0 flex items-center gap-3">
-                                  <span className="text-lg">📝</span>
-                                  <div className="min-w-0">
-                                    <p className="font-medium truncate">{note.title || 'Untitled Note'}</p>
-                                    {note.content && (
-                                      <p className="mt-1 text-xs text-slate-400 line-clamp-2">
-                                        {note.content.trim()}
-                                      </p>
-                                    )}
+                      {currentHighlight.type === 'notes' && (
+                        <>
+                          {notes.length === 0 ? (
+                            <p className="text-sm text-slate-400">No recent notes</p>
+                          ) : (
+                            notes
+                              .slice()
+                              .sort(
+                                (a, b) =>
+                                  new Date(b.updated_at).getTime() -
+                                  new Date(a.updated_at).getTime()
+                              )
+                              .slice(0, 5)
+                              .map((note) => (
+                                <div
+                                  key={note.id}
+                                  className="rounded-xl border border-slate-700/60 bg-slate-800/60 px-4 py-3 text-sm text-white transition-colors hover:border-indigo-400/50 cursor-pointer"
+                                  onClick={() => navigate('/app/notes')}
+                                >
+                                  <div className="flex items-center justify-between gap-3">
+                                    <div className="flex-1 min-w-0 flex items-center gap-3">
+                                      <span className="text-lg">📝</span>
+                                      <div className="min-w-0">
+                                        <p className="font-medium truncate">{note.title || 'Untitled Note'}</p>
+                                        {note.content && (
+                                          <p className="mt-1 text-xs text-slate-400 line-clamp-2">
+                                            {note.content.trim()}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1 text-xs text-slate-300 whitespace-nowrap">
+                                      <span>
+                                        {new Date(note.updated_at).toLocaleDateString('en-US', {
+                                          month: 'short',
+                                          day: 'numeric',
+                                        })}
+                                      </span>
+                                      {note.partners && note.partners.length > 1 && (
+                                        <span className="rounded-md border border-indigo-500/30 bg-indigo-500/15 px-2 py-0.5">
+                                          {note.partners.join(' & ')}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                                <div className="flex flex-col items-end gap-1 text-xs text-slate-300 whitespace-nowrap">
-                                  <span>
-                                    {new Date(note.updated_at).toLocaleDateString('en-US', {
-                                      month: 'short',
-                                      day: 'numeric',
-                                    })}
-                                  </span>
-                                  {note.partners && note.partners.length > 1 && (
-                                    <span className="rounded-md border border-indigo-500/30 bg-indigo-500/15 px-2 py-0.5">
-                                      {note.partners.join(' & ')}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))
+                              ))
+                          )}
+                        </>
                       )}
-                    </>
-                  )}
 
-                  {currentHighlight.type === 'todos' && (
-                    <TodoWidget
-                      variant="embedded"
-                      showHeader={false}
-                      maxItems={5}
-                      todos={todos}
-                      partners={partners}
-                      creating={creatingTodo}
-                      actionIds={todoActionIds}
-                      error={todoError}
-                      sharingLabel={partners.length > 0 ? 'all linked partners' : 'your account'}
-                      onCreate={handleCreateTodo}
-                      onToggle={handleToggleTodo}
-                      onDelete={handleDeleteTodo}
-                      className="w-full"
-                    />
-                  )}
-
+                      {currentHighlight.type === 'todos' && (
+                        <TodoWidget
+                          variant="embedded"
+                          showHeader={false}
+                          maxItems={5}
+                          todos={todos}
+                          partners={partners}
+                          creating={creatingTodo}
+                          actionIds={todoActionIds}
+                          error={todoError}
+                          sharingLabel={partners.length > 0 ? 'all linked partners' : 'your account'}
+                          onCreate={handleCreateTodo}
+                          onToggle={handleToggleTodo}
+                          onDelete={handleDeleteTodo}
+                          className="w-full"
+                        />
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+
+              {nextHighlight && (
+                <button
+                  onClick={goToNextHighlight}
+                  className="hidden sm:flex w-44 flex-col justify-between rounded-2xl border border-slate-700/60 bg-slate-900/70 py-6 px-4 shadow-lg transition-all hover:translate-x-1 hover:border-indigo-400/60 text-right"
+                >
+                  <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Next</span>
+                  <div className="flex items-center gap-2 text-white justify-end">
+                    <span className="text-sm font-semibold truncate">{nextHighlight.title}</span>
+                    <span className="text-lg">{nextHighlight.icon}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 line-clamp-3 leading-relaxed">{nextHighlight.subtitle}</p>
+                </button>
+              )}
             </div>
           </div>
         )}

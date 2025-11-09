@@ -10,6 +10,7 @@ const defaultTilePreferences: Record<string, boolean> = {
   'recipes': true,
   'photo-gallery': true,
   'shared-todos': true,
+  'shopping-list': true,
 }
 
 export default function SettingsPage() {
@@ -581,6 +582,30 @@ export default function SettingsPage() {
                 <span
                   className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
                     tilePreferences['shared-todos'] ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Shopping List Toggle */}
+            <div className="flex items-center justify-between bg-gray-700 p-4 rounded border border-gray-600">
+              <div className="flex items-center space-x-3">
+                <span className="text-2xl">🛒</span>
+                <div>
+                  <p className="font-medium text-gray-100">Shopping List</p>
+                  <p className="text-sm text-gray-400">Keep a shared list of groceries and essentials</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleToggleTile('shopping-list')}
+                disabled={tilePreferencesLoading}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 ${
+                  tilePreferences['shopping-list'] ? 'bg-indigo-600' : 'bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    tilePreferences['shopping-list'] ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
               </button>

@@ -16,6 +16,7 @@ export default function PartnerDashboardPage() {
     'calendar': true,
     'recipes': true,
     'shared-todos': true,
+    'shopping-list': true,
   }
   const [tilePreferences, setTilePreferences] = useState<Record<string, boolean>>(defaultTilePreferences)
 
@@ -87,6 +88,30 @@ export default function PartnerDashboardPage() {
       borderHover: 'hover:border-amber-400/60',
       category: 'Meal Ideas',
       categoryClass: 'bg-amber-500/15 text-amber-200 border border-amber-500/20',
+    },
+    {
+      id: 'shared-todos',
+      title: 'Shared To-Do List',
+      description: 'Track tasks and celebrate wins together.',
+      icon: '✅',
+      route: `/app/partner/${partnerId}/todos`,
+      gradient: 'from-sky-500/20 via-sky-500/10 to-transparent',
+      iconBackground: 'bg-sky-500/20 text-sky-200',
+      borderHover: 'hover:border-sky-400/60',
+      category: 'Productivity',
+      categoryClass: 'bg-sky-500/15 text-sky-200 border border-sky-500/20',
+    },
+    {
+      id: 'shopping-list',
+      title: 'Shopping List',
+      description: 'Plan grocery runs and keep essentials stocked.',
+      icon: '🛒',
+      route: `/app/partner/${partnerId}/shopping`,
+      gradient: 'from-rose-500/20 via-rose-500/10 to-transparent',
+      iconBackground: 'bg-rose-500/20 text-rose-200',
+      borderHover: 'hover:border-rose-400/60',
+      category: 'Household',
+      categoryClass: 'bg-rose-500/15 text-rose-200 border border-rose-500/20',
     },
   ]
 

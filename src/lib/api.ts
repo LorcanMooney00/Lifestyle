@@ -381,7 +381,17 @@ export async function getTilePreferences(userId: string): Promise<{ preferences:
   if (error) {
     if (error.code === 'PGRST116') {
       // No profile found, return default preferences
-      return { preferences: { 'shared-notes': true, 'calendar': true, 'recipes': true, 'photo-gallery': true, 'shared-todos': true }, error: null }
+      return {
+        preferences: {
+          'shared-notes': true,
+          'calendar': true,
+          'recipes': true,
+          'photo-gallery': true,
+          'shared-todos': true,
+          'shopping-list': true,
+        },
+        error: null,
+      }
     }
     console.error('Error fetching tile preferences:', error)
     return { preferences: null, error: error.message }
@@ -394,6 +404,7 @@ export async function getTilePreferences(userId: string): Promise<{ preferences:
     'recipes': true,
     'photo-gallery': true,
     'shared-todos': true,
+    'shopping-list': true,
     ...(data?.tile_preferences ?? {}),
   }
   return { preferences, error: null }

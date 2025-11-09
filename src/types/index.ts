@@ -87,6 +87,19 @@ export interface ShoppingItem {
   updated_at: string
 }
 
+export interface Dog {
+  id: string
+  user_id: string
+  partner_id: string | null
+  name: string
+  meals_per_day: number | null
+  weight_per_meal: number | null
+  photo_url: string | null
+  created_at: string
+  updated_at: string
+  photo_signed_url?: string | null
+}
+
 export interface User {
   id: string
   email?: string

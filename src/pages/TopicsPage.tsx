@@ -14,8 +14,12 @@ import {
   createTodo,
   toggleTodoCompletion,
   deleteTodo,
+  getDogs,
+  createDog,
+  updateDog,
+  uploadDogPhoto,
 } from '../lib/api'
-import type { Note, Event, Todo, ShoppingItem } from '../types'
+import type { Note, Event, Todo, ShoppingItem, Dog } from '../types'
 import PhotoWidget from '../components/PhotoWidget'
 import TodoWidget from '../components/TodoWidget'
 
@@ -27,6 +31,8 @@ const defaultTilePreferences: Record<string, boolean> = {
   'shared-todos': true,
   'shopping-list': true,
 }
+
+const getTodayKey = () => new Date().toISOString().split('T')[0]
 
 export default function TopicsPage() {
   const navigate = useNavigate()
@@ -42,7 +48,51 @@ export default function TopicsPage() {
   const [todoActionIds, setTodoActionIds] = useState<string[]>([])
   const [todoError, setTodoError] = useState<string | null>(null)
   const [highlightIndex, setHighlightIndex] = useState(0)
+  const [dogs, setDogs] = useState<Dog[]>([])
+  const [expandedDogId, setExpandedDogId] = useState<string | null>(null)
+  const [showAddDogModal, setShowAddDogModal] = useState(false)
+  const [dogModalMode, setDogModalMode] = useState<'add' | 'edit'>('add')
+  const [dogFormName, setDogFormName] = useState('')
+  const [dogFormMeals, setDogFormMeals] = useState(2)
+  const [dogFormWeight, setDogFormWeight] = useState('')
+  const [dogFormPhotoUrl, setDogFormPhotoUrl] = useState('')
+  const [dogFormPhotoPreviewUrl, setDogFormPhotoPreviewUrl] = useState('')
+  const [dogFormPartnerId, setDogFormPartnerId] = useState('')
+  const [dogFormPhotoFile, setDogFormPhotoFile] = useState<File | null>(null)
+  const [dogSaving, setDogSaving] = useState(false)
+  const [dogError, setDogError] = useState<string | null>(null)
+  const [dogModalTargetId, setDogModalTargetId] = useState<string | null>(null)
   const contentWidth = 'max-w-5xl mx-auto w-full'
+  const [dogMealStatus, setDogMealStatus] = useState<Record<string, { date: string; completed: boolean[] }>>(() => {
+    if (typeof window === 'undefined') return {}
+    try {
+      const stored = localStorage.getItem('dogMealStatus')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (parsed && typeof parsed === 'object') {
+          return parsed
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load dog meal status from storage:', error)
+    }
+    return {}
+  })
+  useEffect(() => {
+    if (!dogFormPhotoFile) {
+      return
+    }
+    const objectUrl = URL.createObjectURL(dogFormPhotoFile)
+    setDogFormPhotoPreviewUrl(objectUrl)
+    return () => {
+      URL.revokeObjectURL(objectUrl)
+    }
+  }, [dogFormPhotoFile])
+
+  const sortDogs = (dogList: Dog[]) =>
+    [...dogList].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    )
 
   const [showAddPartnerModal, setShowAddPartnerModal] = useState(false)
   const [partnerEmail, setPartnerEmail] = useState('')
@@ -67,13 +117,14 @@ export default function TopicsPage() {
       const nextMonth = new Date(today)
       nextMonth.setDate(today.getDate() + 30)
 
-      const [notesData, partnersData, preferencesData, todosData, eventsData, shoppingData] = await Promise.all([
+      const [notesData, partnersData, preferencesData, todosData, eventsData, shoppingData, dogsData] = await Promise.all([
         getAllNotes(user.id),
         getPartners(user.id),
         getTilePreferences(user.id),
         getTodos(user.id),
         getEvents(today, nextMonth),
         getShoppingItems(user.id),
+        getDogs(user.id),
       ])
 
       setNotes(notesData)
@@ -86,6 +137,15 @@ export default function TopicsPage() {
       setTodos(todosData)
       setEvents(eventsData)
       setShoppingItems(shoppingData)
+      const sortedDogs = sortDogs(dogsData || [])
+      setDogs(sortedDogs)
+      if (sortedDogs.length > 0) {
+        setExpandedDogId((prev) =>
+          prev && sortedDogs.some((dog) => dog.id === prev) ? prev : sortedDogs[0].id
+        )
+      } else {
+        setExpandedDogId(null)
+      }
       setTodoError(null)
     } catch (error) {
       console.error('Error loading dashboard data:', error)
@@ -145,11 +205,214 @@ export default function TopicsPage() {
     return configs
   }, [tilePreferences])
 
+  const partnerMap = useMemo(() => {
+    const map = new Map<string, { id: string; email: string; username: string; profilePictureUrl?: string | null }>()
+    partners.forEach((partner) => map.set(partner.id, partner))
+    return map
+  }, [partners])
+
+  useEffect(() => {
+    if (dogs.length === 0) {
+      setExpandedDogId(null)
+      return
+    }
+    setExpandedDogId((prev) =>
+      prev && dogs.some((dog) => dog.id === prev) ? prev : dogs[0].id
+    )
+  }, [dogs])
+
+  const getMealLabel = (index: number) => {
+    if (index === 0) return 'Breakfast'
+    if (index === 1) return 'Dinner'
+    return `Meal ${index + 1}`
+  }
+
+  const handleDogMealAction = (dog: Dog, mealIndex: number) => {
+    const mealCount = Math.max(1, dog.meals_per_day ?? 2)
+    setDogMealStatus((prev) => {
+      const today = getTodayKey()
+      const existing = prev[dog.id]
+      const baseCompleted =
+        existing && existing.date === today && existing.completed.length === mealCount
+          ? [...existing.completed]
+          : Array(mealCount).fill(false)
+      baseCompleted[mealIndex] = !baseCompleted[mealIndex]
+      return {
+        ...prev,
+        [dog.id]: {
+          date: today,
+          completed: baseCompleted,
+        },
+      }
+    })
+  }
+
+  const openDogModal = (mode: 'add' | 'edit', dog?: Dog) => {
+    setDogModalMode(mode)
+    setDogError(null)
+    if (mode === 'edit' && dog) {
+      setDogModalTargetId(dog.id)
+      setExpandedDogId(dog.id)
+      setDogFormName(dog.name)
+      setDogFormMeals(dog.meals_per_day ?? 2)
+      setDogFormWeight(dog.weight_per_meal != null ? String(dog.weight_per_meal) : '')
+      setDogFormPhotoUrl(dog.photo_url ?? '')
+      setDogFormPhotoPreviewUrl(
+        dog.photo_signed_url ??
+          (dog.photo_url && dog.photo_url.startsWith('http') ? dog.photo_url : '')
+      )
+      setDogFormPartnerId(dog.partner_id ?? '')
+      setDogFormPhotoFile(null)
+    } else {
+      setDogModalTargetId(null)
+      setDogFormName('')
+      setDogFormMeals(2)
+      setDogFormWeight('')
+      setDogFormPhotoUrl('')
+      setDogFormPartnerId('')
+      setDogFormPhotoFile(null)
+      setDogFormPhotoPreviewUrl('')
+    }
+    setShowAddDogModal(true)
+  }
+
+  const handleCloseDogModal = () => {
+    if (dogSaving) return
+    setShowAddDogModal(false)
+    setDogFormPhotoFile(null)
+    setDogFormPhotoPreviewUrl('')
+    setDogModalTargetId(null)
+  }
+
+  const handleDogFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user) return
+
+    const trimmedName = dogFormName.trim()
+    if (!trimmedName) {
+      setDogError('Please give your dog a name.')
+      return
+    }
+
+    const weightValue = dogFormWeight.trim() ? Number(dogFormWeight) : null
+    if (weightValue !== null && (Number.isNaN(weightValue) || weightValue <= 0)) {
+      setDogError('Weight per meal must be a positive number.')
+      return
+    }
+
+    const mealsValue = Math.max(1, Number(dogFormMeals) || 1)
+
+    setDogSaving(true)
+    setDogError(null)
+
+    let photoPath = dogFormPhotoUrl.trim() || null
+
+    if (dogFormPhotoFile) {
+      const { path, error: uploadError } = await uploadDogPhoto(dogFormPhotoFile, user.id)
+      if (uploadError || !path) {
+        setDogError(uploadError || 'Failed to upload photo.')
+        setDogSaving(false)
+        return
+      }
+      photoPath = path
+      setDogFormPhotoUrl(path)
+    }
+
+    if (dogModalMode === 'add') {
+      const { dog, error } = await createDog(user.id, {
+        name: trimmedName,
+        meals_per_day: mealsValue,
+        weight_per_meal: weightValue,
+        partner_id: dogFormPartnerId || null,
+        photo_url: photoPath,
+      })
+
+      if (error || !dog) {
+        setDogError(error || 'Failed to add dog. Please try again.')
+        setDogSaving(false)
+        return
+      }
+
+      setDogs((prev) => sortDogs([...prev, dog]))
+      setExpandedDogId(dog.id)
+    } else if (dogModalMode === 'edit' && dogModalTargetId) {
+      const { dog, error } = await updateDog(dogModalTargetId, {
+        name: trimmedName,
+        meals_per_day: mealsValue,
+        weight_per_meal: weightValue,
+        partner_id: dogFormPartnerId || null,
+        photo_url: photoPath,
+      })
+
+      if (error || !dog) {
+        setDogError(error || 'Failed to update dog. Please try again.')
+        setDogSaving(false)
+        return
+      }
+
+      setDogs((prev) =>
+        sortDogs(
+          prev.map((existing) => (existing.id === dog.id ? dog : existing))
+        )
+      )
+      setExpandedDogId(dog.id)
+    }
+
+    setShowAddDogModal(false)
+    setDogFormPhotoFile(null)
+    setDogFormPhotoPreviewUrl('')
+    setDogModalTargetId(null)
+    setDogSaving(false)
+  }
+
   useEffect(() => {
     if (highlightIndex >= highlightConfigs.length) {
       setHighlightIndex(0)
     }
   }, [highlightConfigs, highlightIndex])
+
+  useEffect(() => {
+    const today = getTodayKey()
+    setDogMealStatus((prev) => {
+      let changed = false
+      const updated: Record<string, { date: string; completed: boolean[] }> = {}
+
+      dogs.forEach((dog) => {
+        const mealCount = Math.max(1, dog.meals_per_day ?? 2)
+        const existing = prev[dog.id]
+        if (existing && existing.date === today && existing.completed.length === mealCount) {
+          updated[dog.id] = existing
+        } else {
+          updated[dog.id] = { date: today, completed: Array(mealCount).fill(false) }
+          changed = true
+        }
+      })
+
+      if (Object.keys(prev).length !== Object.keys(updated).length) {
+        changed = true
+      }
+
+      return changed ? updated : prev
+    })
+  }, [dogs])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      localStorage.setItem('dogMealStatus', JSON.stringify(dogMealStatus))
+    } catch (error) {
+      console.warn('Failed to persist dog meal status:', error)
+    }
+  }, [dogMealStatus])
+
+  useEffect(() => {
+    const now = new Date()
+    const msUntilMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime() - now.getTime()
+    const timer = setTimeout(() => {
+      setDogMealStatus({})
+    }, msUntilMidnight)
+    return () => clearTimeout(timer)
+  }, [dogs])
 
   const currentHighlight = highlightConfigs[highlightIndex]
 
@@ -607,6 +870,314 @@ export default function TopicsPage() {
           </div>
         )}
 
+        {/* Add Dog Modal */}
+        {showAddDogModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+            <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-lg border border-slate-600/50">
+              <div className="p-6">
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <h3 className="text-2xl font-bold text-white">Add Family Dog</h3>
+                    <p className="text-sm text-slate-400 mt-1">
+                      Share feeding details so everyone stays in sync.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleCloseDogModal}
+                    className="text-slate-400 hover:text-white text-2xl min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors rounded-lg hover:bg-slate-700/50"
+                    aria-label="Close add dog modal"
+                    disabled={dogSaving}
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {dogError && (
+                  <div className="mb-4 rounded-xl border border-red-700/50 bg-red-900/30 px-4 py-3 text-sm text-red-200">
+                    {dogError}
+                  </div>
+                )}
+
+                <form onSubmit={handleDogFormSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Dog&apos;s Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={dogFormName}
+                      onChange={(e) => setDogFormName(e.target.value)}
+                      placeholder="Buddy"
+                      required
+                      className="w-full rounded-lg border border-slate-600 bg-slate-700/50 px-4 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                      disabled={dogSaving}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Meals Per Day
+                      </label>
+                      <select
+                        value={dogFormMeals}
+                        onChange={(e) => setDogFormMeals(Number(e.target.value))}
+                        className="w-full rounded-lg border border-slate-600 bg-slate-700/50 px-4 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                        disabled={dogSaving}
+                      >
+                        {[1, 2, 3, 4, 5, 6].map((count) => (
+                          <option key={count} value={count}>
+                            {count} {count === 1 ? 'meal' : 'meals'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Weight Per Meal (grams)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={dogFormWeight}
+                        onChange={(e) => setDogFormWeight(e.target.value)}
+                        placeholder="6"
+                        className="w-full rounded-lg border border-slate-600 bg-slate-700/50 px-4 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                        disabled={dogSaving}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Photo URL (optional)
+                    </label>
+                    <input
+                      type="url"
+                      value={dogFormPhotoUrl}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setDogFormPhotoUrl(value)
+                        setDogFormPhotoFile(null)
+                        setDogFormPhotoPreviewUrl(value && value.startsWith('http') ? value : '')
+                      }}
+                      placeholder="https://..."
+                      className="w-full rounded-lg border border-slate-600 bg-slate-700/50 px-4 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                      disabled={dogSaving}
+                    />
+                    <p className="mt-2 text-xs text-slate-500">
+                      Paste an image link or upload a photo below.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Upload Photo
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null
+                        setDogFormPhotoFile(file)
+                        if (!file) {
+                          setDogFormPhotoPreviewUrl(
+                            dogFormPhotoUrl && dogFormPhotoUrl.startsWith('http')
+                              ? dogFormPhotoUrl
+                              : ''
+                          )
+                        }
+                      }}
+                      className="w-full rounded-lg border border-slate-600 bg-slate-700/50 px-4 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                      disabled={dogSaving}
+                    />
+                    <p className="mt-2 text-xs text-slate-500">
+                      JPG or PNG up to 5MB. Uploading will replace the current photo.
+                    </p>
+                    {(dogFormPhotoPreviewUrl || dogFormPhotoUrl) && (
+                      <div className="mt-3 flex items-center gap-3">
+                        <div className="text-xs text-slate-400">Preview:</div>
+                        <div className="h-12 w-12 overflow-hidden rounded-xl border border-slate-600/60">
+                          <img
+                            src={dogFormPhotoPreviewUrl || dogFormPhotoUrl}
+                            alt="Dog preview"
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Share with Partner
+                    </label>
+                    <select
+                      value={dogFormPartnerId}
+                      onChange={(e) => setDogFormPartnerId(e.target.value)}
+                      className="w-full rounded-lg border border-slate-600 bg-slate-700/50 px-4 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                      disabled={dogSaving}
+                    >
+                      <option value="">Just me</option>
+                      {partners.map((partner) => (
+                        <option key={partner.id} value={partner.id}>
+                          {partner.username || partner.email}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={handleCloseDogModal}
+                      className="flex-1 rounded-lg bg-slate-700/70 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-600/80 disabled:opacity-60"
+                      disabled={dogSaving}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={dogSaving}
+                      className="flex-1 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {dogSaving ? 'Saving...' : dogModalMode === 'add' ? 'Save Dog' : 'Update Dog'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <div className="md:col-span-8 lg:col-span-9 xl:col-span-10 2xl:col-span-11">
+                <div className="mt-4 rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 sm:p-6 shadow-xl">
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="text-lg sm:text-xl font-semibold text-white">Family Dogs</h3>
+                      <p className="text-xs text-slate-400 sm:text-sm">
+                        Tap a card to reveal meal tiles and keep feeding schedules aligned.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => openDogModal('add')}
+                      className="flex items-center gap-2 rounded-lg border border-indigo-500/40 bg-indigo-500/20 px-3 py-2 text-sm font-medium text-indigo-100 transition hover:bg-indigo-500/30"
+                    >
+                      <span>➕</span>
+                      <span>Add Dog</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                    {dogs.map((dog) => {
+                        const isExpanded = expandedDogId === dog.id
+                        const mealCount = Math.max(1, dog.meals_per_day ?? 2)
+                        const status = dogMealStatus[dog.id]
+                        const completed: boolean[] =
+                          status && status.date === getTodayKey() && status.completed.length === mealCount
+                            ? [...status.completed]
+                            : Array(mealCount).fill(false)
+                        return (
+                          <div
+                            key={dog.id}
+                            className="group rounded-2xl border border-slate-700/60 bg-slate-900/70 p-4 shadow-lg transition hover:border-indigo-400/60"
+                          >
+                            <button
+                              onClick={() => setExpandedDogId(isExpanded ? null : dog.id)}
+                              className="flex w-full items-start gap-3 text-left"
+                            >
+                              {dog.photo_signed_url || dog.photo_url ? (
+                                <img
+                                  src={dog.photo_signed_url || dog.photo_url || ''}
+                                  alt={dog.name}
+                                  className="h-12 w-12 rounded-xl object-cover border border-indigo-500/30"
+                                />
+                              ) : (
+                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/20 text-lg text-indigo-100">
+                                  {dog.name.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="min-w-0 space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="truncate text-base font-semibold text-white">{dog.name}</p>
+                                  <span className="rounded-full border border-indigo-500/30 bg-indigo-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-200">
+                                    {mealCount} {mealCount === 1 ? 'meal' : 'meals'}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-slate-400">
+                                  {dog.weight_per_meal ? `${dog.weight_per_meal} grams per meal` : 'Set grams per meal'}
+                                </p>
+                                {dog.partner_id && (
+                                  <p className="text-[11px] text-slate-500">
+                                    Shared with{' '}
+                                    {partnerMap.get(dog.partner_id)?.username ||
+                                      partnerMap.get(dog.partner_id)?.email ||
+                                      'partner'}
+                                  </p>
+                                )}
+                              </div>
+                            </button>
+
+                            <div className="mt-3 flex items-center justify-between">
+                              <span className="text-[11px] uppercase tracking-wide text-slate-500">
+                                Tap card to {isExpanded ? 'hide' : 'view'} meals
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => openDogModal('edit', dog)}
+                                className="rounded-lg border border-indigo-500/40 bg-indigo-500/20 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-indigo-100 transition hover:bg-indigo-500/30"
+                              >
+                                Edit
+                              </button>
+                            </div>
+
+                            {isExpanded && (
+                              <div className="mt-4 grid grid-cols-1 gap-2">
+                                {Array.from({ length: mealCount }).map((_, mealIndex) => (
+                                  <label
+                                    key={mealIndex}
+                                    className="flex items-center gap-3 rounded-xl border border-slate-700/50 bg-slate-800/60 px-3 py-3 text-left text-slate-200 transition hover:border-indigo-400/60 hover:text-white"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-indigo-500 focus:ring-indigo-400"
+                                      checked={completed[mealIndex]}
+                                      onChange={(e) => {
+                                        e.stopPropagation()
+                                        handleDogMealAction(dog, mealIndex)
+                                      }}
+                                    />
+                                    <div>
+                                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
+                                        <span className="text-lg">
+                                          {mealIndex === 0 ? '🍳' : mealIndex === 1 ? '🍲' : '🥣'}
+                                        </span>
+                                        <span>{getMealLabel(mealIndex)}</span>
+                                      </div>
+                                      <div className="text-[11px] text-slate-400">
+                                        {dog.weight_per_meal ? `${dog.weight_per_meal} g` : 'Set grams'}
+                                      </div>
+                                    </div>
+                                  </label>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+
+                    <button
+                      onClick={() => openDogModal('add')}
+                      className="flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-indigo-500/30 bg-slate-900/40 p-6 text-center text-indigo-200 transition hover:border-indigo-400/50 hover:text-indigo-100"
+                    >
+                      <div className="text-3xl">➕</div>
+                      <div className="text-sm font-semibold">Add Dog</div>
+                      <p className="text-xs text-indigo-200/80">Keep meal schedules in sync</p>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Partner Selection and Quick Stats with Photo Widget 1 spanning both */}
         {!loading && (
@@ -683,33 +1254,118 @@ export default function TopicsPage() {
                 </div>
               )}
 
-              {/* Row 2: Quick Stats - Made smaller */}
-              <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-3 lg:gap-3 xl:gap-3 2xl:gap-3 md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-5">
-                <div className="glass backdrop-blur-sm border border-slate-600/40 rounded-2xl p-3 sm:p-4 aspect-square flex flex-col justify-center card-hover shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[10px] sm:text-xs text-slate-400 mb-1 truncate">Total Notes</p>
-                      <p className="text-lg sm:text-xl md:text-2xl lg:text-xl xl:text-2xl 2xl:text-lg font-bold text-white">{notes.length}</p>
+              {/* Row 2: Family Dogs */}
+              <div className="md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-5">
+                <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 sm:p-6 shadow-xl">
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="text-lg sm:text-xl font-semibold text-white">Family Dogs</h3>
+                      <p className="text-xs text-slate-400 sm:text-sm">Keep your shared pups in sync.</p>
                     </div>
-                    <div className="text-2xl sm:text-3xl flex-shrink-0 ml-2">📝</div>
+                    <button
+                      onClick={() => openDogModal('add')}
+                      className="flex items-center gap-2 rounded-lg border border-indigo-500/40 bg-indigo-500/20 px-3 py-2 text-sm font-medium text-indigo-100 transition hover:bg-indigo-500/30"
+                    >
+                      <span>➕</span>
+                      <span>Add Dog</span>
+                    </button>
                   </div>
-                </div>
-                <div className="glass backdrop-blur-sm border border-slate-600/40 rounded-2xl p-3 sm:p-4 aspect-square flex flex-col justify-center card-hover shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[10px] sm:text-xs text-slate-400 mb-1 truncate">Upcoming Events</p>
-                      <p className="text-lg sm:text-xl md:text-2xl lg:text-xl xl:text-2xl 2xl:text-lg font-bold text-white">{events.length}</p>
-                    </div>
-                    <div className="text-2xl sm:text-3xl flex-shrink-0 ml-2">📅</div>
-                  </div>
-                </div>
-                <div className="glass backdrop-blur-sm border border-slate-600/40 rounded-2xl p-3 sm:p-4 aspect-square flex flex-col justify-center card-hover shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[10px] sm:text-xs text-slate-400 mb-1 truncate">Linked Partners</p>
-                      <p className="text-lg sm:text-xl md:text-2xl lg:text-xl xl:text-2xl 2xl:text-lg font-bold text-white">{partners.length}</p>
-                    </div>
-                    <div className="text-2xl sm:text-3xl flex-shrink-0 ml-2">👥</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {dogs.map((dog) => {
+                      const isExpanded = expandedDogId === dog.id
+                      const mealCount = Math.max(1, dog.meals_per_day ?? 2)
+                      const status = dogMealStatus[dog.id]
+                      const completed: boolean[] =
+                        status && status.date === getTodayKey() && status.completed.length === mealCount
+                          ? [...status.completed]
+                          : Array(mealCount).fill(false)
+
+                      return (
+                        <div
+                          key={dog.id}
+                          className="flex flex-col gap-3 rounded-2xl border border-slate-700/60 bg-slate-900/70 p-4 shadow-lg transition hover:border-indigo-400/60"
+                        >
+                          <button
+                            onClick={() => setExpandedDogId(isExpanded ? null : dog.id)}
+                            className="flex items-start gap-3 text-left"
+                          >
+                            {dog.photo_signed_url || dog.photo_url ? (
+                              <img
+                                src={dog.photo_signed_url || dog.photo_url || ''}
+                                alt={dog.name}
+                                className="h-12 w-12 rounded-xl object-cover border border-indigo-500/30"
+                              />
+                            ) : (
+                              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/20 text-lg text-indigo-100">
+                                {dog.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0 space-y-1">
+                              <div className="flex items-center gap-2">
+                                <p className="truncate text-base font-semibold text-white">{dog.name}</p>
+                                <span className="rounded-full border border-indigo-500/30 bg-indigo-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-200">
+                                  {mealCount} {mealCount === 1 ? 'meal' : 'meals'}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-400">
+                                {dog.weight_per_meal ? `${dog.weight_per_meal} g per meal` : 'Set grams per meal'}
+                              </p>
+                              {dog.partner_id && (
+                                <p className="text-[11px] text-slate-500">
+                                  Shared with{' '}
+                                  {partnerMap.get(dog.partner_id)?.username ||
+                                    partnerMap.get(dog.partner_id)?.email ||
+                                    'partner'}
+                                </p>
+                              )}
+                            </div>
+                          </button>
+
+                          <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-slate-500">
+                            <span>Tap card to {isExpanded ? 'hide' : 'view'} meals</span>
+                            <button
+                              type="button"
+                              onClick={() => openDogModal('edit', dog)}
+                              className="rounded-lg border border-indigo-500/40 bg-indigo-500/20 px-2 py-1 text-indigo-100 transition hover:bg-indigo-500/30"
+                            >
+                              Edit
+                            </button>
+                          </div>
+
+                          {isExpanded && (
+                            <div className="grid grid-cols-1 gap-2">
+                              {Array.from({ length: mealCount }).map((_, mealIndex) => (
+                                <label
+                                  key={mealIndex}
+                                  className="flex items-center gap-3 rounded-xl border border-slate-700/50 bg-slate-800/60 px-3 py-3 text-left text-slate-200 transition hover:border-indigo-400/60 hover:text-white"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-indigo-500 focus:ring-indigo-400"
+                                    checked={completed[mealIndex]}
+                                    onChange={(e) => {
+                                      e.stopPropagation()
+                                      handleDogMealAction(dog, mealIndex)
+                                    }}
+                                  />
+                                  <div>
+                                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
+                                      <span className="text-lg">
+                                        {mealIndex === 0 ? '🍳' : mealIndex === 1 ? '🍲' : '🥣'}
+                                      </span>
+                                      <span>{getMealLabel(mealIndex)}</span>
+                                    </div>
+                                    <div className="text-[11px] text-slate-400">
+                                      {dog.weight_per_meal ? `${dog.weight_per_meal} g` : 'Set grams'}
+                                    </div>
+                                  </div>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               </div>

@@ -295,6 +295,77 @@ CREATE POLICY "Users can delete shopping items"
 */
 
 -- ============================================
+-- QUICK UPDATE: Create shared dogs table with RLS
+-- ============================================
+-- Copy and paste this into Supabase SQL Editor to add the shared dog planner:
+/*
+CREATE TABLE IF NOT EXISTS public.dogs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  partner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  meals_per_day INTEGER DEFAULT 2 CHECK (meals_per_day > 0),
+  weight_per_meal NUMERIC(10,2),
+  photo_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE OR REPLACE FUNCTION set_dogs_updated_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS set_dogs_updated_at_trigger ON public.dogs;
+CREATE TRIGGER set_dogs_updated_at_trigger
+BEFORE UPDATE ON public.dogs
+FOR EACH ROW
+EXECUTE FUNCTION set_dogs_updated_at();
+
+ALTER TABLE public.dogs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view dogs" ON public.dogs;
+DROP POLICY IF EXISTS "Users can insert dogs" ON public.dogs;
+DROP POLICY IF EXISTS "Users can update dogs" ON public.dogs;
+DROP POLICY IF EXISTS "Users can delete dogs" ON public.dogs;
+
+CREATE POLICY "Users can view dogs"
+  ON public.dogs FOR SELECT
+  USING (
+    auth.uid() = user_id OR
+    auth.uid() = partner_id
+  );
+
+CREATE POLICY "Users can insert dogs"
+  ON public.dogs FOR INSERT
+  WITH CHECK (
+    auth.uid() = user_id AND
+    (partner_id IS NULL OR are_partners(user_id, partner_id))
+  );
+
+CREATE POLICY "Users can update dogs"
+  ON public.dogs FOR UPDATE
+  USING (
+    auth.uid() = user_id OR auth.uid() = partner_id
+  )
+  WITH CHECK (
+    (auth.uid() = user_id AND (partner_id IS NULL OR are_partners(user_id, partner_id))) OR
+    (auth.uid() = partner_id AND are_partners(user_id, partner_id))
+  );
+
+CREATE POLICY "Users can delete dogs"
+  ON public.dogs FOR DELETE
+  USING (
+    auth.uid() = user_id OR auth.uid() = partner_id
+  );
+*/
+
+-- ============================================
 -- QUICK UPDATE: Run this SQL to enable partner notes sharing
 -- ============================================
 -- Copy and paste this section into Supabase SQL Editor to update existing database:

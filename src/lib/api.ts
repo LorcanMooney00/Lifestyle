@@ -10,6 +10,7 @@ import type {
   Photo,
   Todo,
   ShoppingItem,
+  Dog,
 } from '../types'
 
 export async function getTopics(): Promise<Topic[]> {
@@ -1224,6 +1225,142 @@ export async function deleteShoppingItem(itemId: string): Promise<{ success: boo
   }
 
   return { success: true, error: null }
+}
+
+// ============================================
+// DOGS API
+// ============================================
+
+export async function getDogs(userId: string): Promise<Dog[]> {
+  const { data, error } = await supabase
+    .from('dogs')
+    .select('*')
+    .or(`user_id.eq.${userId},partner_id.eq.${userId}`)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching dogs:', error)
+    return []
+  }
+
+  const rawDogs = (data as Dog[]) || []
+
+  return Promise.all(rawDogs.map(attachDogPhotoSignedUrl))
+}
+
+export async function createDog(
+  userId: string,
+  input: {
+    name: string
+    meals_per_day?: number | null
+    weight_per_meal?: number | null
+    partner_id?: string | null
+    photo_url?: string | null
+  }
+): Promise<{ dog: Dog | null; error: string | null }> {
+  const payload = {
+    user_id: userId,
+    name: input.name,
+    meals_per_day: input.meals_per_day ?? null,
+    weight_per_meal: input.weight_per_meal ?? null,
+    partner_id: input.partner_id ?? null,
+    photo_url: input.photo_url ?? null,
+  }
+
+  const { data, error } = await supabase
+    .from('dogs')
+    .insert(payload)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error creating dog:', error)
+    return { dog: null, error: error.message }
+  }
+
+  const createdDog = await attachDogPhotoSignedUrl(data as Dog)
+  return { dog: createdDog, error: null }
+}
+
+export async function updateDog(
+  dogId: string,
+  updates: Partial<Pick<Dog, 'name' | 'meals_per_day' | 'weight_per_meal' | 'photo_url' | 'partner_id'>>
+): Promise<{ dog: Dog | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('dogs')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', dogId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error updating dog:', error)
+    return { dog: null, error: error.message }
+  }
+
+  const updatedDog = await attachDogPhotoSignedUrl(data as Dog)
+  return { dog: updatedDog, error: null }
+}
+
+export async function deleteDog(dogId: string): Promise<{ success: boolean; error: string | null }> {
+  const { error } = await supabase.from('dogs').delete().eq('id', dogId)
+
+  if (error) {
+    console.error('Error deleting dog:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true, error: null }
+}
+
+export async function uploadDogPhoto(file: File, userId: string): Promise<{ path: string | null; error: string | null }> {
+  if (!file.type.startsWith('image/')) {
+    return { path: null, error: 'Please select an image file' }
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    return { path: null, error: 'Dog photo must be less than 5MB' }
+  }
+
+  const fileExt = file.name.split('.').pop()
+  const fileName = `dog-${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+  const filePath = `${userId}/dogs/${fileName}`
+
+  const { error } = await supabase.storage.from('photos').upload(filePath, file, {
+    cacheControl: '3600',
+    upsert: true,
+  })
+
+  if (error) {
+    console.error('Error uploading dog photo:', error)
+    return { path: null, error: error.message }
+  }
+
+  return { path: filePath, error: null }
+}
+
+async function attachDogPhotoSignedUrl(dog: Dog): Promise<Dog> {
+  if (!dog.photo_url) {
+    return { ...dog, photo_signed_url: null }
+  }
+
+  if (dog.photo_url.startsWith('http')) {
+    return { ...dog, photo_signed_url: dog.photo_url }
+  }
+
+  const { data: signed, error } = await supabase.storage
+    .from('photos')
+    .createSignedUrl(dog.photo_url, 3600)
+
+  if (error) {
+    console.warn('Could not create signed URL for dog photo:', error)
+    return { ...dog, photo_signed_url: null }
+  }
+
+  return { ...dog, photo_signed_url: signed?.signedUrl ?? null }
 }
 
 // ============================================

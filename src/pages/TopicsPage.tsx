@@ -341,14 +341,14 @@ export default function TopicsPage() {
           <div className="mb-6 sm:mb-8 md:mb-10">
             <div className={`${contentWidth} space-y-4`}>
               <div className="overflow-x-auto">
-                <div className="flex w-max max-w-full gap-2 rounded-2xl border border-slate-700/60 bg-slate-900/70 p-1 text-sm text-slate-300 sm:w-full">
+                <div className="flex w-full sm:w-auto sm:w-max max-w-full gap-2 rounded-2xl border border-slate-700/60 bg-slate-900/70 p-1 text-sm text-slate-300">
                   {highlightConfigs.map((config, index) => {
                     const isActive = highlightIndex === index
                     return (
                       <button
                         key={config.type}
                         onClick={() => setHighlightIndex(index)}
-                        className={`flex min-w-[140px] flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 transition ${
+                        className={`flex min-w-[120px] sm:min-w-[140px] flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl px-3 py-2 transition ${
                           isActive
                             ? 'bg-indigo-500/20 text-indigo-200 shadow-inner shadow-indigo-900/40'
                             : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'

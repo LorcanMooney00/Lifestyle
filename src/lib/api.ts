@@ -1,5 +1,16 @@
 import { supabase } from './supabaseClient'
-import type { Topic, Note, TopicMember, Event, Recipe, RecipeIngredient, UserIngredient, Photo, Todo } from '../types'
+import type {
+  Topic,
+  Note,
+  TopicMember,
+  Event,
+  Recipe,
+  RecipeIngredient,
+  UserIngredient,
+  Photo,
+  Todo,
+  ShoppingItem,
+} from '../types'
 
 export async function getTopics(): Promise<Topic[]> {
   // RLS policies will automatically filter to topics user has access to
@@ -1088,6 +1099,127 @@ export async function deleteTodo(todoId: string): Promise<{ success: boolean; er
 
   if (error) {
     console.error('Error deleting todo:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true, error: null }
+}
+
+// ============================================
+// SHOPPING LIST API
+// ============================================
+
+export async function getShoppingItems(userId: string, filterPartnerId?: string | null): Promise<ShoppingItem[]> {
+  const { data, error } = await supabase
+    .from('shopping_list_items')
+    .select('*')
+    .or(`user_id.eq.${userId},partner_id.eq.${userId}`)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching shopping list items:', error)
+    return []
+  }
+
+  let items = (data as ShoppingItem[]) || []
+
+  if (filterPartnerId) {
+    items = items.filter(
+      (item) =>
+        item.partner_id === filterPartnerId ||
+        item.user_id === filterPartnerId
+    )
+  }
+
+  return items
+}
+
+export async function createShoppingItem(
+  userId: string,
+  itemName: string,
+  quantity?: string | null,
+  partnerId?: string | null,
+  notes?: string | null
+): Promise<{ item: ShoppingItem | null; error: string | null }> {
+  const payload = {
+    user_id: userId,
+    item_name: itemName,
+    quantity: quantity ?? null,
+    partner_id: partnerId ?? null,
+    notes: notes ?? null,
+  }
+
+  const { data, error } = await supabase
+    .from('shopping_list_items')
+    .insert(payload)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error creating shopping list item:', error)
+    return { item: null, error: error.message }
+  }
+
+  return { item: data as ShoppingItem, error: null }
+}
+
+export async function updateShoppingItem(
+  itemId: string,
+  updates: {
+    item_name?: string
+    quantity?: string | null
+    notes?: string | null
+    partner_id?: string | null
+  }
+): Promise<{ item: ShoppingItem | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('shopping_list_items')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', itemId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error updating shopping list item:', error)
+    return { item: null, error: error.message }
+  }
+
+  return { item: data as ShoppingItem, error: null }
+}
+
+export async function toggleShoppingItemPurchased(
+  itemId: string,
+  purchased: boolean
+): Promise<{ item: ShoppingItem | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('shopping_list_items')
+    .update({
+      purchased,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', itemId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error toggling shopping list item:', error)
+    return { item: null, error: error.message }
+  }
+
+  return { item: data as ShoppingItem, error: null }
+}
+
+export async function deleteShoppingItem(itemId: string): Promise<{ success: boolean; error: string | null }> {
+  const { error } = await supabase
+    .from('shopping_list_items')
+    .delete()
+    .eq('id', itemId)
+
+  if (error) {
+    console.error('Error deleting shopping list item:', error)
     return { success: false, error: error.message }
   }
 

@@ -9,6 +9,7 @@ import CalendarPage from './pages/CalendarPage'
 import RecipesPage from './pages/RecipesPage'
 import TodosPage from './pages/TodosPage'
 import SettingsPage from './pages/SettingsPage'
+import ShoppingListPage from './pages/ShoppingListPage'
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -119,6 +120,22 @@ function App() {
           element={
             <AuthGate>
               <TodosPage />
+            </AuthGate>
+          }
+        />
+        <Route
+          path="/app/shopping"
+          element={
+            <AuthGate>
+              <ShoppingListPage />
+            </AuthGate>
+          }
+        />
+        <Route
+          path="/app/partner/:partnerId/shopping"
+          element={
+            <AuthGate>
+              <ShoppingListPage />
             </AuthGate>
           }
         />

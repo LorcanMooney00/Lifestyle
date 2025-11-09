@@ -224,6 +224,77 @@ ORDER BY cmd;
 */
 
 -- ============================================
+-- QUICK UPDATE: Create shared shopping list with RLS
+-- ============================================
+-- Copy and paste this into Supabase SQL Editor to add the shopping list feature:
+/*
+CREATE TABLE IF NOT EXISTS public.shopping_list_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  partner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  item_name TEXT NOT NULL,
+  quantity TEXT,
+  notes TEXT,
+  purchased BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE OR REPLACE FUNCTION set_shopping_list_items_updated_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS set_shopping_list_items_updated_at_trigger ON public.shopping_list_items;
+CREATE TRIGGER set_shopping_list_items_updated_at_trigger
+BEFORE UPDATE ON public.shopping_list_items
+FOR EACH ROW
+EXECUTE FUNCTION set_shopping_list_items_updated_at();
+
+ALTER TABLE public.shopping_list_items ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view shopping items" ON public.shopping_list_items;
+DROP POLICY IF EXISTS "Users can insert shopping items" ON public.shopping_list_items;
+DROP POLICY IF EXISTS "Users can update shopping items" ON public.shopping_list_items;
+DROP POLICY IF EXISTS "Users can delete shopping items" ON public.shopping_list_items;
+
+CREATE POLICY "Users can view shopping items"
+  ON public.shopping_list_items FOR SELECT
+  USING (
+    auth.uid() = user_id OR
+    auth.uid() = partner_id
+  );
+
+CREATE POLICY "Users can insert shopping items"
+  ON public.shopping_list_items FOR INSERT
+  WITH CHECK (
+    auth.uid() = user_id AND
+    (partner_id IS NULL OR are_partners(user_id, partner_id))
+  );
+
+CREATE POLICY "Users can update shopping items"
+  ON public.shopping_list_items FOR UPDATE
+  USING (
+    auth.uid() = user_id OR auth.uid() = partner_id
+  )
+  WITH CHECK (
+    (auth.uid() = user_id AND (partner_id IS NULL OR are_partners(user_id, partner_id))) OR
+    (auth.uid() = partner_id AND are_partners(user_id, partner_id))
+  );
+
+CREATE POLICY "Users can delete shopping items"
+  ON public.shopping_list_items FOR DELETE
+  USING (
+    auth.uid() = user_id OR auth.uid() = partner_id
+  );
+*/
+
+-- ============================================
 -- QUICK UPDATE: Run this SQL to enable partner notes sharing
 -- ============================================
 -- Copy and paste this section into Supabase SQL Editor to update existing database:

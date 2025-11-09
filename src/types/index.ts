@@ -75,6 +75,18 @@ export interface Todo {
   updated_at: string
 }
 
+export interface ShoppingItem {
+  id: string
+  user_id: string
+  partner_id: string | null
+  item_name: string
+  quantity: string | null
+  notes: string | null
+  purchased: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface User {
   id: string
   email?: string

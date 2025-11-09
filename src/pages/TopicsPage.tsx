@@ -2,8 +2,20 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signOut } from '../lib/auth'
 import { useAuth } from '../lib/auth'
-import { getAllNotes, getEvents, getPartners, getTilePreferences, linkPartner, unlinkPartner, getTodos, createTodo, toggleTodoCompletion, deleteTodo } from '../lib/api'
-import type { Note, Event, Todo } from '../types'
+import {
+  getAllNotes,
+  getEvents,
+  getPartners,
+  getShoppingItems,
+  getTilePreferences,
+  linkPartner,
+  unlinkPartner,
+  getTodos,
+  createTodo,
+  toggleTodoCompletion,
+  deleteTodo,
+} from '../lib/api'
+import type { Note, Event, Todo, ShoppingItem } from '../types'
 import PhotoWidget from '../components/PhotoWidget'
 import TodoWidget from '../components/TodoWidget'
 
@@ -21,6 +33,7 @@ export default function TopicsPage() {
   const { user } = useAuth()
   const [notes, setNotes] = useState<Note[]>([])
   const [events, setEvents] = useState<Event[]>([])
+  const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([])
   const [partners, setPartners] = useState<Array<{ id: string; email: string; username: string; profilePictureUrl?: string | null }>>([])
   const [loading, setLoading] = useState(true)
   const [tilePreferences, setTilePreferences] = useState<Record<string, boolean>>(defaultTilePreferences)
@@ -54,12 +67,13 @@ export default function TopicsPage() {
       const nextMonth = new Date(today)
       nextMonth.setDate(today.getDate() + 30)
 
-      const [notesData, partnersData, preferencesData, todosData, eventsData] = await Promise.all([
+      const [notesData, partnersData, preferencesData, todosData, eventsData, shoppingData] = await Promise.all([
         getAllNotes(user.id),
         getPartners(user.id),
         getTilePreferences(user.id),
         getTodos(user.id),
         getEvents(today, nextMonth),
+        getShoppingItems(user.id),
       ])
 
       setNotes(notesData)
@@ -71,6 +85,7 @@ export default function TopicsPage() {
       }
       setTodos(todosData)
       setEvents(eventsData)
+      setShoppingItems(shoppingData)
       setTodoError(null)
     } catch (error) {
       console.error('Error loading dashboard data:', error)
@@ -82,7 +97,7 @@ export default function TopicsPage() {
 
   const highlightConfigs = useMemo(() => {
     const configs: Array<{
-      type: 'events' | 'notes' | 'todos'
+      type: 'events' | 'notes' | 'todos' | 'shopping'
       title: string
       subtitle: string
       icon: string
@@ -114,6 +129,16 @@ export default function TopicsPage() {
         subtitle: 'Check shared tasks in motion together.',
         icon: '✅',
         viewAllPath: '/app/todos',
+      })
+    }
+
+    if (tilePreferences['shopping-list'] !== false) {
+      configs.push({
+        type: 'shopping',
+        title: 'Shopping List',
+        subtitle: 'Keep your grocery game tight and tidy.',
+        icon: '🛒',
+        viewAllPath: '/app/shopping',
       })
     }
 
@@ -500,6 +525,57 @@ export default function TopicsPage() {
                           onDelete={handleDeleteTodo}
                           className="w-full"
                         />
+                      )}
+
+                      {currentHighlight.type === 'shopping' && (
+                        <>
+                          {shoppingItems.filter((item) => !item.purchased).length === 0 ? (
+                            <p className="text-sm text-slate-400">
+                              Nothing on your list right now. Add something to keep tabs on it.
+                            </p>
+                          ) : (
+                            shoppingItems
+                              .filter((item) => !item.purchased)
+                              .slice()
+                              .sort(
+                                (a, b) =>
+                                  new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                              )
+                              .slice(0, 5)
+                              .map((item) => {
+                                const partner =
+                                  item.partner_id && partners.find((p) => p.id === item.partner_id)
+                                const sharedLabel = partner
+                                  ? partner.username || partner.email
+                                  : 'Just you'
+
+                                return (
+                                  <div
+                                    key={item.id}
+                                    className="rounded-xl border border-slate-700/60 bg-slate-800/60 px-4 py-3 text-sm text-white transition-colors hover:border-indigo-400/50 cursor-pointer"
+                                    onClick={() => navigate('/app/shopping')}
+                                  >
+                                    <div className="flex items-center justify-between gap-3">
+                                      <div className="flex-1 min-w-0 flex items-center gap-3">
+                                        <span className="text-lg">🛒</span>
+                                        <div className="min-w-0">
+                                          <p className="font-medium truncate">{item.item_name}</p>
+                                          <p className="mt-1 text-xs text-slate-400 line-clamp-1">
+                                            Shared with: {sharedLabel}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      {item.quantity && (
+                                        <span className="rounded-md border border-indigo-500/30 bg-indigo-500/15 px-2 py-0.5 text-xs text-indigo-200">
+                                          {item.quantity}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )
+                              })
+                          )}
+                        </>
                       )}
                     </div>
                   </div>

@@ -340,24 +340,37 @@ export default function TopicsPage() {
         {!loading && currentHighlight && (
           <div className="mb-6 sm:mb-8 md:mb-10">
             <div className={`${contentWidth} space-y-4`}>
-              <div className="overflow-x-auto">
-                <div className="flex w-full flex-wrap gap-2 rounded-2xl border border-slate-700/60 bg-slate-900/70 p-1 text-sm text-slate-300 sm:flex-nowrap">
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-6 rounded-l-2xl bg-gradient-to-r from-slate-950 via-slate-950/60 to-transparent" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-6 rounded-r-2xl bg-gradient-to-l from-slate-950 via-slate-950/60 to-transparent" />
+                <div className="scrollbar-none flex snap-x snap-mandatory gap-2 overflow-x-auto rounded-2xl border border-slate-700/60 bg-slate-900/70 p-1 text-sm text-slate-300">
                   {highlightConfigs.map((config, index) => {
                     const isActive = highlightIndex === index
+                    const label =
+                      config.type === 'events'
+                        ? 'Events'
+                        : config.type === 'notes'
+                        ? 'Notes'
+                        : config.type === 'todos'
+                        ? 'To-Dos'
+                        : config.type === 'shopping'
+                        ? 'Shopping'
+                        : config.title
+
                     return (
                       <button
                         key={config.type}
                         onClick={() => setHighlightIndex(index)}
-                        className={`flex min-w-0 flex-1 basis-1/2 items-center justify-center gap-2 rounded-xl px-3 py-2 text-[11px] transition sm:basis-auto sm:flex-none sm:text-xs ${
+                        className={`group flex snap-start items-center gap-2 rounded-xl px-4 py-2 transition ${
                           isActive
-                            ? 'bg-indigo-500/20 text-indigo-200 shadow-inner shadow-indigo-900/40'
+                            ? 'bg-indigo-500/25 text-indigo-100 shadow-inner shadow-indigo-900/40'
                             : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                         }`}
                         aria-pressed={isActive}
                       >
-                        <span>{config.icon}</span>
-                        <span className="truncate font-semibold uppercase tracking-wide sm:text-[13px]">
-                          {config.title}
+                        <span className="text-lg">{config.icon}</span>
+                        <span className="text-xs font-semibold uppercase tracking-wide sm:text-[13px]">
+                          {label}
                         </span>
                       </button>
                     )

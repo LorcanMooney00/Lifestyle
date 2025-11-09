@@ -341,14 +341,14 @@ export default function TopicsPage() {
           <div className="mb-6 sm:mb-8 md:mb-10">
             <div className={`${contentWidth} space-y-4`}>
               <div className="overflow-x-auto">
-                <div className="flex w-full flex-nowrap gap-2 rounded-2xl border border-slate-700/60 bg-slate-900/70 p-1 text-sm text-slate-300 sm:w-auto">
+                <div className="flex w-full flex-wrap gap-2 rounded-2xl border border-slate-700/60 bg-slate-900/70 p-1 text-sm text-slate-300 sm:flex-nowrap">
                   {highlightConfigs.map((config, index) => {
                     const isActive = highlightIndex === index
                     return (
                       <button
                         key={config.type}
                         onClick={() => setHighlightIndex(index)}
-                        className={`flex flex-none items-center justify-center gap-2 rounded-xl px-3 py-2 whitespace-nowrap transition ${
+                        className={`flex min-w-0 flex-1 basis-1/2 items-center justify-center gap-2 rounded-xl px-3 py-2 text-[11px] transition sm:basis-auto sm:flex-none sm:text-xs ${
                           isActive
                             ? 'bg-indigo-500/20 text-indigo-200 shadow-inner shadow-indigo-900/40'
                             : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
@@ -356,7 +356,7 @@ export default function TopicsPage() {
                         aria-pressed={isActive}
                       >
                         <span>{config.icon}</span>
-                        <span className="text-xs font-semibold uppercase tracking-wide sm:text-[13px]">
+                        <span className="truncate font-semibold uppercase tracking-wide sm:text-[13px]">
                           {config.title}
                         </span>
                       </button>

@@ -296,6 +296,27 @@ export default function TopicsPage() {
     setPartnerToUnlink(null)
   }
 
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMinutes = Math.round(diffMs / (1000 * 60))
+
+    if (diffMinutes < 1) return 'Just now'
+    if (diffMinutes < 60) return `${diffMinutes}m ago`
+
+    const diffHours = Math.round(diffMinutes / 60)
+    if (diffHours < 24) return `${diffHours}h ago`
+
+    const diffDays = Math.round(diffHours / 24)
+    if (diffDays < 7) return `${diffDays}d ago`
+
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    })
+  }
+
 
   return (
     <div className="min-h-screen">
@@ -471,40 +492,49 @@ export default function TopicsPage() {
                                   new Date(a.updated_at).getTime()
                               )
                               .slice(0, 5)
-                              .map((note) => (
-                                <div
-                                  key={note.id}
-                                  className="rounded-xl border border-slate-700/60 bg-slate-800/60 px-4 py-3 text-sm text-white transition-colors hover:border-indigo-400/50 cursor-pointer"
-                                  onClick={() => navigate('/app/notes')}
-                                >
-                                  <div className="flex items-center justify-between gap-3">
-                                    <div className="flex-1 min-w-0 flex items-center gap-3">
-                                      <span className="text-lg">📝</span>
-                                      <div className="min-w-0">
-                                        <p className="font-medium truncate">{note.title || 'Untitled Note'}</p>
-                                        {note.content && (
-                                          <p className="mt-1 text-xs text-slate-400 line-clamp-2">
-                                            {note.content.trim()}
+                              .map((note) => {
+                                const preview =
+                                  note.content?.trim().replace(/\s+/g, ' ').slice(0, 140) ||
+                                  'No content yet—tap to add your thoughts.'
+                                const relativeTime = formatRelativeTime(note.updated_at)
+                                const partnerLabel =
+                                  note.partners && note.partners.length > 1
+                                    ? note.partners.join(' & ')
+                                    : null
+
+                                return (
+                                  <div
+                                    key={note.id}
+                                    className="group rounded-2xl border border-slate-700/60 bg-gradient-to-r from-slate-900/85 via-slate-900/70 to-slate-900/40 px-5 py-4 text-sm text-white shadow-lg transition-all hover:-translate-y-0.5 hover:border-indigo-400/60 hover:shadow-indigo-900/30 cursor-pointer"
+                                    onClick={() => navigate('/app/notes')}
+                                  >
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="flex flex-1 items-start gap-3">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/15 text-lg text-indigo-200 transition-all group-hover:bg-indigo-500/25">
+                                          📝
+                                        </div>
+                                        <div className="min-w-0 space-y-2">
+                                          <div className="flex items-center justify-between gap-2">
+                                            <p className="truncate text-base font-semibold">{note.title || 'Untitled Note'}</p>
+                                            <span className="text-xs text-indigo-200/80">{relativeTime}</span>
+                                          </div>
+                                          <p className="text-xs text-slate-300 line-clamp-2">
+                                            {preview}
+                                            {note.content && note.content.trim().length > 140 && '…'}
                                           </p>
-                                        )}
+                                          {partnerLabel && (
+                                            <div className="flex flex-wrap gap-2 text-[11px] text-indigo-200/80">
+                                              <span className="rounded-full border border-indigo-500/30 bg-indigo-500/15 px-2 py-0.5 uppercase tracking-wide">
+                                                {partnerLabel}
+                                              </span>
+                                            </div>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
-                                    <div className="flex flex-col items-end gap-1 text-xs text-slate-300 whitespace-nowrap">
-                                      <span>
-                                        {new Date(note.updated_at).toLocaleDateString('en-US', {
-                                          month: 'short',
-                                          day: 'numeric',
-                                        })}
-                                      </span>
-                                      {note.partners && note.partners.length > 1 && (
-                                        <span className="rounded-md border border-indigo-500/30 bg-indigo-500/15 px-2 py-0.5">
-                                          {note.partners.join(' & ')}
-                                        </span>
-                                      )}
-                                    </div>
                                   </div>
-                                </div>
-                              ))
+                                )
+                              })
                           )}
                         </>
                       )}

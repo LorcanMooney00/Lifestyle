@@ -675,52 +675,37 @@ export async function getProfilePictureUrl(profilePictureUrl: string | null | un
     return null
   }
   
-  console.log('=== getProfilePictureUrl DEBUG ===')
-  console.log('Input URL/path:', profilePictureUrl)
-  
   // Check if it's already a full URL (legacy format) or a storage path
   try {
     // Try to parse as URL first
     const url = new URL(profilePictureUrl)
-    console.log('Parsed as URL:', url.href)
     
     // If it's already a full URL, try to extract the path and create signed URL
     // Or if it's a signed URL, return it as-is
     if (url.hostname.includes('supabase')) {
-      console.log('Supabase URL detected')
       // Extract storage path from URL
       const pathParts = url.pathname.split('/')
       const bucketIndex = pathParts.findIndex(part => part === 'photos')
       
       if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
         const filePath = pathParts.slice(bucketIndex + 1).join('/')
-        console.log('Extracted file path from URL:', filePath)
         const { data: signedUrlData, error: signedError } = await supabase.storage
           .from('photos')
           .createSignedUrl(filePath, 3600)
         
-        console.log('Signed URL from extracted path:', signedUrlData?.signedUrl)
-        console.log('Signed URL error:', signedError)
-        
         if (!signedError && signedUrlData?.signedUrl) {
-          console.log('=== END getProfilePictureUrl DEBUG ===')
           return signedUrlData.signedUrl
         }
       }
       
       // If extraction failed, return original URL (might be a public URL)
-      console.log('Returning original URL (extraction failed or public URL)')
-      console.log('=== END getProfilePictureUrl DEBUG ===')
       return profilePictureUrl
     }
     
     // Not a Supabase URL, return as-is
-    console.log('Not a Supabase URL, returning as-is')
-    console.log('=== END getProfilePictureUrl DEBUG ===')
     return profilePictureUrl
   } catch (e) {
     // Not a URL, assume it's a storage path (e.g., "userId/filename.jpg")
-    console.log('Not a URL, treating as storage path:', profilePictureUrl)
     
     // Try to generate signed URL directly - the storage policy should allow this
     // Note: We skip the list check because listing folders requires different permissions
@@ -729,36 +714,17 @@ export async function getProfilePictureUrl(profilePictureUrl: string | null | un
       .from('photos')
       .createSignedUrl(profilePictureUrl, 3600) // Valid for 1 hour
     
-    console.log('Signed URL from storage path:', signedUrlData?.signedUrl)
-    console.log('Signed URL error:', signedError)
-    if (signedError) {
-      console.log('Signed URL error details:', JSON.stringify(signedError, null, 2))
-      console.log('Error message:', signedError.message)
-      console.log('Error status:', (signedError as { statusCode?: number }).statusCode)
-    }
-    
     if (!signedError && signedUrlData?.signedUrl) {
-      console.log('=== END getProfilePictureUrl DEBUG ===')
       return signedUrlData.signedUrl
     } else if (signedError) {
       // If file doesn't exist, handle gracefully
       if (signedError.message?.includes('not found') || signedError.message?.includes('Object not found')) {
         console.warn('Profile picture file not found in storage:', profilePictureUrl)
-        console.log('This could mean:')
-        console.log('1. File was deleted')
-        console.log('2. Storage policy doesn\'t allow access')
-        console.log('3. File path is incorrect')
-        console.log('Returning null - UI will show default icon.')
-      } else {
-        console.warn('Error creating signed URL for profile picture:', signedError)
-        console.log('Error type:', signedError.constructor.name)
       }
-      console.log('=== END getProfilePictureUrl DEBUG ===')
       return null
     }
   }
   
-  console.log('=== END getProfilePictureUrl DEBUG (fallback) ===')
   return null
 }
 
@@ -807,9 +773,7 @@ export async function getPartners(userId: string): Promise<Array<{ id: string; e
       const profilePicturePath = row.profile_picture_url || null
       
       if (profilePicturePath) {
-        console.log('Found profile picture path for partner:', row.partner_id, profilePicturePath)
         profilePictureUrl = await getProfilePictureUrl(profilePicturePath)
-        console.log('Generated signed URL for partner:', row.partner_id, profilePictureUrl)
         
         // If file doesn't exist, clean up the database entry
         if (!profilePictureUrl && profilePicturePath) {
@@ -830,7 +794,6 @@ export async function getPartners(userId: string): Promise<Array<{ id: string; e
     })
   )
   
-  console.log('Mapped partners:', mapped)
   return mapped
 }
 
@@ -1643,14 +1606,6 @@ export async function uploadPhoto(file: File): Promise<{ photo: Photo | null; er
     // Get the current session to ensure we have an authenticated user
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
-    console.log('=== PHOTO UPLOAD DEBUG START ===')
-    console.log('Session error:', sessionError)
-    console.log('Session exists:', !!session)
-    console.log('Session user exists:', !!session?.user)
-    console.log('Session user ID:', session?.user?.id)
-    console.log('Session access token exists:', !!session?.access_token)
-    console.log('Session access token (first 20 chars):', session?.access_token?.substring(0, 20))
-    
     if (sessionError || !session || !session.user) {
       console.error('=== AUTHENTICATION FAILED ===')
       return { photo: null, error: 'You must be logged in to upload photos' }
@@ -1658,7 +1613,6 @@ export async function uploadPhoto(file: File): Promise<{ photo: Photo | null; er
 
     // Use the authenticated user's ID from the session
     const authenticatedUserId = session.user.id
-    console.log('Using authenticated user ID:', authenticatedUserId)
     
     // Generate a unique filename
     const fileExt = file.name.split('.').pop()
@@ -1681,24 +1635,8 @@ export async function uploadPhoto(file: File): Promise<{ photo: Photo | null; er
     // Get public URL
     const { data: urlData } = supabase.storage.from('photos').getPublicUrl(filePath)
     const publicUrl = urlData.publicUrl
-
-    // Test if we can query the photos table first (to verify RLS SELECT policy)
-    console.log('Testing SELECT access to photos table...')
-    const { data: testData, error: testError } = await supabase
-      .from('photos')
-      .select('id')
-      .limit(1)
-    
-    console.log('SELECT test - Error:', testError)
-    console.log('SELECT test - Data:', testData)
     
     // Save photo record to database
-    // RLS policy allows any authenticated user to insert (we'll refine security later)
-    console.log('Attempting to INSERT photo with:')
-    console.log('  - user_id:', authenticatedUserId)
-    console.log('  - storage_path:', filePath)
-    console.log('  - url:', publicUrl)
-    
     const { data, error: dbError } = await supabase
       .from('photos')
       .insert({
@@ -1708,14 +1646,6 @@ export async function uploadPhoto(file: File): Promise<{ photo: Photo | null; er
       })
       .select()
       .single()
-
-    console.log('INSERT result - Error:', dbError)
-    console.log('INSERT result - Error code:', dbError?.code)
-    console.log('INSERT result - Error message:', dbError?.message)
-    console.log('INSERT result - Error details:', dbError?.details)
-    console.log('INSERT result - Error hint:', dbError?.hint)
-    console.log('INSERT result - Data:', data)
-    console.log('=== PHOTO UPLOAD DEBUG END ===')
 
     if (dbError) {
       console.error('Error saving photo record:', dbError)
@@ -1789,5 +1719,60 @@ export async function deletePhoto(photoId: string, storagePath: string): Promise
     console.error('Error deleting photo:', error)
     return { success: false, error: error.message || 'Failed to delete photo' }
   }
+}
+
+// Photo assignment functions (replacing localStorage)
+export async function savePhotoAssignment(userId: string, widgetIndex: number, photoId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('photo_assignments')
+    .upsert({
+      user_id: userId,
+      widget_index: widgetIndex,
+      photo_id: photoId
+    }, {
+      onConflict: 'user_id,widget_index'
+    })
+
+  if (error) {
+    console.error('Error saving photo assignment:', error)
+    return false
+  }
+
+  return true
+}
+
+export async function getPhotoAssignments(userId: string): Promise<Record<number, string>> {
+  const { data, error } = await supabase
+    .from('photo_assignments')
+    .select('widget_index, photo_id')
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('Error loading photo assignments:', error)
+    return {}
+  }
+
+  // Convert array to object: { widgetIndex: photoId }
+  const assignments: Record<number, string> = {}
+  data?.forEach(assignment => {
+    assignments[assignment.widget_index] = assignment.photo_id
+  })
+
+  return assignments
+}
+
+export async function deletePhotoAssignment(userId: string, widgetIndex: number): Promise<boolean> {
+  const { error } = await supabase
+    .from('photo_assignments')
+    .delete()
+    .eq('user_id', userId)
+    .eq('widget_index', widgetIndex)
+
+  if (error) {
+    console.error('Error deleting photo assignment:', error)
+    return false
+  }
+
+  return true
 }
 

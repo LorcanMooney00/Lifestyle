@@ -2,9 +2,12 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Cropper from 'react-easy-crop'
 import 'react-easy-crop/react-easy-crop.css'
 import { useAuth } from '../lib/auth'
-import { getUserPhotos, uploadPhoto, deletePhoto } from '../lib/api'
+import { getUserPhotos, uploadPhoto, deletePhoto, savePhotoAssignment, getPhotoAssignments } from '../lib/api'
 import type { Photo } from '../types'
 import type { Area } from 'react-easy-crop'
+
+// Global counter to track how many modals are open across all PhotoWidget instances
+let openModalCount = 0
 
 interface PhotoWidgetProps {
   photoIndex?: number // Which photo to show (0, 1, 2, etc.)
@@ -16,6 +19,7 @@ interface PhotoWidgetProps {
 export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight = false, wide = false }: PhotoWidgetProps) {
   const { user } = useAuth()
   const [photos, setPhotos] = useState<Photo[]>([])
+  const [photoAssignments, setPhotoAssignments] = useState<Record<number, string>>({})
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showUpload, setShowUpload] = useState(false)
@@ -30,26 +34,51 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
   useEffect(() => {
     if (user) {
       loadPhotos()
+      loadAssignments()
     }
   }, [user])
 
+  const loadAssignments = async () => {
+    if (!user) return
+    const assignments = await getPhotoAssignments(user.id)
+    console.log(`Widget ${photoIndex}: Loaded assignments from database:`, assignments)
+    setPhotoAssignments(assignments)
+  }
+
   // Prevent body scroll when modal is open
   useEffect(() => {
-    if (showCropper || showUpload) {
+    const isModalOpen = showCropper || showUpload
+    
+    if (isModalOpen) {
+      openModalCount++
       document.body.style.overflow = 'hidden'
     } else {
-      document.body.style.overflow = 'unset'
+      openModalCount = Math.max(0, openModalCount - 1)
+      
+      // Only restore scrolling if no modals are open
+      if (openModalCount === 0) {
+        document.body.style.overflow = 'visible'
+        document.body.style.touchAction = 'auto'
+      }
     }
     
-    // Cleanup on unmount
+    // Cleanup on unmount - decrement counter and restore if needed
     return () => {
-      document.body.style.overflow = 'unset'
+      if (isModalOpen) {
+        openModalCount = Math.max(0, openModalCount - 1)
+        if (openModalCount === 0) {
+          document.body.style.overflow = 'visible'
+          document.body.style.touchAction = 'auto'
+        }
+      }
     }
   }, [showCropper, showUpload])
 
   const loadPhotos = async () => {
     if (!user) return
+    console.log(`Widget ${photoIndex}: Loading photos...`)
     const photosData = await getUserPhotos(user.id)
+    console.log(`Widget ${photoIndex}: Loaded ${photosData.length} photos`, photosData.map(p => p.id))
     setPhotos(photosData)
   }
 
@@ -121,7 +150,7 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
         console.log('Image loaded, switching to cropper')
         setImageSrc(result)
         // Keep upload modal closed and show cropper
-        setShowUpload(false)
+      setShowUpload(false)
         setShowCropper(true)
       }
     }
@@ -155,15 +184,14 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
 
       const { photo, error: uploadError } = await uploadPhoto(croppedFile)
 
-    if (uploadError) {
-      setError(uploadError)
-    } else if (photo) {
-      // Store which photo is assigned to this widget
-      const widgetKey = `photo-widget-${photoIndex}`
-        console.log(`Saving photo assignment: ${widgetKey} = ${photo.id}`)
-      localStorage.setItem(widgetKey, photo.id)
-        console.log(`Verify saved: ${localStorage.getItem(widgetKey)}`)
-      await loadPhotos()
+      if (uploadError) {
+        setError(uploadError)
+      } else if (photo) {
+        // Store which photo is assigned to this widget in the database
+        console.log(`Saving photo assignment to database: widget ${photoIndex} = ${photo.id}`)
+        await savePhotoAssignment(user.id, photoIndex, photo.id)
+        await loadPhotos()
+        await loadAssignments()
         console.log('Closing cropper modal...')
         setShowCropper(false)
         setImageSrc(null)
@@ -199,33 +227,21 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
     if (deleteError) {
       setError(deleteError)
     } else {
-      // Clear the assignment if this photo was assigned to this widget
-      const widgetKey = `photo-widget-${photoIndex}`
-      const assignedPhotoId = localStorage.getItem(widgetKey)
-      if (assignedPhotoId === photo.id) {
-        localStorage.removeItem(widgetKey)
-      }
       await loadPhotos()
+      await loadAssignments()
     }
   }
 
-  // Get the photo to display - each widget shows a specific photo based on localStorage assignment
+  // Get the photo to display - each widget shows a specific photo based on database assignment
   // If a photo is assigned to this widget, show it. Otherwise, don't show anything (to avoid duplicates)
   const getDisplayPhoto = () => {
-    const widgetKey = `photo-widget-${photoIndex}`
-    const assignedPhotoId = localStorage.getItem(widgetKey)
+    const assignedPhotoId = photoAssignments[photoIndex]
     
     if (assignedPhotoId) {
       // Find the photo with this ID
       const assignedPhoto = photos.find(p => p.id === assignedPhotoId)
       if (assignedPhoto) {
         return assignedPhoto
-      }
-      // Only clear the assignment if we have photos loaded but couldn't find this one
-      // (Don't clear during initial load when photos.length === 0)
-      if (photos.length > 0) {
-        console.log(`Widget ${photoIndex}: clearing stale assignment - photo ${assignedPhotoId} not found in ${photos.length} photos`)
-      localStorage.removeItem(widgetKey)
       }
     }
     

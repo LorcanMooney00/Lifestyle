@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './lib/auth'
 import LoginPage from './pages/LoginPage'
@@ -30,6 +31,20 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  // Ensure body scroll is always enabled on app load
+  useEffect(() => {
+    // Force reset all body styles that might block scrolling
+    document.body.style.overflow = 'visible'
+    document.body.style.position = 'static'
+    document.body.style.touchAction = 'auto'
+    document.body.style.height = 'auto'
+    
+    // Also reset html
+    document.documentElement.style.overflow = 'auto'
+    
+    console.log('Body styles reset on app load')
+  }, [])
+
   return (
     <BrowserRouter>
       <Routes>

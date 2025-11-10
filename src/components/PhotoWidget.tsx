@@ -112,51 +112,58 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
   const aspectClass = fillHeight 
     ? 'h-full' 
     : (wide 
-      ? 'aspect-[3/1] sm:aspect-[4/1] lg:aspect-[5/1]' 
+      ? 'aspect-[16/9] sm:aspect-[21/9] lg:aspect-[21/9]' 
       : (tall 
-        ? 'aspect-[2/1]' 
+        ? 'aspect-[4/3]' 
         : 'aspect-square'))
 
   if (photos.length === 0 && !showUpload) {
     return (
-      <div className={`bg-transparent border-0 rounded-xl p-3 sm:p-4 ${aspectClass} flex flex-col items-center justify-center overflow-hidden`}>
-        <div className="text-3xl sm:text-4xl mb-2">📸</div>
+      <div className={`glass backdrop-blur-xl border border-slate-700/50 rounded-2xl p-4 sm:p-6 ${aspectClass} flex flex-col items-center justify-center overflow-hidden shadow-xl group hover:border-indigo-500/50 transition-all`}>
+        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+          <span className="text-4xl">📸</span>
+        </div>
+        <h3 className="text-sm font-semibold text-slate-200 mb-2">Add a Photo</h3>
+        <p className="text-xs text-slate-400 mb-4 text-center max-w-[200px]">Share a moment from your life</p>
         <button
           onClick={() => setShowUpload(true)}
-          className="bg-indigo-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-indigo-500 text-xs sm:text-sm font-medium transition-colors shadow-md hover:shadow-lg active:scale-95 touch-manipulation"
+          className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-xl hover:from-indigo-500 hover:to-purple-500 text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
         >
-          Upload
+          Upload Photo
         </button>
       </div>
     )
   }
 
   return (
-    <div className={`bg-transparent border-0 rounded-xl overflow-hidden ${aspectClass} flex flex-col group relative w-full`}>
-
-      {/* Regular header when upload is shown */}
-      {showUpload && (
-        <div className="p-2 sm:p-3 border-b border-slate-600/20">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-xs sm:text-sm font-bold text-gray-100">Photo</h3>
-            <button
-              onClick={() => setShowUpload(false)}
-              className="bg-indigo-600 text-white px-2 sm:px-3 py-1 rounded-lg hover:bg-indigo-500 text-xs sm:text-sm font-medium transition-colors shadow-md hover:shadow-lg active:scale-95 touch-manipulation"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+    <div className={`glass backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden ${aspectClass} flex flex-col group relative w-full shadow-xl`}>
 
       {error && (
-        <div className="bg-red-900/30 border-b border-red-700/30 text-red-200 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm">
-          {error}
+        <div className="bg-red-900/30 border-b border-red-700/50 text-red-200 px-4 py-3 text-sm flex items-center gap-2">
+          <span>⚠️</span>
+          <span>{error}</span>
         </div>
       )}
 
       {showUpload && (
-        <div className="p-3 sm:p-4 bg-slate-800/50 flex-1 flex flex-col justify-center">
+        <div className="p-6 flex-1 flex flex-col justify-center">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+                <span className="text-xl">📸</span>
+              </div>
+              <h3 className="text-base font-bold text-slate-100">Upload Photo</h3>
+            </div>
+            <button
+              onClick={() => setShowUpload(false)}
+              className="text-slate-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-slate-700/50"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
           <input
             ref={fileInputRef}
             type="file"
@@ -167,40 +174,77 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
           />
           <label
             htmlFor={`photo-upload-${photoIndex}`}
-            className={`block text-center py-3 sm:py-4 px-3 sm:px-4 border-2 border-dashed rounded-lg cursor-pointer transition-all touch-manipulation min-h-[60px] flex items-center justify-center ${
+            className={`block text-center py-12 px-6 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
               uploading
-                ? 'border-slate-500/50 bg-slate-600/30'
-                : 'border-purple-400/30 bg-slate-700/20 hover:border-purple-300/40 hover:bg-slate-600/20 active:bg-slate-600/30'
+                ? 'border-slate-500/50 bg-slate-700/30'
+                : 'border-indigo-500/40 bg-slate-800/30 hover:border-indigo-400/60 hover:bg-slate-700/40 active:bg-slate-700/50'
             }`}
           >
             {uploading ? (
-              <span className="text-gray-300 text-xs sm:text-sm">Uploading...</span>
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center animate-pulse">
+                  <span className="text-2xl">⏳</span>
+                </div>
+                <span className="text-slate-300 text-sm font-medium">Uploading...</span>
+              </div>
             ) : (
-              <span className="text-indigo-400 font-medium text-xs sm:text-sm">Click to select an image</span>
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <div className="text-center">
+                  <p className="text-indigo-300 font-medium text-sm mb-1">Click to select an image</p>
+                  <p className="text-xs text-slate-400">Max 5MB • JPG, PNG, GIF</p>
+                </div>
+              </div>
             )}
           </label>
-          <p className="text-xs text-gray-400 mt-2 text-center">Max 5MB, images only</p>
         </div>
       )}
 
       {displayPhoto && (
-        <div className="flex-1 relative overflow-hidden w-full h-full group rounded-xl">
+        <div className="flex-1 relative overflow-hidden w-full h-full group rounded-2xl shadow-xl">
           <img
             src={displayPhoto.url}
             alt={`Photo ${photoIndex + 1}`}
-            className="w-full h-full object-cover rounded-xl"
+            className="w-full h-full object-cover rounded-2xl transition-transform duration-300 group-hover:scale-105"
+            style={{ imageRendering: 'auto' }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/30 via-transparent to-transparent pointer-events-none rounded-xl"></div>
-          <div className="absolute inset-0 bg-slate-900/10 pointer-events-none rounded-xl"></div>
+          
+          {/* Subtle vignette effect - only on edges */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none rounded-2xl opacity-50"></div>
+          
+          {/* Action buttons overlay - appears on hover */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
 
-          {/* Delete button - bottom right, hidden until hover */}
-          <button
-            onClick={() => handleDelete(displayPhoto)}
-            className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 bg-red-600/80 hover:bg-red-600 active:bg-red-700 text-white p-2 sm:p-2.5 rounded-full transition-all shadow-lg backdrop-blur-md touch-manipulation min-w-[36px] min-h-[36px] flex items-center justify-center text-xs sm:text-sm opacity-0 group-hover:opacity-100"
-            aria-label="Delete photo"
-          >
-            🗑️
-          </button>
+          {/* Button container */}
+          <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            {/* Change photo button */}
+            <button
+              onClick={() => setShowUpload(true)}
+              className="bg-indigo-600/90 hover:bg-indigo-500 text-white p-2.5 rounded-xl transition-all shadow-lg backdrop-blur-md hover:shadow-xl active:scale-95 min-w-[40px] min-h-[40px] flex items-center justify-center"
+              aria-label="Change photo"
+              title="Change photo"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </button>
+            
+            {/* Delete button */}
+            <button
+              onClick={() => handleDelete(displayPhoto)}
+              className="bg-red-600/90 hover:bg-red-500 text-white p-2.5 rounded-xl transition-all shadow-lg backdrop-blur-md hover:shadow-xl active:scale-95 min-w-[40px] min-h-[40px] flex items-center justify-center"
+              aria-label="Delete photo"
+              title="Delete photo"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
         </div>
       )}
     </div>

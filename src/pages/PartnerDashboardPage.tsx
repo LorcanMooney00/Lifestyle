@@ -157,48 +157,91 @@ export default function PartnerDashboardPage() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-8 sm:mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-2 bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-            Workspace
-          </h2>
-          <p className="text-slate-400 text-sm sm:text-base">
-            Select a shared area to continue working together.
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-20">
+        {/* Header Section */}
+        <div className="mb-8 sm:mb-10">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center">
+              <span className="text-2xl">🤝</span>
+            </div>
+            <div>
+              <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
+                Shared Workspace
+              </h2>
+            </div>
+          </div>
+          <p className="text-slate-400 text-sm sm:text-base ml-15">
+            Collaborate with <span className="text-slate-200 font-medium">{partnerUsername || partnerEmail}</span> on your shared apps
           </p>
         </div>
 
-        <div className="grid grid-cols-[repeat(auto-fit,_minmax(160px,_1fr))] gap-4 sm:gap-5">
+        {/* App Cards Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
           {appCards
             .filter((app) => tilePreferences[app.id] !== false)
             .map((app) => (
               <button
                 key={app.id}
                 onClick={() => navigate(app.route)}
-                className={`relative overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 sm:p-6 text-left shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-2xl ${app.borderHover}`}
+                className={`group relative overflow-hidden rounded-2xl border border-slate-700/50 glass backdrop-blur-xl p-6 text-left shadow-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl ${app.borderHover}`}
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${app.gradient} opacity-0 transition-opacity duration-300 group-hover:opacity-100`}></div>
-                <div className="relative z-10 flex h-full flex-col justify-between gap-6">
-                  <div className="flex items-center justify-between text-xs font-medium uppercase tracking-wide text-slate-400">
-                    <span className={`rounded-full px-3 py-1 ${app.categoryClass}`}>
+                
+                {/* Content */}
+                <div className="relative z-10 flex flex-col gap-4">
+                  {/* Category Badge */}
+                  <div className="flex items-center justify-between">
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${app.categoryClass}`}>
                       {app.category}
                     </span>
                   </div>
-                  <div className={`w-12 h-12 rounded-xl ${app.iconBackground} flex items-center justify-center text-2xl`}>
+                  
+                  {/* Icon */}
+                  <div className={`w-14 h-14 rounded-xl ${app.iconBackground} flex items-center justify-center text-3xl shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                     {app.icon}
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-1">{app.title}</h3>
-                    <p className="text-sm text-slate-300 leading-relaxed">
+                  
+                  {/* Title & Description */}
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-white mb-2 group-hover:text-indigo-200 transition-colors">
+                      {app.title}
+                    </h3>
+                    <p className="text-sm text-slate-400 leading-relaxed">
                       {app.description}
                     </p>
                   </div>
-                  <div className="text-xs font-medium text-indigo-300 group-hover:text-white transition-colors">
-                    Open →
+                  
+                  {/* Action Button */}
+                  <div className="flex items-center gap-2 text-indigo-300 font-medium text-sm group-hover:text-indigo-200 transition-colors mt-2">
+                    <span>Open Workspace</span>
+                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
                   </div>
                 </div>
               </button>
             ))}
         </div>
+
+        {/* Empty State */}
+        {appCards.filter((app) => tilePreferences[app.id] !== false).length === 0 && (
+          <div className="glass backdrop-blur-xl rounded-2xl border border-slate-700/50 p-12 text-center">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-slate-700/50 to-slate-800/50 flex items-center justify-center mx-auto mb-4">
+              <span className="text-4xl">🔧</span>
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">No Apps Available</h3>
+            <p className="text-slate-400 mb-4">
+              Enable workspace apps in your settings to get started
+            </p>
+            <button
+              onClick={() => navigate('/app/settings')}
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-2.5 rounded-xl text-white font-medium hover:from-indigo-500 hover:to-purple-500 transition-all shadow-lg hover:shadow-xl active:scale-95"
+            >
+              <span>⚙️</span>
+              <span>Open Settings</span>
+            </button>
+          </div>
+        )}
       </main>
     </div>
   )

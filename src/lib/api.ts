@@ -11,6 +11,7 @@ import type {
   Todo,
   ShoppingItem,
   Dog,
+  DogMeal,
 } from '../types'
 
 export async function getTopics(): Promise<Topic[]> {
@@ -1340,6 +1341,81 @@ export async function uploadDogPhoto(file: File, userId: string): Promise<{ path
   }
 
   return { path: filePath, error: null }
+}
+
+// ============================================
+// Dog Meals API
+// ============================================
+
+export async function getDogMeals(dogIds: string[], date?: string): Promise<DogMeal[]> {
+  const targetDate = date || new Date().toISOString().split('T')[0]
+  
+  const { data, error } = await supabase
+    .from('dog_meals')
+    .select('*')
+    .in('dog_id', dogIds)
+    .eq('meal_date', targetDate)
+
+  if (error) {
+    console.error('Error fetching dog meals:', error)
+    return []
+  }
+
+  return (data as DogMeal[]) || []
+}
+
+export async function toggleDogMeal(
+  userId: string,
+  dogId: string,
+  mealIndex: number,
+  date?: string
+): Promise<{ success: boolean; error: string | null }> {
+  const targetDate = date || new Date().toISOString().split('T')[0]
+
+  // Check if meal already exists
+  const { data: existing, error: fetchError } = await supabase
+    .from('dog_meals')
+    .select('*')
+    .eq('dog_id', dogId)
+    .eq('meal_date', targetDate)
+    .eq('meal_index', mealIndex)
+    .maybeSingle()
+
+  if (fetchError) {
+    console.error('Error checking dog meal:', fetchError)
+    return { success: false, error: fetchError.message }
+  }
+
+  if (existing) {
+    // Meal exists, toggle it by deleting
+    const { error: deleteError } = await supabase
+      .from('dog_meals')
+      .delete()
+      .eq('id', existing.id)
+
+    if (deleteError) {
+      console.error('Error deleting dog meal:', deleteError)
+      return { success: false, error: deleteError.message }
+    }
+  } else {
+    // Meal doesn't exist, create it
+    const { error: insertError } = await supabase
+      .from('dog_meals')
+      .insert({
+        dog_id: dogId,
+        user_id: userId,
+        meal_date: targetDate,
+        meal_index: mealIndex,
+        completed: true,
+      })
+
+    if (insertError) {
+      console.error('Error creating dog meal:', insertError)
+      return { success: false, error: insertError.message }
+    }
+  }
+
+  return { success: true, error: null }
 }
 
 async function attachDogPhotoSignedUrl(dog: Dog): Promise<Dog> {

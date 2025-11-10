@@ -17,9 +17,12 @@ import {
   getDogs,
   createDog,
   updateDog,
+  deleteDog,
   uploadDogPhoto,
+  getDogMeals,
+  toggleDogMeal,
 } from '../lib/api'
-import type { Note, Event, Todo, ShoppingItem, Dog } from '../types'
+import type { Note, Event, Todo, ShoppingItem, Dog, DogMeal } from '../types'
 import PhotoWidget from '../components/PhotoWidget'
 import TodoWidget from '../components/TodoWidget'
 
@@ -30,6 +33,7 @@ const defaultTilePreferences: Record<string, boolean> = {
   'photo-gallery': true,
   'shared-todos': true,
   'shopping-list': true,
+  'dog-feeding': true,
 }
 
 const getTodayKey = () => new Date().toISOString().split('T')[0]
@@ -49,7 +53,6 @@ export default function TopicsPage() {
   const [todoError, setTodoError] = useState<string | null>(null)
   const [highlightIndex, setHighlightIndex] = useState(0)
   const [dogs, setDogs] = useState<Dog[]>([])
-  const [expandedDogId, setExpandedDogId] = useState<string | null>(null)
   const [showAddDogModal, setShowAddDogModal] = useState(false)
   const [dogModalMode, setDogModalMode] = useState<'add' | 'edit'>('add')
   const [dogFormName, setDogFormName] = useState('')
@@ -63,21 +66,9 @@ export default function TopicsPage() {
   const [dogError, setDogError] = useState<string | null>(null)
   const [dogModalTargetId, setDogModalTargetId] = useState<string | null>(null)
   const contentWidth = 'max-w-5xl mx-auto w-full'
-  const [dogMealStatus, setDogMealStatus] = useState<Record<string, { date: string; completed: boolean[] }>>(() => {
-    if (typeof window === 'undefined') return {}
-    try {
-      const stored = localStorage.getItem('dogMealStatus')
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        if (parsed && typeof parsed === 'object') {
-          return parsed
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to load dog meal status from storage:', error)
-    }
-    return {}
-  })
+  const [dogMealStatus, setDogMealStatus] = useState<Record<string, { date: string; completed: boolean[] }>>({})
+  const [dogMeals, setDogMeals] = useState<DogMeal[]>([])
+  
   useEffect(() => {
     if (!dogFormPhotoFile) {
       return
@@ -139,12 +130,10 @@ export default function TopicsPage() {
       setShoppingItems(shoppingData)
       const sortedDogs = sortDogs(dogsData || [])
       setDogs(sortedDogs)
+      
+      // Load dog meals for today
       if (sortedDogs.length > 0) {
-        setExpandedDogId((prev) =>
-          prev && sortedDogs.some((dog) => dog.id === prev) ? prev : sortedDogs[0].id
-        )
-      } else {
-        setExpandedDogId(null)
+        await loadDogMeals(sortedDogs)
       }
       setTodoError(null)
     } catch (error) {
@@ -213,13 +202,44 @@ export default function TopicsPage() {
 
   useEffect(() => {
     if (dogs.length === 0) {
-      setExpandedDogId(null)
+      setDogMealStatus({})
       return
     }
-    setExpandedDogId((prev) =>
-      prev && dogs.some((dog) => dog.id === prev) ? prev : dogs[0].id
-    )
-  }, [dogs])
+    // Load meals whenever dogs change
+    loadDogMeals(dogs)
+  }, [dogs.length])
+
+  const loadDogMeals = async (dogsList: Dog[]) => {
+    if (dogsList.length === 0) return
+    
+    const dogIds = dogsList.map(d => d.id)
+    const meals = await getDogMeals(dogIds)
+    setDogMeals(meals)
+    
+    // Convert meals to status format
+    const today = getTodayKey()
+    const statusByDog: Record<string, { date: string; completed: boolean[] }> = {}
+    
+    dogsList.forEach(dog => {
+      const mealCount = Math.max(1, dog.meals_per_day ?? 2)
+      const completedArray = Array(mealCount).fill(false)
+      
+      meals
+        .filter(m => m.dog_id === dog.id)
+        .forEach(m => {
+          if (m.meal_index < mealCount) {
+            completedArray[m.meal_index] = m.completed
+          }
+        })
+      
+      statusByDog[dog.id] = {
+        date: today,
+        completed: completedArray
+      }
+    })
+    
+    setDogMealStatus(statusByDog)
+  }
 
   const getMealLabel = (index: number) => {
     if (index === 0) return 'Breakfast'
@@ -227,7 +247,10 @@ export default function TopicsPage() {
     return `Meal ${index + 1}`
   }
 
-  const handleDogMealAction = (dog: Dog, mealIndex: number) => {
+  const handleDogMealAction = async (dog: Dog, mealIndex: number) => {
+    if (!user) return
+    
+    // Optimistically update UI
     const mealCount = Math.max(1, dog.meals_per_day ?? 2)
     setDogMealStatus((prev) => {
       const today = getTodayKey()
@@ -245,6 +268,15 @@ export default function TopicsPage() {
         },
       }
     })
+    
+    // Update database
+    const { error } = await toggleDogMeal(user.id, dog.id, mealIndex)
+    
+    if (error) {
+      console.error('Error toggling dog meal:', error)
+      // Reload meals to sync with database
+      await loadDogMeals(dogs)
+    }
   }
 
   const openDogModal = (mode: 'add' | 'edit', dog?: Dog) => {
@@ -252,7 +284,6 @@ export default function TopicsPage() {
     setDogError(null)
     if (mode === 'edit' && dog) {
       setDogModalTargetId(dog.id)
-      setExpandedDogId(dog.id)
       setDogFormName(dog.name)
       setDogFormMeals(dog.meals_per_day ?? 2)
       setDogFormWeight(dog.weight_per_meal != null ? String(dog.weight_per_meal) : '')
@@ -334,7 +365,6 @@ export default function TopicsPage() {
       }
 
       setDogs((prev) => sortDogs([...prev, dog]))
-      setExpandedDogId(dog.id)
     } else if (dogModalMode === 'edit' && dogModalTargetId) {
       const { dog, error } = await updateDog(dogModalTargetId, {
         name: trimmedName,
@@ -355,7 +385,6 @@ export default function TopicsPage() {
           prev.map((existing) => (existing.id === dog.id ? dog : existing))
         )
       )
-      setExpandedDogId(dog.id)
     }
 
     setShowAddDogModal(false)
@@ -363,6 +392,24 @@ export default function TopicsPage() {
     setDogFormPhotoPreviewUrl('')
     setDogModalTargetId(null)
     setDogSaving(false)
+  }
+
+  const handleDeleteDog = async (dogId: string) => {
+    if (!user) return
+    
+    const confirmed = window.confirm('Are you sure you want to remove this dog? This action cannot be undone.')
+    if (!confirmed) return
+
+    const { success, error } = await deleteDog(dogId)
+    
+    if (error || !success) {
+      console.error('Error deleting dog:', error)
+      alert('Failed to remove dog. Please try again.')
+      return
+    }
+
+    // Remove from local state
+    setDogs((prev) => prev.filter(d => d.id !== dogId))
   }
 
   useEffect(() => {
@@ -591,22 +638,28 @@ export default function TopicsPage() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-20">
         {/* Photo Widget Banner */}
         {!loading && tilePreferences['photo-gallery'] !== false && (
-          <div className={`${contentWidth} mb-6 sm:mb-8 md:mb-10`}>
+          <div className={`${contentWidth} mb-6 sm:mb-8`}>
             <PhotoWidget photoIndex={1} wide={true} />
           </div>
         )}
 
         {/* Highlighted shared activity */}
         {!loading && currentHighlight && (
-          <div className="mb-6 sm:mb-8 md:mb-10">
+          <div className="mb-6 sm:mb-8">
             <div className={`${contentWidth} space-y-4`}>
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                  <span className="text-2xl">✨</span>
+                  Recent Activity
+                </h2>
+              </div>
               <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 w-6 rounded-l-2xl bg-gradient-to-r from-slate-950 via-slate-950/60 to-transparent" />
-                <div className="pointer-events-none absolute inset-y-0 right-0 w-6 rounded-r-2xl bg-gradient-to-l from-slate-950 via-slate-950/60 to-transparent" />
-                <div className="scrollbar-none flex snap-x snap-mandatory gap-2 overflow-x-auto rounded-2xl border border-slate-700/60 bg-slate-900/70 p-1 text-sm text-slate-300">
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-8 rounded-l-2xl bg-gradient-to-r from-slate-950 via-slate-950/60 to-transparent z-10" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-8 rounded-r-2xl bg-gradient-to-l from-slate-950 via-slate-950/60 to-transparent z-10" />
+                <div className="scrollbar-none flex snap-x snap-mandatory gap-2 overflow-x-auto rounded-2xl border border-slate-700/50 bg-gradient-to-br from-slate-900/80 to-slate-800/60 p-2 text-sm text-slate-300 shadow-xl">
                   {highlightConfigs.map((config, index) => {
                     const isActive = highlightIndex === index
                     const label =
@@ -624,15 +677,15 @@ export default function TopicsPage() {
                       <button
                         key={config.type}
                         onClick={() => setHighlightIndex(index)}
-                        className={`group flex snap-start items-center gap-2 rounded-xl px-4 py-2 transition ${
+                        className={`group flex snap-start items-center gap-2 rounded-xl px-5 py-2.5 transition-all shadow-lg ${
                           isActive
-                            ? 'bg-indigo-500/25 text-indigo-100 shadow-inner shadow-indigo-900/40'
-                            : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                            ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-indigo-900/40'
+                            : 'bg-slate-800/60 text-slate-300 hover:bg-slate-700/80 hover:text-white hover:shadow-xl'
                         }`}
                         aria-pressed={isActive}
                       >
                         <span className="text-lg">{config.icon}</span>
-                        <span className="text-xs font-semibold uppercase tracking-wide sm:text-[13px]">
+                        <span className="text-xs font-semibold uppercase tracking-wide sm:text-sm whitespace-nowrap">
                           {label}
                         </span>
                       </button>
@@ -641,23 +694,23 @@ export default function TopicsPage() {
                 </div>
               </div>
 
-              <div className="glass backdrop-blur-sm border border-slate-600/40 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden w-full">
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-800/40 via-slate-900/40 to-slate-900/10 pointer-events-none"></div>
+              <div className="glass backdrop-blur-xl border border-slate-600/50 rounded-2xl p-6 sm:p-7 shadow-2xl relative overflow-hidden w-full">
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/10 via-purple-900/10 to-slate-900/20 pointer-events-none"></div>
                 <div className="relative z-10 flex flex-col gap-5 min-h-[420px] sm:min-h-[400px] md:min-h-[440px]">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-700/50">
                     <div>
                       <div className="flex items-center gap-3 text-white">
-                        <span className="text-2xl">{currentHighlight.icon}</span>
-                        <h3 className="text-xl font-semibold">{currentHighlight.title}</h3>
+                        <span className="text-3xl">{currentHighlight.icon}</span>
+                        <h3 className="text-2xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">{currentHighlight.title}</h3>
                       </div>
-                      <p className="text-sm text-slate-400 mt-1">{currentHighlight.subtitle}</p>
+                      <p className="text-sm text-slate-400 mt-2">{currentHighlight.subtitle}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => navigate(currentHighlight.viewAllPath)}
-                        className="rounded-full border border-indigo-500/40 bg-indigo-500/20 px-3 py-2 text-sm font-medium text-indigo-200 transition-all hover:bg-indigo-500/30"
+                        className="rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 text-sm font-medium text-white transition-all hover:from-indigo-500 hover:to-purple-500 shadow-lg hover:shadow-xl active:scale-95 whitespace-nowrap"
                       >
-                        View all →
+                        View All →
                       </button>
                     </div>
                   </div>
@@ -872,9 +925,10 @@ export default function TopicsPage() {
 
         {/* Add Dog Modal */}
         {showAddDogModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-            <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-lg border border-slate-600/50">
-              <div className="p-6">
+          <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm p-4 overscroll-contain" onClick={handleCloseDogModal}>
+            <div className="flex min-h-full items-center justify-center py-4">
+              <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-lg border border-slate-600/50 my-8" onClick={(e) => e.stopPropagation()}>
+                <div className="p-6 max-h-[80vh] overflow-y-auto overscroll-contain">
                 <div className="flex items-start justify-between mb-6">
                   <div>
                     <h3 className="text-2xl font-bold text-white">Add Family Dog</h3>
@@ -1046,133 +1100,6 @@ export default function TopicsPage() {
                     </button>
                   </div>
                 </form>
-              </div>
-
-              <div className="md:col-span-8 lg:col-span-9 xl:col-span-10 2xl:col-span-11">
-                <div className="mt-4 rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 sm:p-6 shadow-xl">
-                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h3 className="text-lg sm:text-xl font-semibold text-white">Family Dogs</h3>
-                      <p className="text-xs text-slate-400 sm:text-sm">
-                        Tap a card to reveal meal tiles and keep feeding schedules aligned.
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => openDogModal('add')}
-                      className="flex items-center gap-2 rounded-lg border border-indigo-500/40 bg-indigo-500/20 px-3 py-2 text-sm font-medium text-indigo-100 transition hover:bg-indigo-500/30"
-                    >
-                      <span>➕</span>
-                      <span>Add Dog</span>
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                    {dogs.map((dog) => {
-                        const isExpanded = expandedDogId === dog.id
-                        const mealCount = Math.max(1, dog.meals_per_day ?? 2)
-                        const status = dogMealStatus[dog.id]
-                        const completed: boolean[] =
-                          status && status.date === getTodayKey() && status.completed.length === mealCount
-                            ? [...status.completed]
-                            : Array(mealCount).fill(false)
-                        return (
-                          <div
-                            key={dog.id}
-                            className="group rounded-2xl border border-slate-700/60 bg-slate-900/70 p-4 shadow-lg transition hover:border-indigo-400/60"
-                          >
-                            <button
-                              onClick={() => setExpandedDogId(isExpanded ? null : dog.id)}
-                              className="flex w-full items-start gap-3 text-left"
-                            >
-                              {dog.photo_signed_url || dog.photo_url ? (
-                                <img
-                                  src={dog.photo_signed_url || dog.photo_url || ''}
-                                  alt={dog.name}
-                                  className="h-12 w-12 rounded-xl object-cover border border-indigo-500/30"
-                                />
-                              ) : (
-                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/20 text-lg text-indigo-100">
-                                  {dog.name.charAt(0).toUpperCase()}
-                                </div>
-                              )}
-                              <div className="min-w-0 space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <p className="truncate text-base font-semibold text-white">{dog.name}</p>
-                                  <span className="rounded-full border border-indigo-500/30 bg-indigo-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-200">
-                                    {mealCount} {mealCount === 1 ? 'meal' : 'meals'}
-                                  </span>
-                                </div>
-                                <p className="text-xs text-slate-400">
-                                  {dog.weight_per_meal ? `${dog.weight_per_meal} grams per meal` : 'Set grams per meal'}
-                                </p>
-                                {dog.partner_id && (
-                                  <p className="text-[11px] text-slate-500">
-                                    Shared with{' '}
-                                    {partnerMap.get(dog.partner_id)?.username ||
-                                      partnerMap.get(dog.partner_id)?.email ||
-                                      'partner'}
-                                  </p>
-                                )}
-                              </div>
-                            </button>
-
-                            <div className="mt-3 flex items-center justify-between">
-                              <span className="text-[11px] uppercase tracking-wide text-slate-500">
-                                Tap card to {isExpanded ? 'hide' : 'view'} meals
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => openDogModal('edit', dog)}
-                                className="rounded-lg border border-indigo-500/40 bg-indigo-500/20 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-indigo-100 transition hover:bg-indigo-500/30"
-                              >
-                                Edit
-                              </button>
-                            </div>
-
-                            {isExpanded && (
-                              <div className="mt-4 grid grid-cols-1 gap-2">
-                                {Array.from({ length: mealCount }).map((_, mealIndex) => (
-                                  <label
-                                    key={mealIndex}
-                                    className="flex items-center gap-3 rounded-xl border border-slate-700/50 bg-slate-800/60 px-3 py-3 text-left text-slate-200 transition hover:border-indigo-400/60 hover:text-white"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-indigo-500 focus:ring-indigo-400"
-                                      checked={completed[mealIndex]}
-                                      onChange={(e) => {
-                                        e.stopPropagation()
-                                        handleDogMealAction(dog, mealIndex)
-                                      }}
-                                    />
-                                    <div>
-                                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
-                                        <span className="text-lg">
-                                          {mealIndex === 0 ? '🍳' : mealIndex === 1 ? '🍲' : '🥣'}
-                                        </span>
-                                        <span>{getMealLabel(mealIndex)}</span>
-                                      </div>
-                                      <div className="text-[11px] text-slate-400">
-                                        {dog.weight_per_meal ? `${dog.weight_per_meal} g` : 'Set grams'}
-                                      </div>
-                                    </div>
-                                  </label>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
-
-                    <button
-                      onClick={() => openDogModal('add')}
-                      className="flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-indigo-500/30 bg-slate-900/40 p-6 text-center text-indigo-200 transition hover:border-indigo-400/50 hover:text-indigo-100"
-                    >
-                      <div className="text-3xl">➕</div>
-                      <div className="text-sm font-semibold">Add Dog</div>
-                      <p className="text-xs text-indigo-200/80">Keep meal schedules in sync</p>
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -1181,35 +1108,42 @@ export default function TopicsPage() {
 
         {/* Partner Selection and Quick Stats with Photo Widget 1 spanning both */}
         {!loading && (
-          <div className={`${contentWidth} mb-6 sm:mb-8 md:mb-10`}>
-            <h3 className="text-lg sm:text-xl font-semibold text-white mb-4 sm:mb-5 flex items-center gap-2">
-              <span className="text-xl sm:text-2xl">👥</span>
-              Your Partners
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-8 lg:grid-cols-9 xl:grid-cols-10 2xl:grid-cols-11 gap-3 sm:gap-4 md:gap-4 lg:gap-4 xl:gap-4 2xl:gap-4 items-stretch">
+          <div className={`${contentWidth} mb-6 sm:mb-8`}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                <span className="text-2xl sm:text-3xl">👥</span>
+                Your Partners
+              </h2>
+              {partners.length > 0 && (
+                <span className="text-sm text-slate-400 bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-700/50">
+                  {partners.length} {partners.length === 1 ? 'Partner' : 'Partners'}
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-11 2xl:grid-cols-12 gap-3 sm:gap-4 items-stretch">
               {/* Row 1: Partners */}
-              <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-3 lg:gap-3 xl:gap-3 2xl:gap-3 md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-5">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3 md:col-span-5 lg:col-span-7 xl:col-span-8 2xl:col-span-9">
                 {partners.map((partner) => (
                   <div
                     key={partner.id}
                     onClick={() => navigate(`/app/partner/${partner.id}`)}
-                    className="glass backdrop-blur-sm border border-slate-600/40 p-3 sm:p-4 rounded-2xl shadow-lg card-hover text-left group aspect-square flex flex-col justify-center overflow-hidden relative cursor-pointer"
+                    className="glass backdrop-blur-xl border border-slate-600/50 p-5 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 group relative cursor-pointer hover:scale-[1.02] hover:border-indigo-500/50"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/8 to-pink-500/8 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
                     {/* Unlink Button - Top Right */}
                     <button
                       onClick={(e) => handleUnlinkPartner(partner, e)}
-                      className="absolute top-2 right-2 z-20 p-1.5 sm:p-2 rounded-lg bg-red-600/80 hover:bg-red-600 active:bg-red-700 text-white transition-all shadow-lg hover:shadow-xl opacity-0 group-hover:opacity-100 backdrop-blur-sm"
+                      className="absolute top-3 right-3 z-20 p-1.5 rounded-lg bg-red-600/90 hover:bg-red-500 active:bg-red-700 text-white transition-all shadow-lg hover:shadow-xl opacity-0 group-hover:opacity-100 backdrop-blur-sm"
                       title="Unlink partner"
                       aria-label="Unlink partner"
                     >
-                      <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
-                    <div className="relative z-10">
+                    <div className="relative z-10 flex flex-col items-center text-center py-2">
                       {partner.profilePictureUrl ? (
-                        <div className="w-12 h-12 sm:w-14 sm:h-14 mb-2 mx-auto rounded-full overflow-hidden border-2 border-purple-400/40 shadow-lg flex-shrink-0">
+                        <div className="w-20 h-20 mb-3 rounded-full overflow-hidden border-2 border-indigo-500/50 shadow-lg group-hover:border-indigo-400/70 transition-colors">
                           <img
                             src={partner.profilePictureUrl}
                             alt={partner.username}
@@ -1217,14 +1151,17 @@ export default function TopicsPage() {
                           />
                         </div>
                       ) : (
-                        <div className="text-2xl sm:text-3xl mb-2 flex-shrink-0">👤</div>
+                        <div className="w-20 h-20 mb-3 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center border-2 border-indigo-500/30">
+                          <span className="text-4xl">👤</span>
+                        </div>
                       )}
-                      <h4 className="text-xs sm:text-sm font-bold mb-1 text-white group-hover:text-purple-200 transition-colors truncate">
+                      <h4 className="text-base font-bold mb-1.5 text-white group-hover:text-indigo-200 transition-colors line-clamp-1 w-full px-1">
                         {partner.username}
                       </h4>
-                      <p className="text-[10px] sm:text-xs text-slate-400 truncate mb-2">{partner.email}</p>
-                      <div className="text-purple-300 font-medium text-[10px] sm:text-xs group-hover:text-purple-200 transition-colors">
-                        View →
+                      <p className="text-xs text-slate-400 mb-3 line-clamp-1 w-full px-1">{partner.email}</p>
+                      <div className="flex items-center gap-1.5 text-indigo-300 font-medium text-xs group-hover:text-indigo-200 transition-colors bg-indigo-900/30 px-3 py-1.5 rounded-full">
+                        <span>View Dashboard</span>
+                        <span>→</span>
                       </div>
                     </div>
                   </div>
@@ -1232,143 +1169,173 @@ export default function TopicsPage() {
                 {/* Add Partner Card */}
                 <button
                   onClick={handleOpenAddPartner}
-                  className="glass backdrop-blur-sm border-2 border-dashed border-purple-400/40 p-3 sm:p-4 rounded-2xl shadow-lg card-hover text-left group aspect-square flex flex-col justify-center overflow-hidden relative hover:border-purple-300/50 transition-all"
+                  className="glass backdrop-blur-xl border-2 border-dashed border-indigo-500/40 p-5 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 group relative hover:border-indigo-400/60 hover:scale-[1.02]"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/8 to-pink-500/8 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
-                  <div className="relative z-10 flex flex-col items-center justify-center text-center">
-                    <div className="text-3xl sm:text-4xl mb-2 flex-shrink-0">➕</div>
-                    <h4 className="text-xs sm:text-sm font-bold mb-1 text-purple-200 group-hover:text-purple-100 transition-colors">
+                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
+                  <div className="relative z-10 flex flex-col items-center text-center py-2">
+                    <div className="w-20 h-20 mb-3 rounded-full bg-gradient-to-br from-indigo-600/20 to-purple-600/20 flex items-center justify-center group-hover:from-indigo-600/30 group-hover:to-purple-600/30 transition-all border-2 border-indigo-500/30">
+                      <span className="text-4xl">➕</span>
+                    </div>
+                    <h4 className="text-base font-bold mb-1.5 text-indigo-200 group-hover:text-indigo-100 transition-colors">
                       Add Partner
                     </h4>
-                    <p className="text-[10px] sm:text-xs text-slate-400 group-hover:text-slate-300 transition-colors">
+                    <p className="text-xs text-slate-400 group-hover:text-slate-300 transition-colors mb-3">
                       Link a new partner
                     </p>
                   </div>
                 </button>
               </div>
 
-              {/* Photo Widget 1 - Spans over both rows (Partners and Quick Stats) - Dynamically sized */}
+              {/* Photo Widget 1 - Spans over both rows (Partners and Dogs) */}
               {tilePreferences['photo-gallery'] !== false && (
-                <div className="md:col-span-3 lg:col-span-4 xl:col-span-5 2xl:col-span-6 row-span-2 self-stretch">
+                <div className="md:col-span-3 lg:col-span-3 xl:col-span-3 2xl:col-span-3 row-span-2 self-stretch">
                   <PhotoWidget photoIndex={0} fillHeight={true} />
                 </div>
               )}
 
               {/* Row 2: Family Dogs */}
-              <div className="md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-5">
-                <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 sm:p-6 shadow-xl">
-                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              {tilePreferences['dog-feeding'] !== false && (
+              <div className="md:col-span-5 lg:col-span-7 xl:col-span-8 2xl:col-span-9">
+                <div className="glass backdrop-blur-xl rounded-2xl border border-slate-700/50 p-5 sm:p-6 shadow-2xl">
+                  <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <h3 className="text-lg sm:text-xl font-semibold text-white">Family Dogs</h3>
-                      <p className="text-xs text-slate-400 sm:text-sm">Keep your shared pups in sync.</p>
+                      <h3 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                        <span className="text-2xl">🐕</span>
+                        Family Dogs
+                      </h3>
+                      <p className="text-xs text-slate-400 sm:text-sm mt-1">Track feeding schedules for your pups</p>
                     </div>
                     <button
                       onClick={() => openDogModal('add')}
-                      className="flex items-center gap-2 rounded-lg border border-indigo-500/40 bg-indigo-500/20 px-3 py-2 text-sm font-medium text-indigo-100 transition hover:bg-indigo-500/30"
+                      className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 text-sm font-medium text-white transition-all hover:from-indigo-500 hover:to-purple-500 shadow-lg hover:shadow-xl active:scale-95 whitespace-nowrap"
                     >
                       <span>➕</span>
                       <span>Add Dog</span>
                     </button>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {dogs.map((dog) => {
-                      const isExpanded = expandedDogId === dog.id
                       const mealCount = Math.max(1, dog.meals_per_day ?? 2)
                       const status = dogMealStatus[dog.id]
                       const completed: boolean[] =
                         status && status.date === getTodayKey() && status.completed.length === mealCount
                           ? [...status.completed]
                           : Array(mealCount).fill(false)
+                      const completedCount = completed.filter(Boolean).length
+                      const allComplete = completedCount === mealCount
 
                       return (
                         <div
                           key={dog.id}
-                          className="flex flex-col gap-3 rounded-2xl border border-slate-700/60 bg-slate-900/70 p-4 shadow-lg transition hover:border-indigo-400/60"
+                          className={`relative flex flex-col gap-3 rounded-2xl border p-4 shadow-lg transition ${
+                            allComplete
+                              ? 'border-green-500/40 bg-gradient-to-br from-green-900/30 to-slate-900/70'
+                              : 'border-slate-700/60 bg-slate-900/70 hover:border-indigo-400/60'
+                          }`}
                         >
-                          <button
-                            onClick={() => setExpandedDogId(isExpanded ? null : dog.id)}
-                            className="flex items-start gap-3 text-left"
-                          >
-                            {dog.photo_signed_url || dog.photo_url ? (
-                              <img
-                                src={dog.photo_signed_url || dog.photo_url || ''}
-                                alt={dog.name}
-                                className="h-12 w-12 rounded-xl object-cover border border-indigo-500/30"
-                              />
-                            ) : (
-                              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/20 text-lg text-indigo-100">
-                                {dog.name.charAt(0).toUpperCase()}
-                              </div>
-                            )}
-                            <div className="min-w-0 space-y-1">
-                              <div className="flex items-center gap-2">
-                                <p className="truncate text-base font-semibold text-white">{dog.name}</p>
-                                <span className="rounded-full border border-indigo-500/30 bg-indigo-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-200">
-                                  {mealCount} {mealCount === 1 ? 'meal' : 'meals'}
-                                </span>
-                              </div>
-                              <p className="text-xs text-slate-400">
-                                {dog.weight_per_meal ? `${dog.weight_per_meal} g per meal` : 'Set grams per meal'}
-                              </p>
-                              {dog.partner_id && (
-                                <p className="text-[11px] text-slate-500">
-                                  Shared with{' '}
-                                  {partnerMap.get(dog.partner_id)?.username ||
-                                    partnerMap.get(dog.partner_id)?.email ||
-                                    'partner'}
-                                </p>
+                          {/* Header with dog info */}
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-3 flex-1 min-w-0">
+                              {dog.photo_signed_url || dog.photo_url ? (
+                                <img
+                                  src={dog.photo_signed_url || dog.photo_url || ''}
+                                  alt={dog.name}
+                                  className="h-14 w-14 rounded-xl object-cover border border-indigo-500/30 flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-500/20 text-xl text-indigo-100 font-bold">
+                                  {dog.name.charAt(0).toUpperCase()}
+                                </div>
                               )}
+                              <div className="min-w-0 space-y-1 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="text-base font-bold text-white">{dog.name}</p>
+                                  {allComplete && (
+                                    <span className="flex items-center gap-1 rounded-full bg-green-500/20 border border-green-500/40 px-2 py-0.5 text-[10px] font-semibold text-green-200">
+                                      ✓ Fed
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-slate-400">
+                                  <span>{completedCount}/{mealCount} meals today</span>
+                                  {dog.weight_per_meal && <span>• {dog.weight_per_meal}g each</span>}
+                                </div>
+                                {dog.partner_id && (
+                                  <p className="text-[11px] text-slate-500">
+                                    👥 {partnerMap.get(dog.partner_id)?.username || partnerMap.get(dog.partner_id)?.email || 'partner'}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                          </button>
-
-                          <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-slate-500">
-                            <span>Tap card to {isExpanded ? 'hide' : 'view'} meals</span>
-                            <button
-                              type="button"
-                              onClick={() => openDogModal('edit', dog)}
-                              className="rounded-lg border border-indigo-500/40 bg-indigo-500/20 px-2 py-1 text-indigo-100 transition hover:bg-indigo-500/30"
-                            >
-                              Edit
-                            </button>
+                            
+                            {/* Action buttons */}
+                            <div className="flex gap-1.5 flex-shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => openDogModal('edit', dog)}
+                                className="rounded-lg border border-indigo-500/40 bg-indigo-500/20 p-1.5 text-indigo-200 transition hover:bg-indigo-500/30 hover:text-indigo-100"
+                                title="Edit dog"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteDog(dog.id)}
+                                className="rounded-lg border border-red-500/40 bg-red-500/20 p-1.5 text-red-200 transition hover:bg-red-500/30 hover:text-red-100"
+                                title="Remove dog"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
                           </div>
 
-                          {isExpanded && (
-                            <div className="grid grid-cols-1 gap-2">
-                              {Array.from({ length: mealCount }).map((_, mealIndex) => (
-                                <label
-                                  key={mealIndex}
-                                  className="flex items-center gap-3 rounded-xl border border-slate-700/50 bg-slate-800/60 px-3 py-3 text-left text-slate-200 transition hover:border-indigo-400/60 hover:text-white"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-indigo-500 focus:ring-indigo-400"
-                                    checked={completed[mealIndex]}
-                                    onChange={(e) => {
-                                      e.stopPropagation()
-                                      handleDogMealAction(dog, mealIndex)
-                                    }}
-                                  />
-                                  <div>
-                                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
-                                      <span className="text-lg">
-                                        {mealIndex === 0 ? '🍳' : mealIndex === 1 ? '🍲' : '🥣'}
-                                      </span>
-                                      <span>{getMealLabel(mealIndex)}</span>
-                                    </div>
-                                    <div className="text-[11px] text-slate-400">
-                                      {dog.weight_per_meal ? `${dog.weight_per_meal} g` : 'Set grams'}
-                                    </div>
+                          {/* Meals list - always visible */}
+                          <div className="space-y-2 pt-2 border-t border-slate-700/50">
+                            {Array.from({ length: mealCount }).map((_, mealIndex) => (
+                              <label
+                                key={mealIndex}
+                                className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition cursor-pointer ${
+                                  completed[mealIndex]
+                                    ? 'border-green-500/40 bg-green-900/20 text-green-100'
+                                    : 'border-slate-700/50 bg-slate-800/60 text-slate-200 hover:border-indigo-400/60 hover:bg-slate-800/80'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="h-5 w-5 rounded border-slate-600 bg-slate-900 text-indigo-500 focus:ring-indigo-400 focus:ring-offset-slate-900 cursor-pointer"
+                                  checked={completed[mealIndex]}
+                                  onChange={() => handleDogMealAction(dog, mealIndex)}
+                                />
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 text-sm font-semibold">
+                                    <span className="text-lg">
+                                      {mealIndex === 0 ? '🍳' : mealIndex === 1 ? '🍲' : '🥣'}
+                                    </span>
+                                    <span>{getMealLabel(mealIndex)}</span>
                                   </div>
-                                </label>
-                              ))}
-                            </div>
-                          )}
+                                  {dog.weight_per_meal && (
+                                    <div className="text-[11px] text-slate-400 ml-7">
+                                      {dog.weight_per_meal} g
+                                    </div>
+                                  )}
+                                </div>
+                                {completed[mealIndex] && (
+                                  <span className="text-green-400 text-sm">✓</span>
+                                )}
+                              </label>
+                            ))}
+                          </div>
                         </div>
                       )
                     })}
                   </div>
                 </div>
               </div>
+              )}
             </div>
           </div>
         )}

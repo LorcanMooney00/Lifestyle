@@ -100,6 +100,17 @@ export interface Dog {
   photo_signed_url?: string | null
 }
 
+export interface DogMeal {
+  id: string
+  dog_id: string
+  user_id: string
+  meal_date: string
+  meal_index: number
+  completed: boolean
+  completed_at: string
+  created_at: string
+}
+
 export interface User {
   id: string
   email?: string

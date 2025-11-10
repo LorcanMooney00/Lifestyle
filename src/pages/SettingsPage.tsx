@@ -11,6 +11,7 @@ const defaultTilePreferences: Record<string, boolean> = {
   'photo-gallery': true,
   'shared-todos': true,
   'shopping-list': true,
+  'dog-feeding': true,
 }
 
 export default function SettingsPage() {
@@ -282,22 +283,22 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <nav className="bg-gray-800 shadow-sm border-b border-gray-700">
+      <nav className="glass backdrop-blur-xl shadow-lg border-b border-slate-700/50 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <button
                 onClick={() => navigate('/app/topics')}
-                className="text-gray-300 hover:text-gray-100 mr-4"
+                className="text-slate-300 hover:text-white mr-4 transition-colors"
               >
                 ← Dashboard
               </button>
-              <h1 className="text-xl font-bold text-gray-100">Settings</h1>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Settings</h1>
             </div>
             <div className="flex items-center">
               <button
                 onClick={handleSignOut}
-                className="text-gray-300 hover:text-gray-100 px-3 py-2 rounded-md text-sm font-medium"
+                className="text-slate-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-700/50 active:scale-95"
               >
                 Sign Out
               </button>
@@ -306,11 +307,15 @@ export default function SettingsPage() {
         </div>
       </nav>
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-gray-800 shadow-sm rounded-lg p-6 mt-6 border border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-100 mb-4">
-            Profile Picture
-          </h2>
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-20">
+        {/* Profile Section */}
+        <div className="glass backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-slate-700/50">
+          <div className="flex items-center space-x-2 mb-6">
+            <span className="text-2xl">👤</span>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              Profile
+            </h2>
+          </div>
           
           {pictureError && (
             <div className="mb-4 p-4 bg-red-900/30 border border-red-700/50 rounded-xl">
@@ -324,32 +329,34 @@ export default function SettingsPage() {
             </div>
           )}
 
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
+          {/* Profile Picture */}
+          <div className="mb-6 pb-6 border-b border-slate-700/50">
+            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-4">Profile Picture</h3>
+            <div className="flex items-center gap-6">
               {profilePictureUrl ? (
                 <div className="relative">
                   <img
                     src={profilePictureUrl}
                     alt="Profile"
-                    className="w-20 h-20 rounded-full object-cover border-2 border-indigo-500/50 shadow-lg"
+                    className="w-24 h-24 rounded-full object-cover border-2 border-indigo-500/50 shadow-lg"
                   />
                   <button
                     onClick={handleRemoveProfilePicture}
                     disabled={uploadingPicture}
-                    className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-red-600 hover:bg-red-500 text-white text-xs flex items-center justify-center transition-all shadow-lg hover:shadow-xl disabled:opacity-50"
+                    className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-red-600 hover:bg-red-500 text-white text-sm flex items-center justify-center transition-all shadow-lg hover:shadow-xl disabled:opacity-50"
                     title="Remove profile picture"
                   >
                     ×
                   </button>
                 </div>
               ) : (
-                <div className="w-20 h-20 rounded-full bg-slate-700/50 border-2 border-slate-600/50 flex items-center justify-center text-3xl">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-2 border-slate-600/50 flex items-center justify-center text-4xl">
                   👤
                 </div>
               )}
               <div className="flex-1">
-                <p className="text-sm text-slate-300 mb-2">
-                  {profilePictureUrl ? 'Your profile picture' : 'No profile picture set'}
+                <p className="text-sm text-slate-300 mb-3">
+                  {profilePictureUrl ? 'Update your profile picture' : 'Add a profile picture so partners can recognize you'}
                 </p>
                 <input
                   ref={fileInputRef}
@@ -362,48 +369,40 @@ export default function SettingsPage() {
                 />
                 <label
                   htmlFor="profile-picture-upload"
-                  className={`inline-block px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                  className={`inline-block px-5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
                     uploadingPicture
                       ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
-                      : 'bg-indigo-600 text-white hover:bg-indigo-500 active:bg-indigo-700 shadow-lg hover:shadow-xl active:scale-95'
+                      : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-500 hover:to-purple-500 shadow-lg hover:shadow-xl active:scale-95'
                   }`}
                 >
-                  {uploadingPicture ? 'Uploading...' : profilePictureUrl ? 'Change Picture' : 'Upload Picture'}
+                  {uploadingPicture ? '⏳ Uploading...' : profilePictureUrl ? '📷 Change Picture' : '➕ Upload Picture'}
                 </label>
                 <p className="text-xs text-slate-400 mt-2">
-                  Max 2MB. JPG, PNG, or GIF.
+                  Max 2MB • JPG, PNG, or GIF
                 </p>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-gray-800 shadow-sm rounded-lg p-6 mt-6 border border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-100 mb-4">
-            Username
-          </h2>
+          {/* Username */}
+          <div>
+            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-4">Username</h3>
           
           {usernameEditing ? (
             <form onSubmit={handleUpdateUsername} className="space-y-4">
               {usernameError && (
-                <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded">
+                <div className="bg-red-900/30 border border-red-700/50 text-red-300 px-4 py-3 rounded-xl">
                   {usernameError}
                 </div>
               )}
               
               {usernameSuccess && (
-                <div className="bg-green-900 border border-green-700 text-green-200 px-4 py-3 rounded">
+                <div className="bg-green-900/30 border border-green-700/50 text-green-300 px-4 py-3 rounded-xl">
                   {usernameSuccess}
                 </div>
               )}
               
               <div>
-                <label
-                  htmlFor="username"
-                  className="block text-sm font-medium text-gray-300 mb-2"
-                >
-                  Username
-                </label>
                 <input
                   id="username"
                   type="text"
@@ -411,18 +410,18 @@ export default function SettingsPage() {
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Enter your username"
                   required
-                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-2.5 border border-slate-600/50 bg-slate-800/50 text-slate-100 placeholder-slate-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   disabled={usernameLoading}
                 />
               </div>
               
-              <div className="flex space-x-2">
+              <div className="flex space-x-3">
                 <button
                   type="submit"
                   disabled={usernameLoading || !username.trim()}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2.5 rounded-xl hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
                 >
-                  {usernameLoading ? 'Saving...' : 'Save'}
+                  {usernameLoading ? '⏳ Saving...' : '✓ Save'}
                 </button>
                 <button
                   type="button"
@@ -433,82 +432,79 @@ export default function SettingsPage() {
                     loadUsername()
                   }}
                   disabled={usernameLoading}
-                  className="bg-gray-700 text-gray-300 px-4 py-2 rounded-md hover:bg-gray-600 disabled:opacity-50 text-sm font-medium"
+                  className="px-4 py-2.5 rounded-xl bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 disabled:opacity-50 text-sm font-medium transition-all"
                 >
                   Cancel
                 </button>
               </div>
             </form>
           ) : (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-400">
-                    <span className="font-medium">Username:</span>{' '}
-                    {username || (
-                      <span className="text-gray-500 italic">Not set</span>
-                    )}
+            <div className="flex items-center justify-between bg-slate-800/30 rounded-xl p-4">
+              <div>
+                <p className="text-slate-200 font-medium">
+                  {username || <span className="text-slate-500 italic">Not set</span>}
+                </p>
+                {!username && (
+                  <p className="text-xs text-slate-400 mt-1">
+                    Set a username so partners can easily identify you
                   </p>
-                  {!username && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Set a username so partners can easily identify you
-                    </p>
-                  )}
-                </div>
-                <button
-                  onClick={() => {
-                    setUsernameEditing(true)
-                    setUsernameError(null)
-                    setUsernameSuccess(null)
-                  }}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-500 text-sm font-medium"
-                >
-                  {username ? 'Change' : 'Add'} Username
-                </button>
+                )}
               </div>
+              <button
+                onClick={() => {
+                  setUsernameEditing(true)
+                  setUsernameError(null)
+                  setUsernameSuccess(null)
+                }}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-xl hover:from-indigo-500 hover:to-purple-500 text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
+              >
+                {username ? '✏️ Edit' : '➕ Add'}
+              </button>
             </div>
           )}
+          </div>
         </div>
 
-        <div className="bg-gray-800 shadow-sm rounded-lg p-6 mt-6 border border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-100 mb-4">
-            Dashboard Preferences
-          </h2>
-          <p className="text-sm text-gray-400 mb-4">
-            Choose which tiles to show on your partner dashboards
+        {/* Dashboard Widgets Section */}
+        <div className="glass backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-slate-700/50 mt-6">
+          <div className="flex items-center space-x-2 mb-3">
+            <span className="text-2xl">🎛️</span>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              Dashboard Widgets
+            </h2>
+          </div>
+          <p className="text-sm text-slate-400 mb-6">
+            Customize which features appear on your dashboard
           </p>
 
           {tilePreferencesError && (
-            <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded mb-4">
+            <div className="bg-red-900/30 border border-red-700/50 text-red-300 px-4 py-3 rounded-xl mb-4">
               {tilePreferencesError}
             </div>
           )}
 
           {tilePreferencesSuccess && (
-            <div className="bg-green-900 border border-green-700 text-green-200 px-4 py-3 rounded mb-4">
+            <div className="bg-green-900/30 border border-green-700/50 text-green-300 px-4 py-3 rounded-xl mb-4">
               {tilePreferencesSuccess}
             </div>
           )}
 
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Shared Notes Toggle */}
-            <div className="flex items-center justify-between bg-gray-700 p-4 rounded border border-gray-600">
+            <div className="flex items-center justify-between bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 hover:border-slate-600/50 transition-all">
               <div className="flex items-center space-x-3">
-                <span className="text-2xl">📝</span>
-                <div>
-                  <p className="font-medium text-gray-100">Shared Notes</p>
-                  <p className="text-sm text-gray-400">Create and share notes with your partner</p>
-                </div>
+                <span className="text-xl">📝</span>
+                <p className="font-medium text-slate-200 text-sm">Shared Notes</p>
               </div>
               <button
                 onClick={() => handleToggleTile('shared-notes')}
                 disabled={tilePreferencesLoading}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 ${
-                  tilePreferences['shared-notes'] ? 'bg-indigo-600' : 'bg-gray-600'
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
+                  tilePreferences['shared-notes'] ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-slate-600'
                 }`}
               >
                 <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
                     tilePreferences['shared-notes'] ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
@@ -516,23 +512,20 @@ export default function SettingsPage() {
             </div>
 
             {/* Calendar Toggle */}
-            <div className="flex items-center justify-between bg-gray-700 p-4 rounded border border-gray-600">
+            <div className="flex items-center justify-between bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 hover:border-slate-600/50 transition-all">
               <div className="flex items-center space-x-3">
-                <span className="text-2xl">📅</span>
-                <div>
-                  <p className="font-medium text-gray-100">Calendar</p>
-                  <p className="text-sm text-gray-400">Shared calendar and events</p>
-                </div>
+                <span className="text-xl">📅</span>
+                <p className="font-medium text-slate-200 text-sm">Calendar</p>
               </div>
               <button
                 onClick={() => handleToggleTile('calendar')}
                 disabled={tilePreferencesLoading}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 ${
-                  tilePreferences['calendar'] ? 'bg-indigo-600' : 'bg-gray-600'
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
+                  tilePreferences['calendar'] ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-slate-600'
                 }`}
               >
                 <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
                     tilePreferences['calendar'] ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
@@ -540,23 +533,20 @@ export default function SettingsPage() {
             </div>
 
             {/* Recipes Toggle */}
-            <div className="flex items-center justify-between bg-gray-700 p-4 rounded border border-gray-600">
+            <div className="flex items-center justify-between bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 hover:border-slate-600/50 transition-all">
               <div className="flex items-center space-x-3">
-                <span className="text-2xl">🍳</span>
-                <div>
-                  <p className="font-medium text-gray-100">Recipes</p>
-                  <p className="text-sm text-gray-400">Find recipes based on ingredients you have</p>
-                </div>
+                <span className="text-xl">🍳</span>
+                <p className="font-medium text-slate-200 text-sm">Recipes</p>
               </div>
               <button
                 onClick={() => handleToggleTile('recipes')}
                 disabled={tilePreferencesLoading}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 ${
-                  tilePreferences['recipes'] ? 'bg-indigo-600' : 'bg-gray-600'
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
+                  tilePreferences['recipes'] ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-slate-600'
                 }`}
               >
                 <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
                     tilePreferences['recipes'] ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
@@ -564,23 +554,20 @@ export default function SettingsPage() {
             </div>
 
             {/* Shared To-Do List Toggle */}
-            <div className="flex items-center justify-between bg-gray-700 p-4 rounded border border-gray-600">
+            <div className="flex items-center justify-between bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 hover:border-slate-600/50 transition-all">
               <div className="flex items-center space-x-3">
-                <span className="text-2xl">✅</span>
-                <div>
-                  <p className="font-medium text-gray-100">Shared To-Do List</p>
-                  <p className="text-sm text-gray-400">Track shared tasks with your partners</p>
-                </div>
+                <span className="text-xl">✅</span>
+                <p className="font-medium text-slate-200 text-sm">To-Do List</p>
               </div>
               <button
                 onClick={() => handleToggleTile('shared-todos')}
                 disabled={tilePreferencesLoading}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 ${
-                  tilePreferences['shared-todos'] ? 'bg-indigo-600' : 'bg-gray-600'
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
+                  tilePreferences['shared-todos'] ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-slate-600'
                 }`}
               >
                 <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
                     tilePreferences['shared-todos'] ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
@@ -588,47 +575,62 @@ export default function SettingsPage() {
             </div>
 
             {/* Shopping List Toggle */}
-            <div className="flex items-center justify-between bg-gray-700 p-4 rounded border border-gray-600">
+            <div className="flex items-center justify-between bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 hover:border-slate-600/50 transition-all">
               <div className="flex items-center space-x-3">
-                <span className="text-2xl">🛒</span>
-                <div>
-                  <p className="font-medium text-gray-100">Shopping List</p>
-                  <p className="text-sm text-gray-400">Keep a shared list of groceries and essentials</p>
-                </div>
+                <span className="text-xl">🛒</span>
+                <p className="font-medium text-slate-200 text-sm">Shopping List</p>
               </div>
               <button
                 onClick={() => handleToggleTile('shopping-list')}
                 disabled={tilePreferencesLoading}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 ${
-                  tilePreferences['shopping-list'] ? 'bg-indigo-600' : 'bg-gray-600'
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
+                  tilePreferences['shopping-list'] ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-slate-600'
                 }`}
               >
                 <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
                     tilePreferences['shopping-list'] ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
               </button>
             </div>
 
-            {/* Photo Gallery Toggle */}
-            <div className="flex items-center justify-between bg-gray-700 p-4 rounded border border-gray-600">
+            {/* Dog Feeding Toggle */}
+            <div className="flex items-center justify-between bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 hover:border-slate-600/50 transition-all">
               <div className="flex items-center space-x-3">
-                <span className="text-2xl">📸</span>
-                <div>
-                  <p className="font-medium text-gray-100">Photo Gallery</p>
-                  <p className="text-sm text-gray-400">Upload and view your photos on the main dashboard</p>
-                </div>
+                <span className="text-xl">🐕</span>
+                <p className="font-medium text-slate-200 text-sm">Dog Feeding</p>
+              </div>
+              <button
+                onClick={() => handleToggleTile('dog-feeding')}
+                disabled={tilePreferencesLoading}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
+                  tilePreferences['dog-feeding'] ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-slate-600'
+                }`}
+              >
+                <span
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                    tilePreferences['dog-feeding'] ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Photo Gallery Toggle */}
+            <div className="flex items-center justify-between bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 hover:border-slate-600/50 transition-all">
+              <div className="flex items-center space-x-3">
+                <span className="text-xl">📸</span>
+                <p className="font-medium text-slate-200 text-sm">Photo Gallery</p>
               </div>
               <button
                 onClick={() => handleToggleTile('photo-gallery')}
                 disabled={tilePreferencesLoading}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 ${
-                  tilePreferences['photo-gallery'] ? 'bg-indigo-600' : 'bg-gray-600'
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
+                  tilePreferences['photo-gallery'] ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-slate-600'
                 }`}
               >
                 <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
                     tilePreferences['photo-gallery'] ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
@@ -637,36 +639,44 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="bg-gray-800 shadow-sm rounded-lg p-6 mt-6 border border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-100 mb-4">
-            Account Information
-          </h2>
-          <div className="space-y-2">
-            <p className="text-sm text-gray-400">
-              <span className="font-medium">Email:</span> {user?.email}
-            </p>
-            <p className="text-sm text-gray-400">
-              <span className="font-medium">User ID:</span> {user?.id}
-            </p>
+        {/* Account Information Section */}
+        <div className="glass backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-slate-700/50 mt-6">
+          <div className="flex items-center space-x-2 mb-6">
+            <span className="text-2xl">🔐</span>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              Account & Security
+            </h2>
           </div>
-        </div>
 
-        {/* Password Change Section */}
-        <div className="bg-gray-800 shadow-sm rounded-lg p-6 mt-6 border border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-100 mb-4">
-            Change Password
-          </h2>
+          {/* Email Info */}
+          <div className="mb-6 pb-6 border-b border-slate-700/50">
+            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">Account Information</h3>
+            <div className="bg-slate-800/30 rounded-xl p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-400 uppercase">Email</span>
+                <span className="text-sm text-slate-200 font-medium">{user?.email}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-400 uppercase">User ID</span>
+                <span className="text-xs text-slate-500 font-mono">{user?.id?.slice(0, 8)}...</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Password Change */}
+          <div>
+            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-4">Change Password</h3>
           
           {passwordEditing ? (
             <form onSubmit={handleChangePassword} className="space-y-4">
               {passwordError && (
-                <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded">
+                <div className="bg-red-900/30 border border-red-700/50 text-red-300 px-4 py-3 rounded-xl">
                   {passwordError}
                 </div>
               )}
               
               {passwordSuccess && (
-                <div className="bg-green-900 border border-green-700 text-green-200 px-4 py-3 rounded">
+                <div className="bg-green-900/30 border border-green-700/50 text-green-300 px-4 py-3 rounded-xl">
                   {passwordSuccess}
                 </div>
               )}
@@ -674,7 +684,7 @@ export default function SettingsPage() {
               <div>
                 <label
                   htmlFor="new-password"
-                  className="block text-sm font-medium text-gray-300 mb-2"
+                  className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wide"
                 >
                   New Password
                 </label>
@@ -686,7 +696,7 @@ export default function SettingsPage() {
                   placeholder="Enter new password (min 6 characters)"
                   required
                   minLength={6}
-                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-2.5 border border-slate-600/50 bg-slate-800/50 text-slate-100 placeholder-slate-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   disabled={passwordLoading}
                 />
               </div>
@@ -694,7 +704,7 @@ export default function SettingsPage() {
               <div>
                 <label
                   htmlFor="confirm-password"
-                  className="block text-sm font-medium text-gray-300 mb-2"
+                  className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wide"
                 >
                   Confirm New Password
                 </label>
@@ -706,18 +716,18 @@ export default function SettingsPage() {
                   placeholder="Confirm new password"
                   required
                   minLength={6}
-                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-2.5 border border-slate-600/50 bg-slate-800/50 text-slate-100 placeholder-slate-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   disabled={passwordLoading}
                 />
               </div>
               
-              <div className="flex space-x-2">
+              <div className="flex space-x-3">
                 <button
                   type="submit"
                   disabled={passwordLoading || !newPassword || !confirmPassword}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2.5 rounded-xl hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
                 >
-                  {passwordLoading ? 'Changing...' : 'Change Password'}
+                  {passwordLoading ? '⏳ Changing...' : '✓ Change Password'}
                 </button>
                 <button
                   type="button"
@@ -729,16 +739,16 @@ export default function SettingsPage() {
                     setConfirmPassword('')
                   }}
                   disabled={passwordLoading}
-                  className="bg-gray-700 text-gray-300 px-4 py-2 rounded-md hover:bg-gray-600 disabled:opacity-50 text-sm font-medium"
+                  className="px-4 py-2.5 rounded-xl bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 disabled:opacity-50 text-sm font-medium transition-all"
                 >
                   Cancel
                 </button>
               </div>
             </form>
           ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-400">
-                Change your account password to keep your account secure.
+            <div className="bg-slate-800/30 rounded-xl p-4">
+              <p className="text-sm text-slate-300 mb-3">
+                Keep your account secure by regularly updating your password
               </p>
               <button
                 onClick={() => {
@@ -746,64 +756,69 @@ export default function SettingsPage() {
                   setPasswordError(null)
                   setPasswordSuccess(null)
                 }}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-500 text-sm font-medium"
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-xl hover:from-indigo-500 hover:to-purple-500 text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
               >
-                Change Password
+                🔑 Change Password
               </button>
             </div>
           )}
+          </div>
         </div>
 
         {/* Account Deletion Section */}
-        <div className="bg-gray-800 shadow-sm rounded-lg p-6 mt-6 border border-red-700">
-          <h2 className="text-xl font-semibold text-red-400 mb-4">
-            Delete Account
-          </h2>
+        <div className="glass backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-red-700/50 mt-6">
+          <div className="flex items-center space-x-2 mb-6">
+            <span className="text-2xl">⚠️</span>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-red-400 to-pink-400 bg-clip-text text-transparent">
+              Danger Zone
+            </h2>
+          </div>
           
           {!showDeleteConfirm ? (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-400">
-                Permanently delete your account and all associated data. This action cannot be undone.
+            <div className="bg-red-950/30 border border-red-900/50 rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-red-300 mb-2">Delete Account</h3>
+              <p className="text-sm text-slate-300 mb-2">
+                Permanently delete your account and all associated data
               </p>
-              <p className="text-xs text-red-400">
-                Warning: This will delete all your notes, events, recipes, and partner links.
+              <p className="text-xs text-red-400/80 mb-4">
+                ⚠️ This will delete all your notes, events, recipes, and partner links. This action cannot be undone.
               </p>
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-500 text-sm font-medium"
+                className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
               >
-                Delete Account
+                🗑️ Delete Account
               </button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="bg-red-950/30 border border-red-900/50 rounded-xl p-5 space-y-4">
               {deleteError && (
-                <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded">
+                <div className="bg-red-900/30 border border-red-700/50 text-red-300 px-4 py-3 rounded-xl">
                   {deleteError}
                 </div>
               )}
               
               <div>
-                <p className="text-sm text-gray-300 mb-2">
-                  Type <span className="font-mono font-bold text-red-400">DELETE</span> to confirm:
+                <p className="text-sm text-slate-200 mb-3">
+                  Type <span className="font-mono font-bold text-red-400 bg-red-950/50 px-2 py-1 rounded">DELETE</span> to confirm:
                 </p>
                 <input
                   type="text"
                   value={deleteConfirmText}
                   onChange={(e) => setDeleteConfirmText(e.target.value)}
                   placeholder="Type DELETE to confirm"
-                  className="w-full px-3 py-2 border border-red-600 bg-gray-700 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full px-4 py-2.5 border border-red-700/50 bg-slate-900/50 text-slate-100 placeholder-slate-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                   disabled={deleting}
                 />
               </div>
               
-              <div className="flex space-x-2">
+              <div className="flex space-x-3">
                 <button
                   onClick={handleDeleteAccount}
                   disabled={deleting || deleteConfirmText !== 'DELETE'}
-                  className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                  className="flex-1 bg-red-600 hover:bg-red-500 text-white px-4 py-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
                 >
-                  {deleting ? 'Deleting...' : 'Permanently Delete Account'}
+                  {deleting ? '⏳ Deleting...' : '🗑️ Permanently Delete'}
                 </button>
                 <button
                   onClick={() => {
@@ -812,7 +827,7 @@ export default function SettingsPage() {
                     setDeleteError(null)
                   }}
                   disabled={deleting}
-                  className="bg-gray-700 text-gray-300 px-4 py-2 rounded-md hover:bg-gray-600 disabled:opacity-50 text-sm font-medium"
+                  className="px-4 py-2.5 rounded-xl bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 disabled:opacity-50 text-sm font-medium transition-all"
                 >
                   Cancel
                 </button>

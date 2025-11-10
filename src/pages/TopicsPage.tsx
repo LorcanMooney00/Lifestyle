@@ -22,7 +22,7 @@ import {
   getDogMeals,
   toggleDogMeal,
 } from '../lib/api'
-import type { Note, Event, Todo, ShoppingItem, Dog, DogMeal } from '../types'
+import type { Note, Event, Todo, ShoppingItem, Dog } from '../types'
 import PhotoWidget from '../components/PhotoWidget'
 import TodoWidget from '../components/TodoWidget'
 
@@ -67,7 +67,6 @@ export default function TopicsPage() {
   const [dogModalTargetId, setDogModalTargetId] = useState<string | null>(null)
   const contentWidth = 'max-w-5xl mx-auto w-full'
   const [dogMealStatus, setDogMealStatus] = useState<Record<string, { date: string; completed: boolean[] }>>({})
-  const [dogMeals, setDogMeals] = useState<DogMeal[]>([])
   
   useEffect(() => {
     if (!dogFormPhotoFile) {
@@ -214,7 +213,6 @@ export default function TopicsPage() {
     
     const dogIds = dogsList.map(d => d.id)
     const meals = await getDogMeals(dogIds)
-    setDogMeals(meals)
     
     // Convert meals to status format
     const today = getTodayKey()

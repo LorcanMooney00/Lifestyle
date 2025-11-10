@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Cropper from 'react-easy-crop'
+import 'react-easy-crop/react-easy-crop.css'
 import { useAuth } from '../lib/auth'
 import { getUserPhotos, uploadPhoto, deletePhoto } from '../lib/api'
 import type { Photo } from '../types'
@@ -79,7 +80,7 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
     })
   }
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !user) return
 
@@ -100,10 +101,19 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
 
     // Read the file and show the cropper
     const reader = new FileReader()
-    reader.onload = () => {
-      setImageSrc(reader.result as string)
-      setShowUpload(false)
-      setShowCropper(true)
+    reader.onload = (event) => {
+      const result = event.target?.result
+      if (result && typeof result === 'string') {
+        console.log('Image loaded, switching to cropper')
+        setImageSrc(result)
+        // Keep upload modal closed and show cropper
+        setShowUpload(false)
+        setShowCropper(true)
+      }
+    }
+    reader.onerror = () => {
+      setError('Failed to read image file')
+      setSelectedFile(null)
     }
     reader.readAsDataURL(file)
 

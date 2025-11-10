@@ -855,7 +855,7 @@ export async function unlinkPartner(userId: string, partnerId?: string): Promise
 }
 
 // Events API functions
-export async function getEvents(startDate?: Date, endDate?: Date, filterPartnerId?: string): Promise<Event[]> {
+export async function getEvents(startDate?: Date, endDate?: Date, filterPartnerId?: string, currentUserId?: string): Promise<Event[]> {
   let query = supabase
     .from('events')
     .select('*')
@@ -894,6 +894,16 @@ export async function getEvents(startDate?: Date, endDate?: Date, filterPartnerI
         // If partner_id column doesn't exist, only show events created by the partner
         return event.created_by === filterPartnerId
       }
+    })
+  }
+
+  // If currentUserId provided (for main dashboard), show only events where user is involved
+  if (currentUserId && data) {
+    return data.filter((event: any) => {
+      // Show events where:
+      // 1. Current user created the event
+      // 2. Event's partner_id matches current user (shared with them)
+      return event.created_by === currentUserId || event.partner_id === currentUserId
     })
   }
 

@@ -112,7 +112,7 @@ export default function TopicsPage() {
         getPartners(user.id),
         getTilePreferences(user.id),
         getTodos(user.id),
-        getEvents(today, nextMonth),
+        getEvents(today, nextMonth, undefined, user.id),
         getShoppingItems(user.id),
         getDogs(user.id),
       ])

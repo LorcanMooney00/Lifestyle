@@ -222,28 +222,126 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
         ? 'aspect-[4/3]' 
         : 'aspect-square'))
 
-  if (photos.length === 0 && !showUpload) {
+  // Render empty state with cropper modal
+  if (photos.length === 0 && !showUpload && !showCropper) {
     return (
-      <div className={`glass backdrop-blur-xl border border-slate-700/50 rounded-2xl p-4 sm:p-6 ${aspectClass} flex flex-col items-center justify-between overflow-hidden shadow-xl group hover:border-indigo-500/50 transition-all relative`}>
-        {/* Gradient background for empty state */}
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10"></div>
-        
-        <div className="relative z-10 w-full flex justify-end mb-2">
-          <button
-            onClick={() => setShowUpload(true)}
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-xl hover:from-indigo-500 hover:to-purple-500 text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
-          >
-            Upload Photo
-          </button>
-        </div>
-        
-        <div className="relative z-10 flex flex-col items-center flex-1 justify-center">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500/30 to-purple-500/30 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform border-2 border-indigo-500/30">
-            <span className="text-4xl">📸</span>
+      <>
+        {/* Crop Modal - Must be rendered even in empty state */}
+        {showCropper && imageSrc && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+            <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-4xl border border-slate-700/50 flex flex-col" style={{ height: '85vh' }}>
+              <div className="p-4 border-b border-slate-700/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+                      <span className="text-xl">✂️</span>
+                    </div>
+                    <h3 className="text-base font-bold text-slate-100">Crop Your Image</h3>
+                  </div>
+                  <button
+                    onClick={handleCropCancel}
+                    disabled={uploading}
+                    className="text-slate-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-slate-700/50 disabled:opacity-50"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {error && (
+                <div className="mx-4 mt-4 bg-red-900/30 border border-red-700/50 text-red-200 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+                  <span>⚠️</span>
+                  <span>{error}</span>
+                </div>
+              )}
+
+              {/* Cropper Area */}
+              <div className="flex-1 relative bg-black/50 rounded-xl m-4">
+                <Cropper
+                  image={imageSrc}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={wide ? 21/9 : (tall ? 4/3 : (fillHeight ? 16/9 : 1))}
+                  onCropChange={setCrop}
+                  onZoomChange={setZoom}
+                  onCropComplete={onCropComplete}
+                  style={{
+                    containerStyle: {
+                      borderRadius: '0.75rem',
+                    },
+                  }}
+                />
+              </div>
+
+              {/* Controls */}
+              <div className="p-4 space-y-4 border-t border-slate-700/50">
+                {/* Zoom Slider */}
+                <div className="flex items-center gap-3">
+                  <span className="text-slate-300 text-sm font-medium whitespace-nowrap">Zoom:</span>
+                  <input
+                    type="range"
+                    min={1}
+                    max={3}
+                    step={0.1}
+                    value={zoom}
+                    onChange={(e) => setZoom(Number(e.target.value))}
+                    disabled={uploading}
+                    className="flex-1 h-2 bg-slate-700/50 rounded-lg appearance-none cursor-pointer slider"
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleCropCancel}
+                    disabled={uploading}
+                    className="flex-1 bg-slate-700/50 hover:bg-slate-600/50 text-white px-4 py-3 rounded-xl transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCropConfirm}
+                    disabled={uploading}
+                    className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-4 py-3 rounded-xl transition-all font-medium shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                  >
+                    {uploading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="animate-spin">⏳</span>
+                        Uploading...
+                      </span>
+                    ) : (
+                      'Crop & Upload'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-          <h3 className="text-base font-bold text-white">Add a Photo</h3>
+        )}
+
+        <div className={`glass backdrop-blur-xl border border-slate-700/50 rounded-2xl p-4 sm:p-6 ${aspectClass} flex flex-col items-center justify-between overflow-hidden shadow-xl group hover:border-indigo-500/50 transition-all relative`}>
+          {/* Gradient background for empty state */}
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10"></div>
+          
+          <div className="relative z-10 w-full flex justify-end mb-2">
+            <button
+              onClick={() => setShowUpload(true)}
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-xl hover:from-indigo-500 hover:to-purple-500 text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
+            >
+              Upload Photo
+            </button>
+          </div>
+          
+          <div className="relative z-10 flex flex-col items-center flex-1 justify-center">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500/30 to-purple-500/30 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform border-2 border-indigo-500/30">
+              <span className="text-4xl">📸</span>
+            </div>
+            <h3 className="text-base font-bold text-white">Add a Photo</h3>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 

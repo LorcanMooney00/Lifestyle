@@ -643,8 +643,8 @@ export default function TopicsPage() {
             <div className={`${contentWidth} space-y-4`}>
               {/* Hero Section with Photo Background */}
               {tilePreferences['photo-gallery'] !== false ? (
-                <div className="group/hero relative rounded-2xl overflow-hidden h-[180px] sm:h-[200px]">
-                  <PhotoWidget photoIndex={1} fillHeight={true} />
+                <div className="group/hero relative rounded-2xl overflow-hidden">
+                  <PhotoWidget photoIndex={1} wide={true} />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent group-hover/hero:from-slate-950/90 transition-colors duration-300 pointer-events-none"></div>
                   
                   {/* Activity Tabs at Bottom */}
@@ -1160,10 +1160,9 @@ export default function TopicsPage() {
                 </span>
               )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-11 2xl:grid-cols-12 gap-3 sm:gap-4 items-stretch">
-              {/* Row 1: Partners */}
-              <div className="grid grid-cols-3 gap-2 sm:gap-3 md:col-span-5 lg:col-span-7 xl:col-span-8 2xl:col-span-9">
-                {partners.map((partner) => (
+            {/* Partners Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 mb-4">
+              {partners.map((partner) => (
                   <div
                     key={partner.id}
                     onClick={() => navigate(`/app/partner/${partner.id}`)}
@@ -1206,55 +1205,57 @@ export default function TopicsPage() {
                     </div>
                   </div>
                 ))}
-                {/* Add Partner Card */}
-                <button
-                  onClick={handleOpenAddPartner}
-                  className="glass backdrop-blur-xl border-2 border-dashed border-indigo-500/40 p-5 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 group relative hover:border-indigo-400/60 hover:scale-[1.02]"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
-                  <div className="relative z-10 flex flex-col items-center text-center py-2">
-                    <div className="w-20 h-20 mb-3 rounded-full bg-gradient-to-br from-indigo-600/20 to-purple-600/20 flex items-center justify-center group-hover:from-indigo-600/30 group-hover:to-purple-600/30 transition-all border-2 border-indigo-500/30">
-                      <span className="text-4xl">➕</span>
-                    </div>
-                    <h4 className="text-base font-bold mb-1.5 text-indigo-200 group-hover:text-indigo-100 transition-colors">
-                      Add Partner
-                    </h4>
-                    <p className="text-xs text-slate-400 group-hover:text-slate-300 transition-colors mb-3">
-                      Link a new partner
-                    </p>
+              {/* Add Partner Card */}
+              <button
+                onClick={handleOpenAddPartner}
+                className="glass backdrop-blur-xl border-2 border-dashed border-indigo-500/40 p-5 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 group relative hover:border-indigo-400/60 hover:scale-[1.02]"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
+                <div className="relative z-10 flex flex-col items-center text-center py-2">
+                  <div className="w-20 h-20 mb-3 rounded-full bg-gradient-to-br from-indigo-600/20 to-purple-600/20 flex items-center justify-center group-hover:from-indigo-600/30 group-hover:to-purple-600/30 transition-all border-2 border-indigo-500/30">
+                    <span className="text-4xl">➕</span>
                   </div>
+                  <h4 className="text-base font-bold mb-1.5 text-indigo-200 group-hover:text-indigo-100 transition-colors">
+                    Add Partner
+                  </h4>
+                  <p className="text-xs text-slate-400 group-hover:text-slate-300 transition-colors mb-3">
+                    Link a new partner
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            {/* Photo Widget - Below Partners */}
+            {tilePreferences['photo-gallery'] !== false && (
+              <div className="mb-6 sm:mb-8">
+                <PhotoWidget photoIndex={0} mediumWide={true} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Family Dogs Section */}
+        {!loading && tilePreferences['dog-feeding'] !== false && (
+          <div className={`${contentWidth} mb-6 sm:mb-8`}>
+            <div className="glass backdrop-blur-xl rounded-2xl border border-slate-700/50 p-5 sm:p-6 shadow-2xl">
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                    <span className="text-2xl">🐕</span>
+                    Family Dogs
+                  </h3>
+                  <p className="text-xs text-slate-400 sm:text-sm mt-1">Track feeding schedules for your pups</p>
+                </div>
+                <button
+                  onClick={() => openDogModal('add')}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 text-sm font-medium text-white transition-all hover:from-indigo-500 hover:to-purple-500 shadow-lg hover:shadow-xl active:scale-95 whitespace-nowrap"
+                >
+                  <span>➕</span>
+                  <span>Add Dog</span>
                 </button>
               </div>
-
-              {/* Photo Widget 1 - Spans over both rows (Partners and Dogs) */}
-              {tilePreferences['photo-gallery'] !== false && (
-                <div className="md:col-span-3 lg:col-span-3 xl:col-span-3 2xl:col-span-3 row-span-2 self-stretch">
-                  <PhotoWidget photoIndex={0} fillHeight={true} />
-                </div>
-              )}
-
-              {/* Row 2: Family Dogs */}
-              {tilePreferences['dog-feeding'] !== false && (
-              <div className="md:col-span-5 lg:col-span-7 xl:col-span-8 2xl:col-span-9">
-                <div className="glass backdrop-blur-xl rounded-2xl border border-slate-700/50 p-5 sm:p-6 shadow-2xl">
-                  <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h3 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-                        <span className="text-2xl">🐕</span>
-                        Family Dogs
-                      </h3>
-                      <p className="text-xs text-slate-400 sm:text-sm mt-1">Track feeding schedules for your pups</p>
-                    </div>
-                    <button
-                      onClick={() => openDogModal('add')}
-                      className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 text-sm font-medium text-white transition-all hover:from-indigo-500 hover:to-purple-500 shadow-lg hover:shadow-xl active:scale-95 whitespace-nowrap"
-                    >
-                      <span>➕</span>
-                      <span>Add Dog</span>
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {dogs.map((dog) => {
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {dogs.map((dog) => {
                       const mealCount = Math.max(1, dog.meals_per_day ?? 2)
                       const status = dogMealStatus[dog.id]
                       const completed: boolean[] =
@@ -1371,11 +1372,8 @@ export default function TopicsPage() {
                           </div>
                         </div>
                       )
-                    })}
-                  </div>
-                </div>
+                })}
               </div>
-              )}
             </div>
           </div>
         )}

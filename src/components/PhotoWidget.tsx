@@ -8,12 +8,13 @@ import type { Area } from 'react-easy-crop'
 
 interface PhotoWidgetProps {
   photoIndex?: number // Which photo to show (0, 1, 2, etc.)
-  tall?: boolean // If true, widget will be taller (2:1 aspect ratio instead of 1:1)
+  tall?: boolean // If true, widget will be taller (4:3 aspect ratio)
   fillHeight?: boolean // If true, widget will fill available height instead of using aspect ratio
-  wide?: boolean // If true, widget will be wide banner format (4:1 aspect ratio)
+  wide?: boolean // If true, widget will be ultra-wide banner (3:1 aspect ratio)
+  mediumWide?: boolean // If true, widget will be medium-wide (2:1 aspect ratio)
 }
 
-export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight = false, wide = false }: PhotoWidgetProps) {
+export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight = false, wide = false, mediumWide = false }: PhotoWidgetProps) {
   const { user } = useAuth()
   const [photos, setPhotos] = useState<Photo[]>([])
   const [photoAssignments, setPhotoAssignments] = useState<Record<number, string>>({})
@@ -227,10 +228,12 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
   const aspectClass = fillHeight 
     ? 'h-full' 
     : (wide 
-      ? 'aspect-[16/9] sm:aspect-[21/9] lg:aspect-[21/9]' 
+      ? 'aspect-[3/1]' 
+      : (mediumWide
+        ? 'aspect-[2/1]'
       : (tall 
-        ? 'aspect-[4/3]' 
-        : 'aspect-square'))
+          ? 'aspect-[4/3]' 
+          : 'aspect-square')))
 
   // Render empty state with cropper modal when this widget has no photo
   if (!displayPhoto && !showUpload && !showCropper) {
@@ -273,7 +276,7 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
                   image={imageSrc}
                   crop={crop}
                   zoom={zoom}
-                  aspect={wide ? 21/9 : (tall ? 4/3 : (fillHeight ? 16/9 : 1))}
+                  aspect={wide ? 3/1 : (mediumWide ? 2/1 : (tall ? 4/3 : (fillHeight ? 16/9 : 1)))}
                   onCropChange={setCrop}
                   onZoomChange={setZoom}
                   onCropComplete={onCropComplete}
@@ -541,8 +544,8 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
           {/* Action buttons overlay - appears on hover */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
 
-          {/* Button container - top right for fillHeight, bottom right otherwise */}
-          <div className={`absolute ${fillHeight ? 'top-3 right-3' : 'bottom-3 right-3'} flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300`}>
+          {/* Button container - top right for fillHeight, wide or mediumWide, bottom right otherwise */}
+          <div className={`absolute ${fillHeight || wide || mediumWide ? 'top-3 right-3' : 'bottom-3 right-3'} flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300`}>
             {/* Change photo button */}
             <button
               onClick={() => setShowUpload(true)}

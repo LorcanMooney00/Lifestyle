@@ -119,90 +119,104 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
 
   if (photos.length === 0 && !showUpload) {
     return (
-      <div className={`glass backdrop-blur-xl border border-slate-700/50 rounded-2xl p-4 sm:p-6 ${aspectClass} flex flex-col items-center justify-center overflow-hidden shadow-xl group hover:border-indigo-500/50 transition-all`}>
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-          <span className="text-4xl">📸</span>
+      <div className={`glass backdrop-blur-xl border border-slate-700/50 rounded-2xl p-4 sm:p-6 ${aspectClass} flex flex-col items-center justify-between overflow-hidden shadow-xl group hover:border-indigo-500/50 transition-all relative`}>
+        {/* Gradient background for empty state */}
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10"></div>
+        
+        <div className="relative z-10 w-full flex justify-end mb-2">
+          <button
+            onClick={() => setShowUpload(true)}
+            className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-xl hover:from-indigo-500 hover:to-purple-500 text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
+          >
+            Upload Photo
+          </button>
         </div>
-        <h3 className="text-sm font-semibold text-slate-200 mb-2">Add a Photo</h3>
-        <p className="text-xs text-slate-400 mb-4 text-center max-w-[200px]">Share a moment from your life</p>
-        <button
-          onClick={() => setShowUpload(true)}
-          className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-xl hover:from-indigo-500 hover:to-purple-500 text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
-        >
-          Upload Photo
-        </button>
+        
+        <div className="relative z-10 flex flex-col items-center flex-1 justify-center">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500/30 to-purple-500/30 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform border-2 border-indigo-500/30">
+            <span className="text-4xl">📸</span>
+          </div>
+          <h3 className="text-base font-bold text-white">Add a Photo</h3>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className={`glass backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden ${aspectClass} flex flex-col group relative w-full shadow-xl`}>
-
-      {error && (
-        <div className="bg-red-900/30 border-b border-red-700/50 text-red-200 px-4 py-3 text-sm flex items-center gap-2">
-          <span>⚠️</span>
-          <span>{error}</span>
-        </div>
-      )}
-
+    <>
+      {/* Upload Modal - Fixed Overlay */}
       {showUpload && (
-        <div className="p-6 flex-1 flex flex-col justify-center">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
-                <span className="text-xl">📸</span>
-              </div>
-              <h3 className="text-base font-bold text-slate-100">Upload Photo</h3>
-            </div>
-            <button
-              onClick={() => setShowUpload(false)}
-              className="text-slate-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-slate-700/50"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileSelect}
-            className="hidden"
-            id={`photo-upload-${photoIndex}`}
-          />
-          <label
-            htmlFor={`photo-upload-${photoIndex}`}
-            className={`block text-center py-12 px-6 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
-              uploading
-                ? 'border-slate-500/50 bg-slate-700/30'
-                : 'border-indigo-500/40 bg-slate-800/30 hover:border-indigo-400/60 hover:bg-slate-700/40 active:bg-slate-700/50'
-            }`}
-          >
-            {uploading ? (
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center animate-pulse">
-                  <span className="text-2xl">⏳</span>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+          <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md border border-slate-700/50">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+                    <span className="text-xl">📸</span>
+                  </div>
+                  <h3 className="text-base font-bold text-slate-100">Upload Photo</h3>
                 </div>
-                <span className="text-slate-300 text-sm font-medium">Uploading...</span>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                <button
+                  onClick={() => setShowUpload(false)}
+                  className="text-slate-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-slate-700/50"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                </div>
-                <div className="text-center">
-                  <p className="text-indigo-300 font-medium text-sm mb-1">Click to select an image</p>
-                  <p className="text-xs text-slate-400">Max 5MB • JPG, PNG, GIF</p>
-                </div>
+                </button>
               </div>
-            )}
-          </label>
+
+              {error && (
+                <div className="bg-red-900/30 border border-red-700/50 text-red-200 px-4 py-3 rounded-xl text-sm flex items-center gap-2 mb-4">
+                  <span>⚠️</span>
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+                id={`photo-upload-${photoIndex}`}
+              />
+              <label
+                htmlFor={`photo-upload-${photoIndex}`}
+                className={`block text-center py-12 px-6 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                  uploading
+                    ? 'border-slate-500/50 bg-slate-700/30'
+                    : 'border-indigo-500/40 bg-slate-800/30 hover:border-indigo-400/60 hover:bg-slate-700/40 active:bg-slate-700/50'
+                }`}
+              >
+                {uploading ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center animate-pulse">
+                      <span className="text-2xl">⏳</span>
+                    </div>
+                    <span className="text-slate-300 text-sm font-medium">Uploading...</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-indigo-300 font-medium text-sm mb-1">Click to select an image</p>
+                      <p className="text-xs text-slate-400">Max 5MB • JPG, PNG, GIF</p>
+                    </div>
+                  </div>
+                )}
+              </label>
+            </div>
+          </div>
         </div>
       )}
+
+      {/* Photo Display */}
+      <div className={`glass backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden ${aspectClass} flex flex-col group relative w-full shadow-xl`}>
 
       {displayPhoto && (
         <div className="flex-1 relative overflow-hidden w-full h-full group rounded-2xl shadow-xl">
@@ -247,7 +261,8 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   )
 }
 

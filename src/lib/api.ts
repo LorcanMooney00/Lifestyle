@@ -897,20 +897,14 @@ export async function getEvents(startDate?: Date, endDate?: Date, filterPartnerI
     })
   }
 
-  // If currentUserId provided (for main dashboard), show events where user has access
+  // If currentUserId provided (for main dashboard), show only events involving the current user
   if (currentUserId && !filterPartnerId && data) {
-    // Get user's partners to determine which events they should see
-    const partners = await getPartners(currentUserId)
-    const partnerIds = partners.map(p => p.id)
-    
     return data.filter((event: any) => {
       // Show events where:
-      // 1. Current user created the event
-      // 2. Event was created by one of user's partners (partner shared it with them)
-      // 3. Event's partner_id matches current user (explicitly shared with them)
+      // 1. Current user created the event (events YOU created for any partner)
+      // 2. Event's partner_id matches current user (events created FOR you by your partners)
       return (
         event.created_by === currentUserId ||
-        partnerIds.includes(event.created_by) ||
         event.partner_id === currentUserId
       )
     })

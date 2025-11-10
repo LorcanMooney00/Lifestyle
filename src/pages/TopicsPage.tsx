@@ -792,33 +792,49 @@ export default function TopicsPage() {
                                   })
                                 }
 
-                                return (
-                                  <div
-                                    key={event.id}
-                                    className="rounded-xl border border-slate-700/60 bg-slate-800/60 px-4 py-3 text-sm text-white transition-colors hover:border-indigo-400/50 cursor-pointer"
-                                    onClick={() => navigate('/app/calendar')}
-                                  >
-                                    <div className="flex items-center justify-between gap-3">
-                                      <div className="flex-1 min-w-0 flex items-center gap-3">
-                                        <span className="text-lg">📅</span>
-                                        <div className="min-w-0">
-                                          <p className="font-medium truncate">{event.title}</p>
-                                          {event.description && (
-                                            <p className="mt-1 text-xs text-slate-400 line-clamp-1">
-                                              {event.description}
+                                {
+                                  const eventCreator = event.created_by === user?.id 
+                                    ? 'You' 
+                                    : partners.find(p => p.id === event.created_by)?.username || 
+                                      partners.find(p => p.id === event.partner_id)?.username || 
+                                      'Unknown'
+                                  
+                                  const isYourEvent = event.created_by === user?.id
+                                  const partnerName = partners.find(p => p.id === event.partner_id)?.username
+                                  
+                                  return (
+                                    <div
+                                      key={event.id}
+                                      className="rounded-xl border border-slate-700/60 bg-slate-800/60 px-4 py-3 text-sm text-white transition-colors hover:border-indigo-400/50 cursor-pointer"
+                                      onClick={() => navigate('/app/calendar')}
+                                    >
+                                      <div className="flex items-center justify-between gap-3">
+                                        <div className="flex-1 min-w-0 flex items-center gap-3">
+                                          <span className="text-lg">📅</span>
+                                          <div className="min-w-0">
+                                            <p className="font-medium truncate">{event.title}</p>
+                                            {event.description && (
+                                              <p className="mt-1 text-xs text-slate-400 line-clamp-1">
+                                                {event.description}
+                                              </p>
+                                            )}
+                                            <p className="mt-1 text-xs text-slate-500">
+                                              {isYourEvent 
+                                                ? (partnerName ? `Your calendar with ${partnerName}` : 'Your calendar')
+                                                : `${eventCreator}'s calendar`}
                                             </p>
-                                          )}
+                                          </div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1 text-xs text-slate-300 whitespace-nowrap">
+                                          {event.event_time && <span>{event.event_time}</span>}
+                                          <span className="rounded-md border border-slate-600/50 bg-slate-700/60 px-2 py-0.5">
+                                            {timeLabel}
+                                          </span>
                                         </div>
                                       </div>
-                                      <div className="flex flex-col items-end gap-1 text-xs text-slate-300 whitespace-nowrap">
-                                        {event.event_time && <span>{event.event_time}</span>}
-                                        <span className="rounded-md border border-slate-600/50 bg-slate-700/60 px-2 py-0.5">
-                                          {timeLabel}
-                                        </span>
-                                      </div>
                                     </div>
-                                  </div>
-                                )
+                                  )
+                                }
                               })
                           )}
                         </>

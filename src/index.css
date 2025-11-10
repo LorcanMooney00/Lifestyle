@@ -7,6 +7,7 @@
     height: 100%;
     overflow: auto !important;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-y pan-x;
   }
 
   body {
@@ -20,6 +21,7 @@
     min-height: 100vh;
     height: auto;
     position: relative;
+    touch-action: pan-y pan-x;
   }
 
   #root {

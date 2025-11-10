@@ -6,9 +6,6 @@ import { getUserPhotos, uploadPhoto, deletePhoto, savePhotoAssignment, getPhotoA
 import type { Photo } from '../types'
 import type { Area } from 'react-easy-crop'
 
-// Global counter to track how many modals are open across all PhotoWidget instances
-let openModalCount = 0
-
 interface PhotoWidgetProps {
   photoIndex?: number // Which photo to show (0, 1, 2, etc.)
   tall?: boolean // If true, widget will be taller (2:1 aspect ratio instead of 1:1)
@@ -45,34 +42,8 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
     setPhotoAssignments(assignments)
   }
 
-  // Prevent body scroll when modal is open
-  useEffect(() => {
-    const isModalOpen = showCropper || showUpload
-    
-    if (isModalOpen) {
-      openModalCount++
-      document.body.style.overflow = 'hidden'
-    } else {
-      openModalCount = Math.max(0, openModalCount - 1)
-      
-      // Only restore scrolling if no modals are open
-      if (openModalCount === 0) {
-        document.body.style.overflow = 'visible'
-        document.body.style.touchAction = 'auto'
-      }
-    }
-    
-    // Cleanup on unmount - decrement counter and restore if needed
-    return () => {
-      if (isModalOpen) {
-        openModalCount = Math.max(0, openModalCount - 1)
-        if (openModalCount === 0) {
-          document.body.style.overflow = 'visible'
-          document.body.style.touchAction = 'auto'
-        }
-      }
-    }
-  }, [showCropper, showUpload])
+  // Don't manipulate body styles - let the modal overlay handle scroll blocking
+  // This prevents issues with stuck scroll-lock states
 
   const loadPhotos = async () => {
     if (!user) return

@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import Cropper from 'react-easy-crop'
 import { useAuth } from '../lib/auth'
 import { getUserPhotos, uploadPhoto, deletePhoto } from '../lib/api'
 import type { Photo } from '../types'
+import type { Area } from 'react-easy-crop'
 
 interface PhotoWidgetProps {
   photoIndex?: number // Which photo to show (0, 1, 2, etc.)
@@ -16,6 +18,12 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showUpload, setShowUpload] = useState(false)
+  const [showCropper, setShowCropper] = useState(false)
+  const [imageSrc, setImageSrc] = useState<string | null>(null)
+  const [crop, setCrop] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -28,6 +36,47 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
     if (!user) return
     const photosData = await getUserPhotos(user.id)
     setPhotos(photosData)
+  }
+
+  const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
+    setCroppedAreaPixels(croppedAreaPixels)
+  }, [])
+
+  const createCroppedImage = async (imageSrc: string, pixelCrop: Area): Promise<Blob> => {
+    const image = new Image()
+    image.src = imageSrc
+    await new Promise((resolve) => {
+      image.onload = resolve
+    })
+
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('No 2d context')
+
+    canvas.width = pixelCrop.width
+    canvas.height = pixelCrop.height
+
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      pixelCrop.width,
+      pixelCrop.height
+    )
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob)
+        } else {
+          reject(new Error('Canvas is empty'))
+        }
+      }, 'image/jpeg', 0.95)
+    })
   }
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,26 +95,72 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
       return
     }
 
-    setUploading(true)
     setError(null)
+    setSelectedFile(file)
 
-    const { photo, error: uploadError } = await uploadPhoto(file)
-
-    if (uploadError) {
-      setError(uploadError)
-    } else if (photo) {
-      // Store which photo is assigned to this widget
-      const widgetKey = `photo-widget-${photoIndex}`
-      localStorage.setItem(widgetKey, photo.id)
-      await loadPhotos()
+    // Read the file and show the cropper
+    const reader = new FileReader()
+    reader.onload = () => {
+      setImageSrc(reader.result as string)
       setShowUpload(false)
+      setShowCropper(true)
     }
+    reader.readAsDataURL(file)
 
-    setUploading(false)
     // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+  }
+
+  const handleCropConfirm = async () => {
+    if (!imageSrc || !croppedAreaPixels || !selectedFile || !user) return
+
+    setUploading(true)
+    setError(null)
+
+    try {
+      // Create cropped image blob
+      const croppedBlob = await createCroppedImage(imageSrc, croppedAreaPixels)
+      
+      // Convert blob to File
+      const croppedFile = new File([croppedBlob], selectedFile.name, {
+        type: 'image/jpeg',
+        lastModified: Date.now()
+      })
+
+      const { photo, error: uploadError } = await uploadPhoto(croppedFile)
+
+      if (uploadError) {
+        setError(uploadError)
+      } else if (photo) {
+        // Store which photo is assigned to this widget
+        const widgetKey = `photo-widget-${photoIndex}`
+        localStorage.setItem(widgetKey, photo.id)
+        await loadPhotos()
+        setShowCropper(false)
+        setImageSrc(null)
+        setSelectedFile(null)
+        setCrop({ x: 0, y: 0 })
+        setZoom(1)
+        setCroppedAreaPixels(null)
+      }
+    } catch (err) {
+      setError('Failed to crop image')
+      console.error('Crop error:', err)
+    }
+
+    setUploading(false)
+  }
+
+  const handleCropCancel = () => {
+    setShowCropper(false)
+    setImageSrc(null)
+    setSelectedFile(null)
+    setCrop({ x: 0, y: 0 })
+    setZoom(1)
+    setCroppedAreaPixels(null)
+    setShowUpload(true)
   }
 
   const handleDelete = async (photo: Photo) => {
@@ -144,6 +239,101 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
 
   return (
     <>
+      {/* Crop Modal - Fixed Overlay */}
+      {showCropper && imageSrc && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+          <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-4xl border border-slate-700/50 flex flex-col" style={{ height: '85vh' }}>
+            <div className="p-4 border-b border-slate-700/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+                    <span className="text-xl">✂️</span>
+                  </div>
+                  <h3 className="text-base font-bold text-slate-100">Crop Your Image</h3>
+                </div>
+                <button
+                  onClick={handleCropCancel}
+                  disabled={uploading}
+                  className="text-slate-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-slate-700/50 disabled:opacity-50"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="mx-4 mt-4 bg-red-900/30 border border-red-700/50 text-red-200 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+                <span>⚠️</span>
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* Cropper Area */}
+            <div className="flex-1 relative bg-black/50 rounded-xl m-4">
+              <Cropper
+                image={imageSrc}
+                crop={crop}
+                zoom={zoom}
+                aspect={wide ? 21/9 : (tall ? 4/3 : (fillHeight ? 16/9 : 1))}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+                style={{
+                  containerStyle: {
+                    borderRadius: '0.75rem',
+                  },
+                }}
+              />
+            </div>
+
+            {/* Controls */}
+            <div className="p-4 space-y-4 border-t border-slate-700/50">
+              {/* Zoom Slider */}
+              <div className="flex items-center gap-3">
+                <span className="text-slate-300 text-sm font-medium whitespace-nowrap">Zoom:</span>
+                <input
+                  type="range"
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  value={zoom}
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  disabled={uploading}
+                  className="flex-1 h-2 bg-slate-700/50 rounded-lg appearance-none cursor-pointer slider"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCropCancel}
+                  disabled={uploading}
+                  className="flex-1 bg-slate-700/50 hover:bg-slate-600/50 text-white px-4 py-3 rounded-xl transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCropConfirm}
+                  disabled={uploading}
+                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-4 py-3 rounded-xl transition-all font-medium shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                >
+                  {uploading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="animate-spin">⏳</span>
+                      Uploading...
+                    </span>
+                  ) : (
+                    'Crop & Upload'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Upload Modal - Fixed Overlay */}
       {showUpload && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">

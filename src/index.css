@@ -70,5 +70,44 @@
     -webkit-mask-composite: xor;
     mask-composite: exclude;
   }
+
+  /* Custom range slider styles */
+  input[type='range'].slider {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  input[type='range'].slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.5);
+    transition: all 0.2s ease;
+  }
+
+  input[type='range'].slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.7);
+  }
+
+  input[type='range'].slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.5);
+    transition: all 0.2s ease;
+  }
+
+  input[type='range'].slider::-moz-range-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.7);
+  }
 }
 

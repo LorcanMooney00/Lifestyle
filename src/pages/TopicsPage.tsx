@@ -755,7 +755,7 @@ export default function TopicsPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2 flex-1 overflow-y-auto pr-1 pb-1 min-h-[360px]">
+                  <div className="space-y-2 flex-1 overflow-y-auto pr-2 pb-1 max-h-[360px] scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800/50">
                       {currentHighlight.type === 'events' && (
                         <>
                           {events.length === 0 ? (
@@ -768,7 +768,6 @@ export default function TopicsPage() {
                                   new Date(a.event_date).getTime() -
                                   new Date(b.event_date).getTime()
                               )
-                              .slice(0, 5)
                               .map((event) => {
                                 const eventDate = new Date(event.event_date)
                                 const today = new Date()
@@ -852,7 +851,6 @@ export default function TopicsPage() {
                                   new Date(b.updated_at).getTime() -
                                   new Date(a.updated_at).getTime()
                               )
-                              .slice(0, 5)
                               .map((note) => {
                                 const preview =
                                   note.content?.trim().replace(/\s+/g, ' ').slice(0, 140) ||
@@ -908,7 +906,6 @@ export default function TopicsPage() {
                         <TodoWidget
                           variant="embedded"
                           showHeader={false}
-                          maxItems={5}
                           todos={todos}
                           partners={partners}
                           creating={creatingTodo}
@@ -936,7 +933,6 @@ export default function TopicsPage() {
                                 (a, b) =>
                                   new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
                               )
-                              .slice(0, 5)
                               .map((item) => {
                                 const partner =
                                   item.partner_id && partners.find((p) => p.id === item.partner_id)

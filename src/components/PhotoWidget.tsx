@@ -33,6 +33,20 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
     }
   }, [user])
 
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (showCropper || showUpload) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [showCropper, showUpload])
+
   const loadPhotos = async () => {
     if (!user) return
     const photosData = await getUserPhotos(user.id)
@@ -141,19 +155,23 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
 
       const { photo, error: uploadError } = await uploadPhoto(croppedFile)
 
-      if (uploadError) {
-        setError(uploadError)
-      } else if (photo) {
-        // Store which photo is assigned to this widget
-        const widgetKey = `photo-widget-${photoIndex}`
-        localStorage.setItem(widgetKey, photo.id)
-        await loadPhotos()
+    if (uploadError) {
+      setError(uploadError)
+    } else if (photo) {
+      // Store which photo is assigned to this widget
+      const widgetKey = `photo-widget-${photoIndex}`
+        console.log(`Saving photo assignment: ${widgetKey} = ${photo.id}`)
+      localStorage.setItem(widgetKey, photo.id)
+        console.log(`Verify saved: ${localStorage.getItem(widgetKey)}`)
+      await loadPhotos()
+        console.log('Closing cropper modal...')
         setShowCropper(false)
         setImageSrc(null)
         setSelectedFile(null)
         setCrop({ x: 0, y: 0 })
         setZoom(1)
         setCroppedAreaPixels(null)
+        console.log('Cropper modal closed')
       }
     } catch (err) {
       setError('Failed to crop image')
@@ -192,7 +210,7 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
   }
 
   // Get the photo to display - each widget shows a specific photo based on localStorage assignment
-  // If a photo is assigned to this widget, show it. Otherwise, show the photo at the photoIndex position
+  // If a photo is assigned to this widget, show it. Otherwise, don't show anything (to avoid duplicates)
   const getDisplayPhoto = () => {
     const widgetKey = `photo-widget-${photoIndex}`
     const assignedPhotoId = localStorage.getItem(widgetKey)
@@ -203,12 +221,17 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
       if (assignedPhoto) {
         return assignedPhoto
       }
-      // If assigned photo doesn't exist anymore (was deleted), clear the assignment
+      // Only clear the assignment if we have photos loaded but couldn't find this one
+      // (Don't clear during initial load when photos.length === 0)
+      if (photos.length > 0) {
+        console.log(`Widget ${photoIndex}: clearing stale assignment - photo ${assignedPhotoId} not found in ${photos.length} photos`)
       localStorage.removeItem(widgetKey)
+      }
     }
     
-    // Fallback to showing photo at photoIndex position
-    return photos.length > photoIndex ? photos[photoIndex] : null
+    // No assignment - don't show anything to avoid duplicates
+    // User must explicitly upload to each widget
+    return null
   }
   
   const displayPhoto = getDisplayPhoto()
@@ -222,8 +245,8 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
         ? 'aspect-[4/3]' 
         : 'aspect-square'))
 
-  // Render empty state with cropper modal
-  if (photos.length === 0 && !showUpload && !showCropper) {
+  // Render empty state with cropper modal when this widget has no photo
+  if (!displayPhoto && !showUpload && !showCropper) {
     return (
       <>
         {/* Crop Modal - Must be rendered even in empty state */}
@@ -326,13 +349,13 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10"></div>
           
           <div className="relative z-10 w-full flex justify-end mb-2">
-            <button
-              onClick={() => setShowUpload(true)}
+        <button
+          onClick={() => setShowUpload(true)}
               className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-xl hover:from-indigo-500 hover:to-purple-500 text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
-            >
+        >
               Upload Photo
-            </button>
-          </div>
+        </button>
+      </div>
           
           <div className="relative z-10 flex flex-col items-center flex-1 justify-center">
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500/30 to-purple-500/30 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform border-2 border-indigo-500/30">
@@ -415,13 +438,13 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
 
               {/* Action Buttons */}
               <div className="flex gap-3">
-                <button
+            <button
                   onClick={handleCropCancel}
                   disabled={uploading}
                   className="flex-1 bg-slate-700/50 hover:bg-slate-600/50 text-white px-4 py-3 rounded-xl transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Cancel
-                </button>
+            >
+              Cancel
+            </button>
                 <button
                   onClick={handleCropConfirm}
                   disabled={uploading}
@@ -464,30 +487,30 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
                 </button>
               </div>
 
-              {error && (
+      {error && (
                 <div className="bg-red-900/30 border border-red-700/50 text-red-200 px-4 py-3 rounded-xl text-sm flex items-center gap-2 mb-4">
                   <span>⚠️</span>
                   <span>{error}</span>
-                </div>
-              )}
+        </div>
+      )}
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="hidden"
-                id={`photo-upload-${photoIndex}`}
-              />
-              <label
-                htmlFor={`photo-upload-${photoIndex}`}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="hidden"
+            id={`photo-upload-${photoIndex}`}
+          />
+          <label
+            htmlFor={`photo-upload-${photoIndex}`}
                 className={`block text-center py-12 px-6 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
-                  uploading
+              uploading
                     ? 'border-slate-500/50 bg-slate-700/30'
                     : 'border-indigo-500/40 bg-slate-800/30 hover:border-indigo-400/60 hover:bg-slate-700/40 active:bg-slate-700/50'
-                }`}
-              >
-                {uploading ? (
+            }`}
+          >
+            {uploading ? (
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center animate-pulse">
                       <span className="text-2xl">⏳</span>
@@ -506,8 +529,8 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
                       <p className="text-xs text-slate-400">Max 5MB • JPG, PNG, GIF</p>
                     </div>
                   </div>
-                )}
-              </label>
+            )}
+          </label>
             </div>
           </div>
         </div>
@@ -546,20 +569,20 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
             </button>
             
             {/* Delete button */}
-            <button
-              onClick={() => handleDelete(displayPhoto)}
+          <button
+            onClick={() => handleDelete(displayPhoto)}
               className="bg-red-600/90 hover:bg-red-500 text-white p-2.5 rounded-xl transition-all shadow-lg backdrop-blur-md hover:shadow-xl active:scale-95 min-w-[40px] min-h-[40px] flex items-center justify-center"
-              aria-label="Delete photo"
+            aria-label="Delete photo"
               title="Delete photo"
-            >
+          >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
-            </button>
+          </button>
           </div>
         </div>
       )}
-      </div>
+    </div>
     </>
   )
 }

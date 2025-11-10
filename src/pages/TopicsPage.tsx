@@ -637,27 +637,22 @@ export default function TopicsPage() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-20">
-        {/* Photo Widget Banner */}
-        {!loading && tilePreferences['photo-gallery'] !== false && (
-          <div className={`${contentWidth} mb-6 sm:mb-8`}>
-            <PhotoWidget photoIndex={1} wide={true} />
-          </div>
-        )}
-
-        {/* Highlighted shared activity */}
+        {/* Hero Photo with Integrated Activity Tabs */}
         {!loading && currentHighlight && (
           <div className="mb-6 sm:mb-8">
             <div className={`${contentWidth} space-y-4`}>
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                  <span className="text-2xl">✨</span>
-                  Recent Activity
-                </h2>
-              </div>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 w-8 rounded-l-2xl bg-gradient-to-r from-slate-950 via-slate-950/60 to-transparent z-10" />
-                <div className="pointer-events-none absolute inset-y-0 right-0 w-8 rounded-r-2xl bg-gradient-to-l from-slate-950 via-slate-950/60 to-transparent z-10" />
-                <div className="scrollbar-none flex snap-x snap-mandatory gap-2 overflow-x-auto rounded-2xl border border-slate-700/50 bg-gradient-to-br from-slate-900/80 to-slate-800/60 p-2 text-sm text-slate-300 shadow-xl">
+              {/* Hero Section with Photo Background */}
+              {tilePreferences['photo-gallery'] !== false ? (
+                <div className="group/hero relative rounded-2xl overflow-hidden h-[180px] sm:h-[200px]">
+                  <PhotoWidget photoIndex={1} fillHeight={true} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent group-hover/hero:from-slate-950/90 transition-colors duration-300 pointer-events-none"></div>
+                  
+                  {/* Activity Tabs at Bottom */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5 opacity-70 group-hover/hero:opacity-100 transition-opacity duration-300">
+                    <div className="relative">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 w-8 rounded-l-2xl bg-gradient-to-r from-slate-950 via-slate-950/60 to-transparent z-10" />
+                      <div className="pointer-events-none absolute inset-y-0 right-0 w-8 rounded-r-2xl bg-gradient-to-l from-slate-950 via-slate-950/60 to-transparent z-10" />
+                      <div className="scrollbar-none flex snap-x snap-mandatory gap-2 overflow-x-auto p-1">
                   {highlightConfigs.map((config, index) => {
                     const isActive = highlightIndex === index
                     const label =
@@ -672,25 +667,72 @@ export default function TopicsPage() {
                         : config.title
 
                     return (
-                      <button
-                        key={config.type}
-                        onClick={() => setHighlightIndex(index)}
-                        className={`group flex snap-start items-center gap-2 rounded-xl px-5 py-2.5 transition-all shadow-lg ${
-                          isActive
-                            ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-indigo-900/40'
-                            : 'bg-slate-800/60 text-slate-300 hover:bg-slate-700/80 hover:text-white hover:shadow-xl'
-                        }`}
-                        aria-pressed={isActive}
-                      >
-                        <span className="text-lg">{config.icon}</span>
-                        <span className="text-xs font-semibold uppercase tracking-wide sm:text-sm whitespace-nowrap">
-                          {label}
-                        </span>
-                      </button>
-                    )
-                  })}
+                        <button
+                          key={config.type}
+                          onClick={() => setHighlightIndex(index)}
+                          className={`group flex snap-start items-center gap-2 rounded-xl px-4 py-2.5 transition-all backdrop-blur-md ${
+                            isActive
+                              ? 'bg-white/20 text-white shadow-lg border border-white/30'
+                              : 'bg-black/30 text-slate-200 hover:bg-black/40 hover:text-white border border-white/10'
+                          }`}
+                          aria-pressed={isActive}
+                        >
+                          <span className="text-lg">{config.icon}</span>
+                          <span className="text-xs font-semibold uppercase tracking-wide sm:text-sm whitespace-nowrap">
+                            {label}
+                          </span>
+                        </button>
+                      )
+                    })}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                    <span className="text-2xl">✨</span>
+                    Recent Activity
+                  </h2>
+                  <div className="relative">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 w-8 rounded-l-2xl bg-gradient-to-r from-slate-950 via-slate-950/60 to-transparent z-10" />
+                    <div className="pointer-events-none absolute inset-y-0 right-0 w-8 rounded-r-2xl bg-gradient-to-l from-slate-950 via-slate-950/60 to-transparent z-10" />
+                    <div className="scrollbar-none flex snap-x snap-mandatory gap-2 overflow-x-auto rounded-2xl border border-slate-700/50 bg-gradient-to-br from-slate-900/80 to-slate-800/60 p-2 text-sm text-slate-300 shadow-xl">
+                      {highlightConfigs.map((config, index) => {
+                        const isActive = highlightIndex === index
+                        const label =
+                          config.type === 'events'
+                            ? 'Events'
+                            : config.type === 'notes'
+                            ? 'Notes'
+                            : config.type === 'todos'
+                            ? 'To-Dos'
+                            : config.type === 'shopping'
+                            ? 'Shopping'
+                            : config.title
+
+                        return (
+                          <button
+                            key={config.type}
+                            onClick={() => setHighlightIndex(index)}
+                            className={`group flex snap-start items-center gap-2 rounded-xl px-5 py-2.5 transition-all shadow-lg ${
+                              isActive
+                                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-indigo-900/40'
+                                : 'bg-slate-800/60 text-slate-300 hover:bg-slate-700/80 hover:text-white hover:shadow-xl'
+                            }`}
+                            aria-pressed={isActive}
+                          >
+                            <span className="text-lg">{config.icon}</span>
+                            <span className="text-xs font-semibold uppercase tracking-wide sm:text-sm whitespace-nowrap">
+                              {label}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="glass backdrop-blur-xl border border-slate-600/50 rounded-2xl p-6 sm:p-7 shadow-2xl relative overflow-hidden w-full">
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/10 via-purple-900/10 to-slate-900/20 pointer-events-none"></div>

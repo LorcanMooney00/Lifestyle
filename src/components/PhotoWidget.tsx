@@ -217,10 +217,10 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none rounded-2xl opacity-50"></div>
           
           {/* Action buttons overlay - appears on hover */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
 
-          {/* Button container */}
-          <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          {/* Button container - top right for fillHeight, bottom right otherwise */}
+          <div className={`absolute ${fillHeight ? 'top-3 right-3' : 'bottom-3 right-3'} flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300`}>
             {/* Change photo button */}
             <button
               onClick={() => setShowUpload(true)}

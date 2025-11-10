@@ -41,7 +41,9 @@ export default function CalendarPage() {
     const { year, month } = getDaysInMonth(currentDate)
     const firstDay = new Date(year, month, 1)
     const lastDay = new Date(year, month + 1, 0)
-    const data = await getEvents(firstDay, lastDay, partnerId || undefined)
+    // If viewing a specific partner's calendar, filter by partnerId
+    // If viewing main calendar (no partnerId), filter by currentUserId to show only your events
+    const data = await getEvents(firstDay, lastDay, partnerId || undefined, partnerId ? undefined : user.id)
     setEvents(data)
   }
 

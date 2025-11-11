@@ -102,17 +102,23 @@ export default function RecipesPage() {
     <div className="min-h-screen">
       <nav className="glass backdrop-blur-xl shadow-lg border-b border-slate-700/50 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <button
-                onClick={() => navigate(partnerId ? `/app/partner/${partnerId}` : '/app/topics')}
-                className="text-slate-300 hover:text-white mr-4 transition-colors"
-              >
-                ← {partnerId ? 'Partner Dashboard' : 'Dashboard'}
-              </button>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Recipes</h1>
-            </div>
-            <div className="flex items-center space-x-3">
+          <div className="flex justify-between items-center h-16 gap-3">
+            <button
+              onClick={() => navigate(partnerId ? `/app/partner/${partnerId}` : '/app/topics')}
+              className="text-slate-300 hover:text-white p-2 rounded-lg transition-all hover:bg-slate-700/50 active:scale-95 flex-shrink-0"
+              aria-label="Home"
+              title={partnerId ? "Partner Workspace" : "Dashboard"}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            </button>
+            
+            <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent flex-1">
+              Recipes
+            </h1>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={() => navigate('/app/settings')}
                 className="text-slate-300 hover:text-white p-2 rounded-lg text-xl transition-all hover:bg-slate-700/50 active:scale-95"

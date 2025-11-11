@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { signOut } from '../lib/auth'
-import { getEvents, createEvent, updateEvent, deleteEvent, getPartners } from '../lib/api'
+import { getEvents, createEvent, updateEvent, deleteEvent, getPartners, getTilePreferences } from '../lib/api'
 import type { Event, Partner } from '../types'
 
 export default function CalendarPage() {
@@ -23,13 +23,41 @@ export default function CalendarPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [tilePreferences, setTilePreferences] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     if (user) {
       loadEvents()
       loadPartners()
+      if (partnerId) {
+        loadTilePreferences()
+      }
     }
   }, [user, currentDate, partnerId])
+
+  const loadTilePreferences = async () => {
+    if (!user) return
+    const preferencesData = await getTilePreferences(user.id)
+    if (preferencesData.preferences) {
+      setTilePreferences(preferencesData.preferences)
+    }
+  }
+
+  // Define available partner workspace apps
+  const partnerApps = useMemo(() => {
+    if (!partnerId) return []
+    
+    const apps = [
+      { id: 'calendar', title: 'Calendar', icon: '📅', route: `/app/partner/${partnerId}/calendar`, current: true },
+      { id: 'shared-notes', title: 'Notes', icon: '📝', route: `/app/partner/${partnerId}/notes` },
+      { id: 'shared-todos', title: 'To-Do', icon: '✓', route: `/app/partner/${partnerId}/todos` },
+      { id: 'shopping-list', title: 'Shopping', icon: '🛒', route: `/app/partner/${partnerId}/shopping` },
+      { id: 'recipes', title: 'Recipes', icon: '🍳', route: `/app/partner/${partnerId}/recipes` },
+    ]
+    
+    // Filter based on tile preferences
+    return apps.filter(app => tilePreferences[app.id] !== false)
+  }, [partnerId, tilePreferences])
 
   useEffect(() => {
     if (selectedEvent) {
@@ -275,30 +303,50 @@ export default function CalendarPage() {
             </button>
             
             <div className="flex items-center gap-2 flex-1 min-w-0 overflow-x-auto scrollbar-thin px-2">
-              <button
-                onClick={() => navigate(partnerId ? `/app/partner/${partnerId}/calendar` : '/app/calendar')}
-                className="px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-sm font-medium whitespace-nowrap flex-shrink-0"
-              >
-                📅 Calendar
-              </button>
-              <button
-                onClick={() => navigate(partnerId ? `/app/partner/${partnerId}/notes` : '/app/notes')}
-                className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
-              >
-                📝 Notes
-              </button>
-              <button
-                onClick={() => navigate(partnerId ? `/app/partner/${partnerId}/todos` : '/app/todos')}
-                className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
-              >
-                ✓ To-Do
-              </button>
-              <button
-                onClick={() => navigate(partnerId ? `/app/partner/${partnerId}/shopping` : '/app/shopping')}
-                className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
-              >
-                🛒 Shopping
-              </button>
+              {partnerId && partnerApps.length > 0 ? (
+                // Partner workspace navigation - dynamically filtered
+                partnerApps.map((app) => (
+                  <button
+                    key={app.id}
+                    onClick={() => navigate(app.route)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap flex-shrink-0 transition-all ${
+                      app.current
+                        ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                    }`}
+                  >
+                    {app.icon} {app.title}
+                  </button>
+                ))
+              ) : (
+                // Default "View All" navigation
+                <>
+                  <button
+                    onClick={() => navigate('/app/calendar')}
+                    className="px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-sm font-medium whitespace-nowrap flex-shrink-0"
+                  >
+                    📅 Calendar
+                  </button>
+                  <button
+                    onClick={() => navigate('/app/notes')}
+                    className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
+                  >
+                    📝 Notes
+                  </button>
+                  <button
+                    onClick={() => navigate('/app/todos')}
+                    className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
+                  >
+                    ✓ To-Do
+                  </button>
+                  <button
+                    onClick={() => navigate('/app/shopping')}
+                    className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
+                  >
+                    🛒 Shopping
+                  </button>
+                </>
+              )}
             </div>
 
             <div className="flex items-center space-x-3 flex-shrink-0">

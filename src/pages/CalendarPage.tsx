@@ -22,6 +22,7 @@ export default function CalendarPage() {
   const [eventTime, setEventTime] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -173,14 +174,20 @@ export default function CalendarPage() {
     }
   }
 
-  const handleDeleteEvent = async () => {
-    if (!selectedEvent || !confirm('Are you sure you want to delete this event?')) return
+  const handleDeleteEvent = () => {
+    if (!selectedEvent) return
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!selectedEvent) return
 
     const success = await deleteEvent(selectedEvent.id)
     if (success) {
       await loadEvents()
       setShowEventForm(false)
       setSelectedEvent(null)
+      setShowDeleteConfirm(false)
     }
   }
 
@@ -561,6 +568,37 @@ export default function CalendarPage() {
           </div>
         )}
       </main>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md border border-slate-600/50">
+            <div className="p-6">
+              <div className="mb-4">
+                <h3 className="text-xl font-bold text-white mb-2">Delete event?</h3>
+                <p className="text-sm text-slate-400">
+                  Are you sure you want to delete "{selectedEvent?.title}"? This action cannot be undone.
+                </p>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 px-4 py-3 text-sm font-medium text-white bg-slate-700 rounded-lg hover:bg-slate-600 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-3 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-500 transition-all shadow-lg hover:shadow-xl active:scale-95"
+                >
+                  Delete event
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

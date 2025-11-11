@@ -56,14 +56,17 @@ export async function signUp(email: string, password: string, username: string):
   if (data.user && !error) {
     const { error: profileError } = await supabase
       .from('user_profiles')
-      .insert({
+      .upsert({
         id: data.user.id,
         username: username,
+        email: email,
+      }, {
+        onConflict: 'id'
       })
 
     if (profileError) {
       console.error('Error creating user profile:', profileError)
-      // Don't fail signup if profile creation fails - user can update it later
+      return { data, error: profileError }
     }
   }
 

@@ -35,6 +35,7 @@ export default function ShoppingListPage() {
   const [filterPartnerId, setFilterPartnerId] = useState<string>(partnerId ?? 'all')
   const [showPurchased, setShowPurchased] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -228,6 +229,71 @@ export default function ShoppingListPage() {
             >
               + Add Item
             </button>
+            {!partnerId && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                  className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700/50 transition-colors"
+                  aria-label="Filter items"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                </button>
+                
+                {showFilterDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowFilterDropdown(false)} />
+                    <div className="absolute left-0 mt-2 w-56 rounded-lg border border-slate-700 bg-slate-900 shadow-xl z-20">
+                      <div className="p-2">
+                        <button
+                          onClick={() => {
+                            setFilterPartnerId('all')
+                            setShowFilterDropdown(false)
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                            filterPartnerId === 'all'
+                              ? 'bg-indigo-600 text-white'
+                              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                          }`}
+                        >
+                          All items
+                        </button>
+                        <button
+                          onClick={() => {
+                            setFilterPartnerId('personal')
+                            setShowFilterDropdown(false)
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                            filterPartnerId === 'personal'
+                              ? 'bg-indigo-600 text-white'
+                              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                          }`}
+                        >
+                          Just me
+                        </button>
+                        {partners.map((partner) => (
+                          <button
+                            key={partner.id}
+                            onClick={() => {
+                              setFilterPartnerId(partner.id)
+                              setShowFilterDropdown(false)
+                            }}
+                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                              filterPartnerId === partner.id
+                                ? 'bg-indigo-600 text-white'
+                                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                            }`}
+                          >
+                            {partner.username || partner.email}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
             <label className="flex items-center gap-2 text-xs text-slate-400">
               <input
                 type="checkbox"
@@ -239,32 +305,6 @@ export default function ShoppingListPage() {
             </label>
           </div>
         </div>
-
-        {!partnerId && (
-          <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-lg sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-white sm:text-base">Filter items</h3>
-              <p className="text-xs text-slate-400">
-                View personal items or focus on a specific partner’s list.
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <select
-                value={filterPartnerId}
-                onChange={(e) => setFilterPartnerId(e.target.value)}
-                className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-              >
-                <option value="all">All items</option>
-                <option value="personal">Just me</option>
-                {partners.map((partner) => (
-                  <option key={partner.id} value={partner.id}>
-                    {partner.username || partner.email}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
 
         {loading ? (
           <div className="flex min-h-[200px] items-center justify-center">

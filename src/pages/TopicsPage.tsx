@@ -11,9 +11,7 @@ import {
   linkPartner,
   unlinkPartner,
   getTodos,
-  createTodo,
   toggleTodoCompletion,
-  deleteTodo,
   getDogs,
   createDog,
   updateDog,
@@ -24,7 +22,6 @@ import {
 } from '../lib/api'
 import type { Note, Event, Todo, ShoppingItem, Dog } from '../types'
 import PhotoWidget from '../components/PhotoWidget'
-import TodoWidget from '../components/TodoWidget'
 
 const defaultTilePreferences: Record<string, boolean> = {
   'shared-notes': true,
@@ -48,11 +45,7 @@ export default function TopicsPage() {
   const [loading, setLoading] = useState(true)
   const [tilePreferences, setTilePreferences] = useState<Record<string, boolean>>(defaultTilePreferences)
   const [todos, setTodos] = useState<Todo[]>([])
-  const [creatingTodo, setCreatingTodo] = useState(false)
   const [todoActionIds, setTodoActionIds] = useState<string[]>([])
-  const [todoError, setTodoError] = useState<string | null>(null)
-  const [showTodoPartnerSelector, setShowTodoPartnerSelector] = useState(false)
-  const [pendingTodoContent, setPendingTodoContent] = useState('')
   const [highlightIndex, setHighlightIndex] = useState(0)
   const [dogs, setDogs] = useState<Dog[]>([])
   const [showAddDogModal, setShowAddDogModal] = useState(false)
@@ -136,10 +129,8 @@ export default function TopicsPage() {
       if (sortedDogs.length > 0) {
         await loadDogMeals(sortedDogs)
       }
-      setTodoError(null)
     } catch (error) {
       console.error('Error loading dashboard data:', error)
-      setTodoError('Could not load shared to-do list. Please try again later.')
     } finally {
       setLoading(false)
     }
@@ -463,66 +454,16 @@ export default function TopicsPage() {
 
   const currentHighlight = highlightConfigs[highlightIndex]
 
-  const handleCreateTodo = async (content: string, targetPartnerId?: string) => {
-    if (!user) return
-    
-    // Show partner selector if no targetPartnerId provided
-    if (!targetPartnerId) {
-      setPendingTodoContent(content)
-      setShowTodoPartnerSelector(true)
-      return
-    }
-
-    setCreatingTodo(true)
-    setTodoError(null)
-    try {
-      const { todo, error } = await createTodo(user.id, content, targetPartnerId)
-      if (error || !todo) {
-        setTodoError(error || 'Failed to create to-do. Please try again.')
-        return
-      }
-      setTodos((prev) => [...prev, todo])
-      setShowTodoPartnerSelector(false)
-      setPendingTodoContent('')
-    } catch (error) {
-      console.error('Error creating todo:', error)
-      setTodoError('Failed to create to-do. Please try again.')
-    } finally {
-      setCreatingTodo(false)
-    }
-  }
-
   const handleToggleTodo = async (todoId: string, completed: boolean) => {
     setTodoActionIds((prev) => [...prev, todoId])
-    setTodoError(null)
     try {
       const { todo, error } = await toggleTodoCompletion(todoId, completed)
       if (error || !todo) {
-        setTodoError(error || 'Failed to update to-do. Please try again.')
         return
       }
       setTodos((prev) => prev.map((item) => (item.id === todo.id ? todo : item)))
     } catch (error) {
       console.error('Error toggling todo:', error)
-      setTodoError('Failed to update to-do. Please try again.')
-    } finally {
-      setTodoActionIds((prev) => prev.filter((id) => id !== todoId))
-    }
-  }
-
-  const handleDeleteTodo = async (todoId: string) => {
-    setTodoActionIds((prev) => [...prev, todoId])
-    setTodoError(null)
-    try {
-      const { success, error } = await deleteTodo(todoId)
-      if (!success) {
-        setTodoError(error || 'Failed to delete to-do. Please try again.')
-        return
-      }
-      setTodos((prev) => prev.filter((todo) => todo.id !== todoId))
-    } catch (error) {
-      console.error('Error deleting todo:', error)
-      setTodoError('Failed to delete to-do. Please try again.')
     } finally {
       setTodoActionIds((prev) => prev.filter((id) => id !== todoId))
     }
@@ -919,19 +860,46 @@ export default function TopicsPage() {
                       )}
 
                       {currentHighlight.type === 'todos' && (
-                        <TodoWidget
-                          variant="embedded"
-                          showHeader={false}
-                          todos={todos}
-                          partners={partners}
-                          creating={creatingTodo}
-                          actionIds={todoActionIds}
-                          error={todoError}
-                          onCreate={handleCreateTodo}
-                          onToggle={handleToggleTodo}
-                          onDelete={handleDeleteTodo}
-                          className="w-full"
-                        />
+                        <>
+                          {todos.filter((todo) => !todo.completed).length === 0 ? (
+                            <p className="text-sm text-slate-400">
+                              Nothing on your list right now. Add tasks to stay organized!
+                            </p>
+                          ) : (
+                            <div className="space-y-2">
+                              {todos
+                                .filter((todo) => !todo.completed)
+                                .slice(0, 5)
+                                .map((todo) => {
+                                  const partner = partners.find((p) => p.id === todo.partner_id)
+                                  return (
+                                    <div
+                                      key={todo.id}
+                                      className="flex items-start gap-3 p-3 rounded-xl bg-slate-800/40 border border-slate-700/50 hover:border-slate-600/50 transition-colors"
+                                    >
+                                      <button
+                                        onClick={() => handleToggleTodo(todo.id, !todo.completed)}
+                                        disabled={todoActionIds.includes(todo.id)}
+                                        className="mt-0.5 w-5 h-5 rounded border-2 border-slate-500 hover:border-indigo-400 transition-colors flex items-center justify-center disabled:opacity-50"
+                                      >
+                                        {todoActionIds.includes(todo.id) && (
+                                          <div className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                                        )}
+                                      </button>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm text-white">{todo.content}</p>
+                                        {partner && (
+                                          <p className="text-xs text-slate-500 mt-1">
+                                            Shared with {partner.username || partner.email}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                            </div>
+                          )}
+                        </>
                       )}
 
                       {currentHighlight.type === 'shopping' && (
@@ -1552,63 +1520,6 @@ export default function TopicsPage() {
           </div>
         )}
 
-        {/* Todo Partner Selector Modal */}
-        {showTodoPartnerSelector && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md border border-slate-600/50">
-              <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-xl font-bold text-white">
-                    Share To-Do With
-                  </h3>
-                  <button
-                    onClick={() => {
-                      setShowTodoPartnerSelector(false)
-                      setPendingTodoContent('')
-                    }}
-                    className="text-slate-400 hover:text-white text-2xl transition-colors"
-                    aria-label="Close"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                {partners.length === 0 ? (
-                  <div className="text-center py-4">
-                    <p className="text-sm text-slate-400 mb-4">
-                      No partners yet. Add a partner first to create shared to-dos.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {partners.map((partner) => (
-                      <button
-                        key={partner.id}
-                        onClick={() => handleCreateTodo(pendingTodoContent, partner.id)}
-                        className="w-full p-4 glass backdrop-blur-xl border border-slate-600/50 rounded-xl hover:border-indigo-500/50 transition-all text-left group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold">
-                            {(partner.username || partner.email || '?')[0].toUpperCase()}
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-white group-hover:text-indigo-200 transition-colors">
-                              {partner.username || partner.email}
-                            </p>
-                            <p className="text-sm text-slate-400">Create shared to-do</p>
-                          </div>
-                          <svg className="w-5 h-5 text-slate-400 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </main>
     </div>
   )

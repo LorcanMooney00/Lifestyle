@@ -177,7 +177,7 @@ export default function CalendarPage() {
     // Empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
       days.push(
-        <div key={`empty-${i}`} className="min-h-[90px] sm:min-h-[110px] min-w-[70px] sm:min-w-[90px] p-2 rounded-xl bg-slate-900/20 border-2 border-slate-700/20"></div>
+        <div key={`empty-${i}`} className="min-h-[75px] sm:min-h-[100px] min-w-[75px] sm:min-w-[95px] p-2 rounded-xl bg-slate-900/20 border-2 border-slate-700/20"></div>
       )
     }
 
@@ -193,7 +193,7 @@ export default function CalendarPage() {
         <div
           key={day}
           onClick={() => handleDayClick(day)}
-          className={`min-h-[90px] sm:min-h-[110px] min-w-[70px] sm:min-w-[90px] p-2.5 sm:p-3 rounded-xl border-2 flex flex-col transition-all ${
+          className={`min-h-[75px] sm:min-h-[100px] min-w-[75px] sm:min-w-[95px] p-2.5 sm:p-3 rounded-xl border-2 flex flex-col transition-all ${
             isToday 
               ? 'bg-gradient-to-br from-indigo-500/30 to-purple-500/20 border-indigo-400/60 shadow-lg shadow-indigo-500/30' 
               : 'bg-slate-800/60 backdrop-blur-sm border-slate-600/50 hover:border-slate-500/60'
@@ -310,7 +310,7 @@ export default function CalendarPage() {
           <div className="overflow-x-auto -mx-2 sm:mx-0">
             <div className="min-w-[560px] sm:min-w-0">
               {/* Day Names Header */}
-              <div className="grid grid-cols-7 gap-2.5 sm:gap-3 mb-3 px-2 sm:px-0">
+              <div className="grid grid-cols-7 gap-1.5 sm:gap-2 mb-3 px-2 sm:px-0">
                 {dayNames.map((day) => (
                   <div key={day} className="text-center text-xs sm:text-sm font-bold text-slate-300 py-2">
                     {day}
@@ -319,7 +319,7 @@ export default function CalendarPage() {
               </div>
 
               {/* Calendar Days */}
-              <div className="grid grid-cols-7 gap-2.5 sm:gap-3 px-2 sm:px-0">
+              <div className="grid grid-cols-7 gap-1.5 sm:gap-2 px-2 sm:px-0">
                 {renderCalendarDays()}
               </div>
             </div>

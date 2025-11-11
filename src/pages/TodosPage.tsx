@@ -132,8 +132,6 @@ export default function TodosPage() {
     )
   }
 
-  const pageTitle = partnerId ? 'Shared To-Do List' : 'All Shared To-Dos'
-
   return (
     <div className="min-h-screen bg-gray-900">
       <nav className="glass backdrop-blur-xl shadow-lg border-b border-slate-700/50 sticky top-0 z-50">

@@ -139,35 +139,35 @@ export default function TodosPage() {
       <nav className="glass backdrop-blur-xl shadow-lg border-b border-slate-700/50 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 flex-1 overflow-x-auto scrollbar-thin">
               <button
                 onClick={() => navigate(partnerId ? `/app/partner/${partnerId}` : '/app/topics')}
-                className="text-slate-300 hover:text-white transition-colors"
+                className="text-slate-300 hover:text-white transition-colors whitespace-nowrap flex-shrink-0"
               >
                 ← {partnerId ? 'Back' : 'Dashboard'}
               </button>
-              <div className="hidden sm:flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   onClick={() => navigate('/app/calendar')}
-                  className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all"
+                  className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap"
                 >
                   📅 Calendar
                 </button>
                 <button
                   onClick={() => navigate('/app/notes')}
-                  className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all"
+                  className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap"
                 >
                   📝 Notes
                 </button>
                 <button
                   onClick={() => navigate('/app/todos')}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-sm font-medium"
+                  className="px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-sm font-medium whitespace-nowrap"
                 >
                   ✓ To-Do
                 </button>
                 <button
                   onClick={() => navigate('/app/shopping')}
-                  className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all"
+                  className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap"
                 >
                   🛒 Shopping
                 </button>

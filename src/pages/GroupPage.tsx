@@ -97,9 +97,13 @@ export default function GroupPage() {
     })
     return map
   }, [partners])
+  const isOwner = useMemo(() => {
+    if (!user || !group) return false
+    return group.created_by === user.id
+  }, [group, user])
 
   const handleSaveGroup = async () => {
-    if (!group || !groupId || !groupName.trim()) return
+    if (!group || !groupId || !groupName.trim() || !isOwner) return
 
     setSavingGroup(true)
     const success = await updateGroup(groupId, groupName.trim(), groupDescription.trim() || null)
@@ -114,7 +118,7 @@ export default function GroupPage() {
   }
 
   const handleTogglePartner = async (partner?: Partner) => {
-    if (!groupId || !partner) return
+    if (!groupId || !partner || !isOwner) return
 
     setMemberError(null)
     setUpdatingMembers((prev) => ({ ...prev, [partner.id]: true }))
@@ -153,7 +157,7 @@ export default function GroupPage() {
   }
 
   const handleDeleteGroup = async () => {
-    if (!groupId) return
+    if (!groupId || !isOwner) return
 
     setDeleting(true)
     setDeleteError(null)
@@ -217,12 +221,14 @@ export default function GroupPage() {
               <h1 className="text-2xl sm:text-3xl font-bold text-white">{group.name}</h1>
             </div>
           </div>
-          <button
-            onClick={() => setConfirmDelete(true)}
-            className="px-3 py-2 rounded-lg border border-red-500/60 text-red-300 hover:bg-red-500/10 transition-all text-sm font-medium"
-          >
-            Delete Group
-          </button>
+          {isOwner && (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="px-3 py-2 rounded-lg border border-red-500/60 text-red-300 hover:bg-red-500/10 transition-all text-sm font-medium"
+            >
+              Delete Group
+            </button>
+          )}
         </div>
 
         <div className="glass backdrop-blur-xl border border-slate-700/50 rounded-2xl p-5 sm:p-6 space-y-4">
@@ -231,14 +237,16 @@ export default function GroupPage() {
               <p className="text-sm text-slate-400">Members</p>
               <p className="text-3xl font-bold text-white">{memberCount}</p>
             </div>
-            <div>
-              <button
-                onClick={() => setEditing((prev) => !prev)}
-                className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 transition-all"
-              >
-                {editing ? 'Cancel' : 'Edit Details'}
-              </button>
-            </div>
+            {isOwner && (
+              <div>
+                <button
+                  onClick={() => setEditing((prev) => !prev)}
+                  className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 transition-all"
+                >
+                  {editing ? 'Cancel' : 'Edit Details'}
+                </button>
+              </div>
+            )}
           </div>
 
           {editing ? (
@@ -291,7 +299,11 @@ export default function GroupPage() {
         <div className="glass backdrop-blur-xl border border-slate-700/50 rounded-2xl p-5 sm:p-6 space-y-4">
           <div>
             <h2 className="text-lg font-semibold text-white">Partners</h2>
-            <p className="text-sm text-slate-400">Toggle which partners are part of this group.</p>
+            <p className="text-sm text-slate-400">
+              {isOwner
+                ? 'Toggle which partners are part of this group.'
+                : 'Group membership is managed by the group owner.'}
+            </p>
           </div>
 
           {memberError && (
@@ -322,21 +334,27 @@ export default function GroupPage() {
                         </p>
                         <p className="text-xs text-slate-400">{partner.email}</p>
                       </div>
-                      <button
-                        onClick={() => handleTogglePartner(partner)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
-                          isMember
-                            ? 'bg-red-600/90 text-white hover:bg-red-500'
-                            : 'bg-indigo-600 text-white hover:bg-indigo-500'
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
-                        disabled={updatingMembers[partner.id]}
-                      >
-                        {updatingMembers[partner.id]
-                          ? 'Updating...'
-                          : isMember
-                          ? 'Remove'
-                          : 'Add'}
-                      </button>
+                      {isOwner ? (
+                        <button
+                          onClick={() => handleTogglePartner(partner)}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                            isMember
+                              ? 'bg-red-600/90 text-white hover:bg-red-500'
+                              : 'bg-indigo-600 text-white hover:bg-indigo-500'
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          disabled={updatingMembers[partner.id]}
+                        >
+                          {updatingMembers[partner.id]
+                            ? 'Updating...'
+                            : isMember
+                            ? 'Remove'
+                            : 'Add'}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-slate-400">
+                          {isMember ? 'Member' : 'Not added'}
+                        </span>
+                      )}
                     </div>
                   </div>
                 )
@@ -357,7 +375,7 @@ export default function GroupPage() {
 
           <div className="space-y-3">
             {members.length === 0 ? (
-              <p className="text-sm text-slate-400">No members yet. Invite someone above.</p>
+              <p className="text-sm text-slate-400">No members yet.</p>
             ) : (
               members.map((member) => {
                 const isYou = member.user_id === user.id
@@ -389,7 +407,7 @@ export default function GroupPage() {
                       <span className="text-xs text-slate-300 bg-slate-700/60 px-2 py-0.5 rounded-full uppercase tracking-wide">
                         {member.role}
                       </span>
-                      {!isYou && partnerLookup.get(member.user_id) && (
+                      {!isYou && isOwner && partnerLookup.get(member.user_id) && (
                         <button
                           onClick={() => handleTogglePartner(partnerLookup.get(member.user_id) as Partner)}
                           className="px-3 py-1.5 text-xs rounded-lg border border-red-500/60 text-red-300 hover:bg-red-500/10 transition-all"

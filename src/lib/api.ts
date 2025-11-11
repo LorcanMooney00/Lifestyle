@@ -857,7 +857,12 @@ export async function unlinkPartner(userId: string, partnerId?: string): Promise
 }
 
 // Events API functions
-export async function getEvents(startDate?: Date, endDate?: Date, filterPartnerId?: string, currentUserId?: string): Promise<Event[]> {
+export async function getEvents(
+  startDate?: Date,
+  endDate?: Date,
+  filterPartnerId?: string,
+  currentUserId?: string
+): Promise<Event[]> {
   let query = supabase
     .from('events')
     .select('*')
@@ -882,32 +887,61 @@ export async function getEvents(startDate?: Date, endDate?: Date, filterPartnerI
     return []
   }
 
-  // If filtering by partner, filter in memory to ensure we only show events involving that partner
+  let memberGroupIds: string[] = []
+  if (currentUserId) {
+    const { data: membership, error: membershipError } = await supabase
+      .from('group_members')
+      .select('group_id')
+      .eq('user_id', currentUserId)
+
+    if (membershipError) {
+      console.error('Error fetching group membership:', membershipError)
+    } else {
+      memberGroupIds = (membership || []).map((row: any) => row.group_id)
+    }
+  }
+
+  // If filtering by partner, filter in memory to ensure we only show events involving both users (or their shared groups)
   if (filterPartnerId && data) {
     return data.filter((event: any) => {
-      // Show events where:
-      // 1. The partner_id matches the filter (events created for this partner)
-      // 2. The event was created by the partner (events created by this partner)
-      // Note: partner_id may be undefined if column doesn't exist yet, so we check both
-      const hasPartnerId = event.partner_id !== undefined && event.partner_id !== null
-      if (hasPartnerId) {
-        return event.partner_id === filterPartnerId || event.created_by === filterPartnerId
-      } else {
-        // If partner_id column doesn't exist, only show events created by the partner
-        return event.created_by === filterPartnerId
+      const eventPartnerId = event.partner_id ?? null
+      const eventGroupId = event.group_id ?? null
+      const involvesCurrentUser =
+        !currentUserId ||
+        event.created_by === currentUserId ||
+        eventPartnerId === currentUserId ||
+        (eventGroupId && memberGroupIds.includes(eventGroupId))
+
+      if (!involvesCurrentUser) {
+        return false
       }
+
+      // Partner-to-partner events
+      if (eventPartnerId === filterPartnerId && event.created_by === currentUserId) {
+        return true
+      }
+      if (eventPartnerId === currentUserId && event.created_by === filterPartnerId) {
+        return true
+      }
+
+      // Group events involving the partner
+      if (eventGroupId && memberGroupIds.includes(eventGroupId)) {
+        return event.created_by === filterPartnerId || eventPartnerId === filterPartnerId
+      }
+
+      return false
     })
   }
 
-  // If currentUserId provided (for main dashboard), show only events involving the current user
-  if (currentUserId && !filterPartnerId && data) {
+  // For general view (dashboard/calendar without partner filter) ensure we only show events the user can access
+  if (currentUserId && data) {
     return data.filter((event: any) => {
-      // Show events where:
-      // 1. Current user created the event (events YOU created for any partner)
-      // 2. Event's partner_id matches current user (events created FOR you by your partners)
+      const eventPartnerId = event.partner_id ?? null
+      const eventGroupId = event.group_id ?? null
       return (
         event.created_by === currentUserId ||
-        event.partner_id === currentUserId
+        eventPartnerId === currentUserId ||
+        (eventGroupId && memberGroupIds.includes(eventGroupId))
       )
     })
   }
@@ -1798,10 +1832,26 @@ export async function deletePhotoAssignment(userId: string, widgetIndex: number)
 // ============ GROUPS ============
 
 export async function getGroups(userId: string): Promise<Group[]> {
-  const { data, error } = await supabase
+  const { data: membership, error: membershipError } = await supabase
+    .from('group_members')
+    .select('group_id')
+    .eq('user_id', userId)
+
+  if (membershipError) {
+    console.error('Error fetching group memberships:', membershipError)
+    return []
+  }
+
+  const groupIds = Array.from(new Set((membership || []).map((row: any) => row.group_id)))
+
+  if (groupIds.length === 0) {
+    return []
+  }
+
+  const { data: groupsData, error } = await supabase
     .from('groups')
     .select('*')
-    .eq('created_by', userId)
+    .in('id', groupIds)
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -1809,9 +1859,8 @@ export async function getGroups(userId: string): Promise<Group[]> {
     return []
   }
 
-  // Count members for each group
   const groupsWithCounts = await Promise.all(
-    (data || []).map(async (group) => {
+    (groupsData || []).map(async (group) => {
       const { count, error: countError } = await supabase
         .from('group_members')
         .select('*', { count: 'exact', head: true })

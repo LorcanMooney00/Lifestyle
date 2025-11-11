@@ -48,12 +48,33 @@ ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
 -- Enable RLS on group_members
 ALTER TABLE public.group_members ENABLE ROW LEVEL SECURITY;
 
--- Groups policies (simplified to avoid recursion)
+-- Helper function to safely check group membership without recursion
+CREATE OR REPLACE FUNCTION public.is_group_member(p_group_id UUID, p_user_id UUID DEFAULT auth.uid())
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF p_group_id IS NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  RETURN EXISTS (
+    SELECT 1
+    FROM public.group_members
+    WHERE group_id = p_group_id
+      AND user_id = COALESCE(p_user_id, auth.uid())
+  );
+END;
+$$;
+
+-- Groups policies
 DROP POLICY IF EXISTS "Users can view groups they belong to" ON public.groups;
 CREATE POLICY "Users can view groups they belong to"
   ON public.groups FOR SELECT
   USING (
-    auth.uid() = created_by
+    auth.uid() = created_by OR public.is_group_member(id)
   );
 
 DROP POLICY IF EXISTS "Users can create groups" ON public.groups;
@@ -78,13 +99,13 @@ DROP POLICY IF EXISTS "Users can view group members" ON public.group_members;
 CREATE POLICY "Users can view group members"
   ON public.group_members FOR SELECT
   USING (
-    -- Users can see members of groups they belong to (avoid recursion by checking user_id directly)
-    user_id = auth.uid() OR
-    EXISTS (
+    user_id = auth.uid()
+    OR EXISTS (
       SELECT 1 FROM public.groups
       WHERE groups.id = group_members.group_id
       AND groups.created_by = auth.uid()
     )
+    OR public.is_group_member(group_members.group_id)
   );
 
 DROP POLICY IF EXISTS "Group admins can add members" ON public.group_members;
@@ -134,16 +155,22 @@ BEGIN
     EXECUTE 'DROP POLICY IF EXISTS "Users can create group events" ON public.events';
     
     -- Create comprehensive SELECT policy that includes partner AND group sharing
-    -- IMPORTANT: Check group_id IS NOT NULL first to avoid querying group_members unnecessarily
     EXECUTE 'CREATE POLICY "Users can view shared events"
       ON public.events FOR SELECT
       USING (
-        created_by = auth.uid() OR
-        partner_id = auth.uid() OR
-        EXISTS (
-          SELECT 1 FROM public.partner_links
-          WHERE (partner_links.user_id = auth.uid() AND partner_links.partner_id = events.created_by)
-          OR (partner_links.partner_id = auth.uid() AND partner_links.user_id = events.created_by)
+        created_by = auth.uid()
+        OR partner_id = auth.uid()
+        OR public.is_group_member(group_id)
+        OR EXISTS (
+          SELECT 1
+          FROM public.partner_links
+          WHERE (
+            partner_links.user_id = auth.uid()
+            AND partner_links.partner_id = events.created_by
+          ) OR (
+            partner_links.partner_id = auth.uid()
+            AND partner_links.user_id = events.created_by
+          )
         )
       )';
 
@@ -151,6 +178,8 @@ BEGIN
       ON public.events FOR INSERT
       WITH CHECK (
         created_by = auth.uid()
+        AND (group_id IS NULL OR public.is_group_member(group_id))
+        AND (partner_id IS NULL OR group_id IS NULL)
       )';
       
     EXECUTE 'CREATE POLICY "Users can update their own events"
@@ -180,14 +209,7 @@ BEGIN
       ON public.notes FOR SELECT
       USING (
         created_by = auth.uid() OR
-        (
-          group_id IS NOT NULL AND
-          EXISTS (
-            SELECT 1 FROM public.group_members
-            WHERE group_members.group_id = notes.group_id
-            AND group_members.user_id = auth.uid()
-          )
-        ) OR
+        public.is_group_member(notes.group_id) OR
         EXISTS (
           SELECT 1 FROM public.topics
           WHERE topics.id = notes.topic_id
@@ -220,11 +242,7 @@ BEGIN
               )
             )
           )) OR
-          (group_id IS NOT NULL AND EXISTS (
-            SELECT 1 FROM public.group_members
-            WHERE group_members.group_id = notes.group_id
-            AND group_members.user_id = auth.uid()
-          ))
+          (group_id IS NOT NULL AND public.is_group_member(notes.group_id))
         )
       )';
       

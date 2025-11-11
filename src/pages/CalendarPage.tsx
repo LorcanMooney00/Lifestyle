@@ -69,6 +69,19 @@ export default function CalendarPage() {
       setEventDescription(selectedEvent.description || '')
       setEventDate(selectedEvent.event_date)
       setEventTime(selectedEvent.event_time || '')
+      if (selectedEvent.group_id) {
+        setShareType('group')
+        setSelectedGroupId(selectedEvent.group_id)
+        setSelectedPartnerId('')
+      } else if (selectedEvent.partner_id) {
+        setShareType('partner')
+        setSelectedPartnerId(selectedEvent.partner_id)
+        setSelectedGroupId('')
+      } else {
+        setShareType('partner')
+        setSelectedPartnerId('')
+        setSelectedGroupId('')
+      }
       setShowEventForm(true)
     }
   }, [selectedEvent])
@@ -92,7 +105,7 @@ export default function CalendarPage() {
     const lastDay = new Date(year, month + 1, 0)
     // If viewing a specific partner's calendar, filter by partnerId
     // If viewing main calendar (no partnerId), filter by currentUserId to show only your events
-    const data = await getEvents(firstDay, lastDay, partnerId || undefined, partnerId ? undefined : user.id)
+    const data = await getEvents(firstDay, lastDay, partnerId || undefined, user.id)
     setEvents(data)
   }
 

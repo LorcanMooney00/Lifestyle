@@ -1,5 +1,6 @@
 export interface Event {
   partner_id?: string | null
+  group_id?: string | null
   id: string
   title: string
   description: string | null

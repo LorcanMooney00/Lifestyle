@@ -136,9 +136,10 @@ export default function TodosPage() {
             <div className="flex items-center">
               <button
                 onClick={() => navigate('/app/settings')}
-                className="text-gray-300 hover:text-gray-100 px-3 py-2 rounded-md text-sm font-medium transition-all hover:bg-gray-700/60"
+                className="text-slate-300 hover:text-white p-2 rounded-lg text-xl transition-all hover:bg-slate-700/50 active:scale-95"
+                aria-label="Settings"
               >
-                Settings
+                ⚙️
               </button>
             </div>
           </div>

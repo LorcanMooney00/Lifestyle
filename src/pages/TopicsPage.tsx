@@ -621,9 +621,10 @@ export default function TopicsPage() {
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => navigate('/app/settings')}
-                className="text-slate-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-700/50 active:scale-95"
+                className="text-slate-300 hover:text-white p-2 rounded-lg text-xl transition-all hover:bg-slate-700/50 active:scale-95"
+                aria-label="Settings"
               >
-                ⚙️ Settings
+                ⚙️
               </button>
               <button
                 onClick={handleSignOut}

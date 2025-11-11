@@ -270,34 +270,19 @@ export default function NotesPage() {
           {selectedNote ? (
             <>
               <div className="p-4 border-b border-slate-600/50">
-                <div className="flex items-center gap-2 mb-2 md:hidden">
-                  <button
-                    onClick={() => setSelectedNote(null)}
-                    className="text-slate-300 hover:text-white p-1 transition-colors rounded-lg hover:bg-slate-700/50"
-                    aria-label="Back to notes"
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <span className="text-sm text-slate-300">Back to Notes</span>
-                </div>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <input
-                    type="text"
-                    value={noteTitle}
-                    onChange={(e) => {
-                      setNoteTitle(e.target.value)
-                      setHasUnsavedChanges(true)
-                    }}
-                    placeholder="Note title"
-                    className="flex-1 min-w-[200px] text-xl font-semibold border-none focus:outline-none focus:ring-0 bg-transparent text-white placeholder-slate-500"
-                  />
-                  {selectedNote.partners && selectedNote.partners.length > 0 && (
-                    <span className="text-sm text-slate-400 whitespace-nowrap">
-                      {selectedNote.partners.join(' & ')}
-                    </span>
-                  )}
+                <div className="flex items-center justify-between gap-3 mb-3 md:hidden">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSelectedNote(null)}
+                      className="text-slate-300 hover:text-white p-1 transition-colors rounded-lg hover:bg-slate-700/50"
+                      aria-label="Back to notes"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <span className="text-sm text-slate-300">Back to Notes</span>
+                  </div>
                   <div className="flex gap-2">
                     {hasUnsavedChanges && (
                       <button
@@ -315,6 +300,23 @@ export default function NotesPage() {
                       {saving ? 'Saving...' : 'Save'}
                     </button>
                   </div>
+                </div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <input
+                    type="text"
+                    value={noteTitle}
+                    onChange={(e) => {
+                      setNoteTitle(e.target.value)
+                      setHasUnsavedChanges(true)
+                    }}
+                    placeholder="Note title"
+                    className="flex-1 min-w-[200px] text-xl font-semibold border-none focus:outline-none focus:ring-0 bg-transparent text-white placeholder-slate-500"
+                  />
+                  {selectedNote.partners && selectedNote.partners.length > 0 && (
+                    <span className="text-sm text-slate-400 whitespace-nowrap">
+                      {selectedNote.partners.join(' & ')}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex-1 p-4 overflow-y-auto min-h-0">

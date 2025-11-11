@@ -34,6 +34,7 @@ export default function ShoppingListPage() {
   const [newItemPartnerId, setNewItemPartnerId] = useState<string>(partnerId ?? '')
   const [filterPartnerId, setFilterPartnerId] = useState<string>(partnerId ?? 'all')
   const [showPurchased, setShowPurchased] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -116,6 +117,7 @@ export default function ShoppingListPage() {
       if (!partnerId) {
         setNewItemPartnerId('')
       }
+      setShowAddModal(false)
     }
 
     setCreating(false)
@@ -218,94 +220,24 @@ export default function ShoppingListPage() {
       </nav>
 
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-xl">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-white sm:text-2xl">Add an item</h2>
-              <p className="text-sm text-slate-400">
-                Keep track of groceries, supplies, and anything else you need.
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 text-xs text-slate-400">
-                <input
-                  type="checkbox"
-                  checked={showPurchased}
-                  onChange={(e) => setShowPurchased(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-indigo-500 focus:ring-indigo-400"
-                />
-                Show purchased items
-              </label>
-            </div>
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-indigo-500 active:scale-95"
+            >
+              + Add Item
+            </button>
+            <label className="flex items-center gap-2 text-xs text-slate-400">
+              <input
+                type="checkbox"
+                checked={showPurchased}
+                onChange={(e) => setShowPurchased(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-indigo-500 focus:ring-indigo-400"
+              />
+              Show purchased
+            </label>
           </div>
-
-          {error && (
-            <div className="mt-4 rounded-xl border border-red-700/50 bg-red-900/20 px-4 py-3 text-sm text-red-200">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleCreateItem} className="mt-6 grid gap-3 sm:grid-cols-[2fr,1fr,1fr,auto]">
-            <div className="sm:col-span-1">
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-400">
-                Item
-              </label>
-              <input
-                type="text"
-                value={newItemName}
-                onChange={(e) => setNewItemName(e.target.value)}
-                placeholder="E.g. Almond milk"
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-                disabled={creating}
-                required
-              />
-            </div>
-
-            <div className="sm:col-span-1">
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-400">
-                Quantity (optional)
-              </label>
-              <input
-                type="text"
-                value={newItemQuantity}
-                onChange={(e) => setNewItemQuantity(e.target.value)}
-                placeholder="2 cartons"
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-                disabled={creating}
-              />
-            </div>
-
-            {!partnerId && (
-              <div className="sm:col-span-1">
-                <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-400">
-                  Shared With
-                </label>
-                <select
-                  value={newItemPartnerId}
-                  onChange={(e) => setNewItemPartnerId(e.target.value)}
-                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-                  disabled={creating}
-                >
-                  <option value="">Just me</option>
-                  {partners.map((partner) => (
-                    <option key={partner.id} value={partner.id}>
-                      {partner.username || partner.email}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div className="sm:col-span-1 flex items-end">
-              <button
-                type="submit"
-                disabled={creating}
-                className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {creating ? 'Adding…' : 'Add Item'}
-              </button>
-            </div>
-          </form>
         </div>
 
         {!partnerId && (
@@ -486,6 +418,108 @@ export default function ShoppingListPage() {
                 )}
               </section>
             )}
+          </div>
+        )}
+
+        {/* Add Item Modal */}
+        {showAddModal && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md border border-slate-600/50">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-bold text-white">Add Shopping Item</h3>
+                  <button
+                    onClick={() => {
+                      setShowAddModal(false)
+                      setError(null)
+                    }}
+                    className="text-slate-400 hover:text-white text-2xl transition-colors"
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {error && (
+                  <div className="mb-4 rounded-xl border border-red-700/50 bg-red-900/20 px-4 py-3 text-sm text-red-200">
+                    {error}
+                  </div>
+                )}
+
+                <form onSubmit={handleCreateItem} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Item Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={newItemName}
+                      onChange={(e) => setNewItemName(e.target.value)}
+                      placeholder="E.g. Almond milk"
+                      className="w-full rounded-lg border border-slate-600 bg-slate-700/50 px-4 py-3 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all"
+                      disabled={creating}
+                      required
+                      autoFocus
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Quantity (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={newItemQuantity}
+                      onChange={(e) => setNewItemQuantity(e.target.value)}
+                      placeholder="E.g. 2 cartons"
+                      className="w-full rounded-lg border border-slate-600 bg-slate-700/50 px-4 py-3 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all"
+                      disabled={creating}
+                    />
+                  </div>
+
+                  {!partnerId && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Share With
+                      </label>
+                      <select
+                        value={newItemPartnerId}
+                        onChange={(e) => setNewItemPartnerId(e.target.value)}
+                        className="w-full rounded-lg border border-slate-600 bg-slate-700/50 px-4 py-3 text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all"
+                        disabled={creating}
+                      >
+                        <option value="">Just me</option>
+                        {partners.map((partner) => (
+                          <option key={partner.id} value={partner.id}>
+                            {partner.username || partner.email}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddModal(false)
+                        setError(null)
+                      }}
+                      className="flex-1 rounded-lg border border-slate-600 bg-slate-700/50 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-600/50 hover:text-white"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={creating}
+                      className="flex-1 rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 active:scale-95"
+                    >
+                      {creating ? 'Adding…' : 'Add Item'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
           </div>
         )}
       </main>

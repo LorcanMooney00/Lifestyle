@@ -23,6 +23,8 @@ export default function TodosPage() {
   const [todoActionIds, setTodoActionIds] = useState<string[]>([])
   const [todoError, setTodoError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showPartnerSelector, setShowPartnerSelector] = useState(false)
+  const [pendingTodoContent, setPendingTodoContent] = useState('')
 
   useEffect(() => {
     if (user) {
@@ -50,17 +52,30 @@ export default function TodosPage() {
     }
   }
 
-  const handleCreateTodo = async (content: string) => {
+  const handleCreateTodo = async (content: string, targetPartnerId?: string) => {
     if (!user) return
+    
+    // If no partnerId in URL and no targetPartnerId provided, show partner selector
+    if (!partnerId && !targetPartnerId) {
+      setPendingTodoContent(content)
+      setShowPartnerSelector(true)
+      return
+    }
+
+    const partnerToUse = targetPartnerId || partnerId
+    if (!partnerToUse) return
+
     setCreatingTodo(true)
     setTodoError(null)
     try {
-      const { todo, error } = await createTodo(user.id, content, partnerId ?? null)
+      const { todo, error } = await createTodo(user.id, content, partnerToUse)
       if (error || !todo) {
         setTodoError(error || 'Failed to create to-do. Please try again.')
         return
       }
       setTodos((prev) => [...prev, todo])
+      setShowPartnerSelector(false)
+      setPendingTodoContent('')
     } catch (error) {
       console.error('Error creating todo:', error)
       setTodoError('Failed to create to-do. Please try again.')
@@ -167,6 +182,73 @@ export default function TodosPage() {
           onDelete={handleDeleteTodo}
         />
       </main>
+
+      {/* Partner Selector Modal */}
+      {showPartnerSelector && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md border border-slate-600/50">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-white">
+                  Share To-Do With
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowPartnerSelector(false)
+                    setPendingTodoContent('')
+                  }}
+                  className="text-slate-400 hover:text-white text-2xl transition-colors"
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
+
+              {partners.length === 0 ? (
+                <div className="text-center py-4">
+                  <p className="text-sm text-slate-400 mb-4">
+                    No partners yet. Add a partner first to create shared to-dos.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setShowPartnerSelector(false)
+                      navigate('/app/topics')
+                    }}
+                    className="text-indigo-400 hover:text-indigo-300 underline text-sm"
+                  >
+                    Go to Dashboard →
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {partners.map((partner) => (
+                    <button
+                      key={partner.id}
+                      onClick={() => handleCreateTodo(pendingTodoContent, partner.id)}
+                      className="w-full p-4 glass backdrop-blur-xl border border-slate-600/50 rounded-xl hover:border-indigo-500/50 transition-all text-left group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                          {(partner.username || partner.email || '?')[0].toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-white group-hover:text-indigo-200 transition-colors">
+                            {partner.username || partner.email}
+                          </p>
+                          <p className="text-sm text-slate-400">Create shared to-do</p>
+                        </div>
+                        <svg className="w-5 h-5 text-slate-400 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

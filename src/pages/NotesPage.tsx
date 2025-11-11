@@ -19,6 +19,7 @@ export default function NotesPage() {
   const [noteContent, setNoteContent] = useState('')
   const [saving, setSaving] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -81,11 +82,16 @@ export default function NotesPage() {
 
   const handleDiscardChanges = () => {
     if (!selectedNote) return
-    if (hasUnsavedChanges && !confirm('Discard unsaved changes?')) return
-    
+    if (!hasUnsavedChanges) return
+    setShowDiscardConfirm(true)
+  }
+
+  const confirmDiscard = () => {
+    if (!selectedNote) return
     setNoteTitle(selectedNote.title || '')
     setNoteContent(selectedNote.content || '')
     setHasUnsavedChanges(false)
+    setShowDiscardConfirm(false)
   }
 
   const handleCreateNote = async (targetPartnerId?: string) => {
@@ -341,6 +347,37 @@ export default function NotesPage() {
           )}
         </div>
       </div>
+
+      {/* Discard Confirmation Modal */}
+      {showDiscardConfirm && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md border border-slate-600/50">
+            <div className="p-6">
+              <div className="mb-4">
+                <h3 className="text-xl font-bold text-white mb-2">Discard changes?</h3>
+                <p className="text-sm text-slate-400">
+                  You have unsaved changes. Are you sure you want to discard them? This action cannot be undone.
+                </p>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDiscardConfirm(false)}
+                  className="flex-1 px-4 py-3 text-sm font-medium text-white bg-slate-700 rounded-lg hover:bg-slate-600 transition-all"
+                >
+                  Keep editing
+                </button>
+                <button
+                  onClick={confirmDiscard}
+                  className="flex-1 px-4 py-3 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-500 transition-all shadow-lg hover:shadow-xl active:scale-95"
+                >
+                  Discard changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Partner Selector Modal */}
       {showPartnerSelector && (

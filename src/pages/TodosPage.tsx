@@ -136,17 +136,42 @@ export default function TodosPage() {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <nav className="bg-gray-800 shadow-sm border-b border-gray-700">
+      <nav className="glass backdrop-blur-xl shadow-lg border-b border-slate-700/50 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate(partnerId ? `/app/partner/${partnerId}` : '/app/topics')}
-                className="text-gray-300 hover:text-gray-100"
+                className="text-slate-300 hover:text-white transition-colors"
               >
-                ← Back
+                ← {partnerId ? 'Back' : 'Dashboard'}
               </button>
-              <h1 className="text-xl font-bold text-gray-100">{pageTitle}</h1>
+              <div className="hidden sm:flex items-center gap-2">
+                <button
+                  onClick={() => navigate('/app/calendar')}
+                  className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all"
+                >
+                  📅 Calendar
+                </button>
+                <button
+                  onClick={() => navigate('/app/notes')}
+                  className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all"
+                >
+                  📝 Notes
+                </button>
+                <button
+                  onClick={() => navigate('/app/todos')}
+                  className="px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-sm font-medium"
+                >
+                  ✓ To-Do
+                </button>
+                <button
+                  onClick={() => navigate('/app/shopping')}
+                  className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all"
+                >
+                  🛒 Shopping
+                </button>
+              </div>
             </div>
             <div className="flex items-center">
               <button

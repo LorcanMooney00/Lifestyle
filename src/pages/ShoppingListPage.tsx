@@ -197,26 +197,56 @@ export default function ShoppingListPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <nav className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/app/topics')}
-              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white"
-            >
-              ← Dashboard
-            </button>
-            <h1 className="text-lg font-semibold text-white sm:text-xl">
-              {partnerId ? 'Shared Shopping List' : 'Shopping List'}
-            </h1>
+      <nav className="glass backdrop-blur-xl shadow-lg border-b border-slate-700/50 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate('/app/topics')}
+                className="text-slate-300 hover:text-white transition-colors"
+              >
+                ← Dashboard
+              </button>
+              <div className="hidden sm:flex items-center gap-2">
+                <button
+                  onClick={() => navigate('/app/calendar')}
+                  className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all"
+                >
+                  📅 Calendar
+                </button>
+                <button
+                  onClick={() => navigate('/app/notes')}
+                  className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all"
+                >
+                  📝 Notes
+                </button>
+                <button
+                  onClick={() => navigate('/app/todos')}
+                  className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all"
+                >
+                  ✓ To-Do
+                </button>
+                <button
+                  onClick={() => navigate('/app/shopping')}
+                  className="px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-sm font-medium"
+                >
+                  🛒 Shopping
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <button
+                onClick={loadData}
+                disabled={loading}
+                className="text-slate-300 hover:text-white p-2 rounded-lg transition-all hover:bg-slate-700/50 disabled:opacity-50"
+                title="Refresh"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
+            </div>
           </div>
-          <button
-            onClick={loadData}
-            disabled={loading}
-            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading ? 'Refreshing…' : 'Refresh'}
-          </button>
         </div>
       </nav>
 

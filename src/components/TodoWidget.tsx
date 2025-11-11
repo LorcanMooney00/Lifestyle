@@ -14,7 +14,6 @@ interface TodoWidgetProps {
   creating: boolean
   actionIds: string[]
   error: string | null
-  sharingLabel: string
   onCreate: (content: string) => Promise<void>
   onToggle: (todoId: string, completed: boolean) => Promise<void>
   onDelete: (todoId: string) => Promise<void>
@@ -30,7 +29,6 @@ export default function TodoWidget({
   creating,
   actionIds,
   error,
-  sharingLabel,
   onCreate,
   onToggle,
   onDelete,
@@ -85,8 +83,7 @@ export default function TodoWidget({
             className="rounded-xl border border-slate-600/50 bg-slate-800/60 px-4 py-3 text-sm text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 transition-all"
             disabled={creating}
           />
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-slate-400">
-            <span>Sharing with {sharingLabel}</span>
+          <div className="flex justify-end">
             <button
               type="submit"
               disabled={creating || !content.trim()}

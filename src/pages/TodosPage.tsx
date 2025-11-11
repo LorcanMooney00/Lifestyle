@@ -168,15 +168,6 @@ export default function TodosPage() {
           creating={creatingTodo}
           actionIds={todoActionIds}
           error={todoError}
-          sharingLabel={
-            partnerId
-              ? partners.find((p) => p.id === partnerId)?.username ||
-                partners.find((p) => p.id === partnerId)?.email ||
-                'selected partner'
-              : partners.length > 0
-              ? 'all linked partners'
-              : 'your account'
-          }
           onCreate={handleCreateTodo}
           onToggle={handleToggleTodo}
           onDelete={handleDeleteTodo}

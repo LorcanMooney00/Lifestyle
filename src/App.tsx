@@ -11,6 +11,7 @@ import RecipesPage from './pages/RecipesPage'
 import TodosPage from './pages/TodosPage'
 import SettingsPage from './pages/SettingsPage'
 import ShoppingListPage from './pages/ShoppingListPage'
+import GroupPage from './pages/GroupPage'
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -95,6 +96,14 @@ function App() {
           element={
             <AuthGate>
               <CalendarPage />
+            </AuthGate>
+          }
+        />
+        <Route
+          path="/app/group/:groupId"
+          element={
+            <AuthGate>
+              <GroupPage />
             </AuthGate>
           }
         />

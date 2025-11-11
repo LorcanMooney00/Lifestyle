@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { signOut } from '../lib/auth'
-import { getEvents, createEvent, updateEvent, deleteEvent, getPartners, getTilePreferences } from '../lib/api'
-import type { Event, Partner } from '../types'
+import { getEvents, createEvent, updateEvent, deleteEvent, getPartners, getTilePreferences, getGroups } from '../lib/api'
+import type { Event, Partner, Group } from '../types'
 
 export default function CalendarPage() {
   const { user } = useAuth()
@@ -12,9 +12,12 @@ export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [events, setEvents] = useState<Event[]>([])
   const [partners, setPartners] = useState<Partner[]>([])
+  const [groups, setGroups] = useState<Group[]>([])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
+  const [shareType, setShareType] = useState<'partner' | 'group'>('partner')
   const [selectedPartnerId, setSelectedPartnerId] = useState<string>('')
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('')
   const [showEventForm, setShowEventForm] = useState(false)
   const [eventTitle, setEventTitle] = useState('')
   const [eventDescription, setEventDescription] = useState('')
@@ -29,6 +32,7 @@ export default function CalendarPage() {
     if (user) {
       loadEvents()
       loadPartners()
+      loadGroups()
       if (partnerId) {
         loadTilePreferences()
       }
@@ -73,6 +77,12 @@ export default function CalendarPage() {
     if (!user) return
     const data = await getPartners(user.id)
     setPartners(data)
+  }
+
+  const loadGroups = async () => {
+    if (!user) return
+    const data = await getGroups(user.id)
+    setGroups(data)
   }
 
   const loadEvents = async () => {
@@ -138,7 +148,9 @@ export default function CalendarPage() {
     setEventTitle('')
     setEventDescription('')
     setEventTime('')
+    setShareType('partner')
     setSelectedPartnerId(partnerId || '') // Pre-select partner if viewing partner calendar
+    setSelectedGroupId('')
     setSelectedEvent(null)
     setError(null)
     setShowEventForm(true)
@@ -148,9 +160,9 @@ export default function CalendarPage() {
     e.preventDefault()
     if (!user || !eventTitle.trim() || !eventDate) return
 
-    // Don't allow creating new events without a partner selected
-    if (!selectedEvent && !selectedPartnerId) {
-      setError('Please select a partner to share this event with')
+    // Don't allow creating new events without a partner or group selected
+    if (!selectedEvent && !selectedPartnerId && !selectedGroupId) {
+      setError('Please select a partner or group to share this event with')
       return
     }
 
@@ -173,10 +185,10 @@ export default function CalendarPage() {
           setError('Failed to update event. Please try again.')
         }
       } else {
-        // Create new event with selected partner
-        if (!selectedPartnerId) {
+        // Create new event with selected partner or group
+        if (!selectedPartnerId && !selectedGroupId) {
           setSaving(false)
-          setError('Please select a partner to share this event with')
+          setError('Please select a partner or group to share this event with')
           return
         }
         const newEvent = await createEvent(
@@ -185,7 +197,8 @@ export default function CalendarPage() {
           eventDate,
           eventTime || null,
           user.id,
-          selectedPartnerId
+          shareType === 'partner' ? selectedPartnerId : undefined,
+          shareType === 'group' ? selectedGroupId : undefined
         )
         if (newEvent) {
           await loadEvents()
@@ -275,7 +288,7 @@ export default function CalendarPage() {
                 <span className="font-semibold leading-tight">
                   {event.title}
                   {event.event_time && <span className="opacity-80 ml-1 text-[9px] sm:text-[10px]">@ {event.event_time}</span>}
-                </span>
+                  </span>
               </div>
             ))}
           </div>
@@ -347,12 +360,12 @@ export default function CalendarPage() {
                   >
                     ✓ To-Do
                   </button>
-                  <button
+              <button
                     onClick={() => navigate('/app/shopping')}
                     className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
-                  >
+              >
                     🛒 Shopping
-                  </button>
+              </button>
                 </>
               )}
             </div>
@@ -383,16 +396,16 @@ export default function CalendarPage() {
         <div className="glass backdrop-blur-sm rounded-2xl shadow-lg border border-slate-600/50">
           {/* Calendar Header */}
           <div className="p-3 sm:p-4 border-b border-slate-600/50 flex items-center justify-between gap-2">
-            <button
-              onClick={goToPreviousMonth}
+              <button
+                onClick={goToPreviousMonth}
               className="p-2 hover:bg-slate-700/50 active:bg-slate-600 rounded-lg text-slate-300 hover:text-white transition-all active:scale-95"
-              aria-label="Previous month"
-            >
-              ←
-            </button>
+                aria-label="Previous month"
+              >
+                ←
+              </button>
             <h2 className="text-base sm:text-xl font-bold text-white text-center flex-1">
-              {monthNames[month]} {year}
-            </h2>
+                {monthNames[month]} {year}
+              </h2>
             <button
               onClick={goToToday}
               className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 active:bg-indigo-700 text-xs sm:text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
@@ -526,42 +539,116 @@ export default function CalendarPage() {
                 )}
 
                 <form onSubmit={handleSaveEvent} className="space-y-3">
-                  {/* Partner Selector - only show when creating new event and not in partner-specific calendar */}
-                  {!selectedEvent && !partnerId && (
-                    <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                        Share with Partner *
-                      </label>
-                      <select
-                        value={selectedPartnerId}
-                        onChange={(e) => setSelectedPartnerId(e.target.value)}
-                        required
-                        className="w-full px-3 py-2 text-sm border border-slate-600 bg-slate-700/50 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                      >
-                        <option value="">Select a partner...</option>
-                        {partners.map((partner) => (
-                          <option key={partner.id} value={partner.id}>
-                            {partner.username || partner.email}
-                          </option>
-                        ))}
-                      </select>
-                      {partners.length === 0 && (
-                        <p className="mt-1.5 text-xs text-slate-400">
-                          No partners yet.{' '}
+                  {/* Share Type Selector - only show when creating new event and not in partner-specific calendar */}
+                {!selectedEvent && !partnerId && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                          Share With *
+                        </label>
+                        <div className="flex gap-2">
                           <button
                             type="button"
                             onClick={() => {
-                              setShowEventForm(false)
-                              navigate('/app/topics')
+                              setShareType('partner')
+                              setSelectedGroupId('')
                             }}
-                            className="text-indigo-400 hover:text-indigo-300 underline"
+                            className={`flex-1 px-3 py-2 text-sm rounded-lg font-medium transition-all ${
+                              shareType === 'partner'
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                            }`}
                           >
-                            Add a partner first →
+                            👤 Partner
                           </button>
-                        </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShareType('group')
+                              setSelectedPartnerId('')
+                            }}
+                            className={`flex-1 px-3 py-2 text-sm rounded-lg font-medium transition-all ${
+                              shareType === 'group'
+                                ? 'bg-purple-600 text-white'
+                                : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                            }`}
+                          >
+                            👥 Group
+                          </button>
+                        </div>
+                      </div>
+
+                      {shareType === 'partner' ? (
+                        <div>
+                          <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                            Select Partner *
+                          </label>
+                          <select
+                            value={selectedPartnerId}
+                            onChange={(e) => setSelectedPartnerId(e.target.value)}
+                            required
+                            className="w-full px-3 py-2 text-sm border border-slate-600 bg-slate-700/50 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                          >
+                            <option value="">Select a partner...</option>
+                            {partners.map((partner) => (
+                              <option key={partner.id} value={partner.id}>
+                                {partner.username || partner.email}
+                              </option>
+                            ))}
+                          </select>
+                          {partners.length === 0 && (
+                            <p className="mt-1.5 text-xs text-slate-400">
+                              No partners yet.{' '}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowEventForm(false)
+                                  navigate('/app/topics')
+                                }}
+                                className="text-indigo-400 hover:text-indigo-300 underline"
+                              >
+                                Add a partner first →
+                              </button>
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                            Select Group *
+                          </label>
+                          <select
+                            value={selectedGroupId}
+                            onChange={(e) => setSelectedGroupId(e.target.value)}
+                            required
+                            className="w-full px-3 py-2 text-sm border border-slate-600 bg-slate-700/50 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                          >
+                            <option value="">Select a group...</option>
+                            {groups.map((group) => (
+                              <option key={group.id} value={group.id}>
+                                {group.name}
+                              </option>
+                            ))}
+                          </select>
+                          {groups.length === 0 && (
+                            <p className="mt-1.5 text-xs text-slate-400">
+                              No groups yet.{' '}
+                    <button
+                                type="button"
+                      onClick={() => {
+                        setShowEventForm(false)
+                        navigate('/app/topics')
+                      }}
+                                className="text-purple-400 hover:text-purple-300 underline"
+                    >
+                                Create a group first →
+                    </button>
+                            </p>
+                          )}
+                        </div>
                       )}
-                    </div>
-                  )}
+                  </div>
+                )}
 
                   <div>
                     <label className="block text-xs font-medium text-slate-400 mb-1.5">
@@ -578,29 +665,29 @@ export default function CalendarPage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
+                  <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                        Date *
-                      </label>
-                      <input
-                        type="date"
-                        value={eventDate}
-                        onChange={(e) => setEventDate(e.target.value)}
-                        required
+                      Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={eventDate}
+                      onChange={(e) => setEventDate(e.target.value)}
+                      required
                         className="w-full px-3 py-2 text-sm border border-slate-600 bg-slate-700/50 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                      />
-                    </div>
+                    />
+                  </div>
 
-                    <div>
+                  <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1.5">
                         Time
-                      </label>
-                      <input
-                        type="time"
-                        value={eventTime}
-                        onChange={(e) => setEventTime(e.target.value)}
+                    </label>
+                    <input
+                      type="time"
+                      value={eventTime}
+                      onChange={(e) => setEventTime(e.target.value)}
                         className="w-full px-3 py-2 text-sm border border-slate-600 bg-slate-700/50 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                      />
+                    />
                     </div>
                   </div>
 
@@ -618,22 +705,22 @@ export default function CalendarPage() {
                   </div>
 
                   <div className="flex gap-2 pt-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowEventForm(false)
-                        setSelectedEvent(null)
-                      }}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowEventForm(false)
+                          setSelectedEvent(null)
+                        }}
                       className="flex-1 px-4 py-2.5 bg-slate-700/50 text-slate-300 hover:text-white rounded-lg hover:bg-slate-700 text-sm font-medium transition-all flex items-center justify-center gap-2"
-                    >
+                      >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={saving || !eventTitle.trim() || !eventDate || (!selectedEvent && !selectedPartnerId)}
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                      disabled={saving || !eventTitle.trim() || !eventDate || (!selectedEvent && !selectedPartnerId && !selectedGroupId)}
                       className="flex-1 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-500 hover:to-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold transition-all active:scale-95 shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2"
                     >
                       {saving ? (

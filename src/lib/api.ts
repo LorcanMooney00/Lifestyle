@@ -12,6 +12,8 @@ import type {
   ShoppingItem,
   Dog,
   DogMeal,
+  Group,
+  GroupMember,
 } from '../types'
 
 export async function getTopics(): Promise<Topic[]> {
@@ -919,10 +921,11 @@ export async function createEvent(
   eventDate: string,
   eventTime: string | null,
   createdBy: string,
-  partnerId?: string
+  partnerId?: string,
+  groupId?: string
 ): Promise<Event | null> {
-  // Build insert object - don't include partner_id (column may not exist)
-  // We'll try to include it, but if it fails, retry without it
+  // Build insert object - don't include partner_id or group_id (columns may not exist)
+  // We'll try to include them, but if it fails, retry without
   const baseInsertData = {
     title,
     description,
@@ -931,10 +934,13 @@ export async function createEvent(
     created_by: createdBy,
   }
   
-  // Try to include partner_id if provided
+  // Try to include partner_id or group_id if provided
   const insertData: any = { ...baseInsertData }
   if (partnerId) {
     insertData.partner_id = partnerId
+  }
+  if (groupId) {
+    insertData.group_id = groupId
   }
 
   const { data, error } = await supabase
@@ -1783,6 +1789,183 @@ export async function deletePhotoAssignment(userId: string, widgetIndex: number)
 
   if (error) {
     console.error('Error deleting photo assignment:', error)
+    return false
+  }
+
+  return true
+}
+
+// ============ GROUPS ============
+
+export async function getGroups(userId: string): Promise<Group[]> {
+  const { data, error } = await supabase
+    .from('groups')
+    .select('*')
+    .eq('created_by', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching groups:', error)
+    return []
+  }
+
+  // Count members for each group
+  const groupsWithCounts = await Promise.all(
+    (data || []).map(async (group) => {
+      const { count, error: countError } = await supabase
+        .from('group_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('group_id', group.id)
+
+      if (countError) {
+        console.error('Error counting members:', countError)
+      }
+
+      return {
+        ...group,
+        member_count: count || 0
+      }
+    })
+  )
+
+  return groupsWithCounts
+}
+
+export async function getGroup(groupId: string): Promise<Group | null> {
+  const { data, error } = await supabase
+    .from('groups')
+    .select('*')
+    .eq('id', groupId)
+    .single()
+
+  if (error) {
+    console.error('Error fetching group:', error)
+    return null
+  }
+
+  return data
+}
+
+export async function createGroup(name: string, description: string | null, createdBy: string): Promise<Group | null> {
+  const { data, error } = await supabase
+    .from('groups')
+    .insert({
+      name,
+      description,
+      created_by: createdBy
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error creating group:', error)
+    return null
+  }
+
+  return data
+}
+
+export async function updateGroup(groupId: string, name: string, description: string | null): Promise<boolean> {
+  const { error } = await supabase
+    .from('groups')
+    .update({
+      name,
+      description,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', groupId)
+
+  if (error) {
+    console.error('Error updating group:', error)
+    return false
+  }
+
+  return true
+}
+
+export async function deleteGroup(groupId: string): Promise<boolean> {
+  const { error} = await supabase
+    .from('groups')
+    .delete()
+    .eq('id', groupId)
+
+  if (error) {
+    console.error('Error deleting group:', error)
+    return false
+  }
+
+  return true
+}
+
+export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
+  const { data, error } = await supabase
+    .from('group_members')
+    .select('*')
+    .eq('group_id', groupId)
+    .order('joined_at', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching group members:', error)
+    return []
+  }
+
+  return (data || []) as GroupMember[]
+}
+
+export async function addGroupMember(groupId: string, userEmail: string, role: 'admin' | 'member' = 'member'): Promise<boolean> {
+  // First, find the user by email
+  const { data: userData, error: userError } = await supabase
+    .from('user_profiles')
+    .select('user_id')
+    .eq('email', userEmail)
+    .single()
+
+  if (userError || !userData) {
+    console.error('Error finding user:', userError)
+    return false
+  }
+
+  // Add the user to the group
+  const { error } = await supabase
+    .from('group_members')
+    .insert({
+      group_id: groupId,
+      user_id: userData.user_id,
+      role
+    })
+
+  if (error) {
+    console.error('Error adding group member:', error)
+    return false
+  }
+
+  return true
+}
+
+export async function removeGroupMember(groupId: string, userId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('group_members')
+    .delete()
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('Error removing group member:', error)
+    return false
+  }
+
+  return true
+}
+
+export async function updateGroupMemberRole(groupId: string, userId: string, role: 'admin' | 'member'): Promise<boolean> {
+  const { error } = await supabase
+    .from('group_members')
+    .update({ role })
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('Error updating member role:', error)
     return false
   }
 

@@ -137,3 +137,24 @@ export interface Photo {
   created_at: string
 }
 
+export interface Group {
+  id: string
+  name: string
+  description: string | null
+  created_by: string
+  created_at: string
+  updated_at: string
+  member_count?: number
+  creator_username?: string | null
+}
+
+export interface GroupMember {
+  id: string
+  group_id: string
+  user_id: string
+  role: 'admin' | 'member'
+  joined_at: string
+  username?: string | null
+  email?: string
+}
+

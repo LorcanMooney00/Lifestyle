@@ -19,8 +19,11 @@ import {
   uploadDogPhoto,
   getDogMeals,
   toggleDogMeal,
+  getGroups,
+  createGroup,
+  deleteGroup,
 } from '../lib/api'
-import type { Note, Event, Todo, ShoppingItem, Dog } from '../types'
+import type { Note, Event, Todo, ShoppingItem, Dog, Group } from '../types'
 import PhotoWidget from '../components/PhotoWidget'
 
 const defaultTilePreferences: Record<string, boolean> = {
@@ -87,6 +90,14 @@ export default function TopicsPage() {
   const [showUnlinkModal, setShowUnlinkModal] = useState(false)
   const [partnerToUnlink, setPartnerToUnlink] = useState<{ id: string; email: string; username: string; profilePictureUrl?: string | null } | null>(null)
   const [unlinking, setUnlinking] = useState(false)
+  
+  // Groups state
+  const [groups, setGroups] = useState<Group[]>([])
+  const [showAddGroupModal, setShowAddGroupModal] = useState(false)
+  const [groupName, setGroupName] = useState('')
+  const [groupDescription, setGroupDescription] = useState('')
+  const [creatingGroup, setCreatingGroup] = useState(false)
+  const [groupError, setGroupError] = useState<string | null>(null)
 
   useEffect(() => {
     if (user) {
@@ -102,7 +113,7 @@ export default function TopicsPage() {
       const nextMonth = new Date(today)
       nextMonth.setDate(today.getDate() + 30)
 
-      const [notesData, partnersData, preferencesData, todosData, eventsData, shoppingData, dogsData] = await Promise.all([
+      const [notesData, partnersData, preferencesData, todosData, eventsData, shoppingData, dogsData, groupsData] = await Promise.all([
         getAllNotes(user.id),
         getPartners(user.id),
         getTilePreferences(user.id),
@@ -110,6 +121,7 @@ export default function TopicsPage() {
         getEvents(today, nextMonth, undefined, user.id),
         getShoppingItems(user.id),
         getDogs(user.id),
+        getGroups(user.id),
       ])
 
       setNotes(notesData)
@@ -124,6 +136,7 @@ export default function TopicsPage() {
       setShoppingItems(shoppingData)
       const sortedDogs = sortDogs(dogsData || [])
       setDogs(sortedDogs)
+      setGroups(groupsData || [])
       
       // Load dog meals for today
       if (sortedDogs.length > 0) {
@@ -496,6 +509,35 @@ export default function TopicsPage() {
     }
 
     setLinking(false)
+  }
+
+  const handleCreateGroup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user || !groupName.trim()) return
+
+    setCreatingGroup(true)
+    setGroupError(null)
+
+    const newGroup = await createGroup(groupName.trim(), groupDescription.trim() || null, user.id)
+    if (newGroup) {
+      setGroupName('')
+      setGroupDescription('')
+      await loadDashboardData()
+      setShowAddGroupModal(false)
+    } else {
+      setGroupError('Failed to create group. Please try again.')
+    }
+
+    setCreatingGroup(false)
+  }
+
+  const handleDeleteGroup = async (groupId: string, groupName: string) => {
+    if (!window.confirm(`Delete group "${groupName}"? This cannot be undone.`)) return
+
+    const success = await deleteGroup(groupId)
+    if (success) {
+      await loadDashboardData()
+    }
   }
 
   const handleOpenAddPartner = () => {
@@ -1231,6 +1273,82 @@ export default function TopicsPage() {
           </div>
         )}
 
+        {/* Groups Section */}
+        {!loading && (
+          <div className={`${contentWidth} mb-6 sm:mb-8`}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                <span className="text-2xl sm:text-3xl">👨‍👩‍👧‍👦</span>
+                Your Groups
+              </h2>
+              {groups.length > 0 && (
+                <span className="text-sm text-slate-400 bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-700/50">
+                  {groups.length} {groups.length === 1 ? 'Group' : 'Groups'}
+                </span>
+              )}
+            </div>
+            {/* Groups Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+              {groups.map((group) => (
+                <div
+                  key={group.id}
+                  onClick={() => navigate(`/app/group/${group.id}`)}
+                  className="glass backdrop-blur-xl border border-slate-600/50 p-4 py-3 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 group relative cursor-pointer hover:scale-[1.02] hover:border-purple-500/50"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-pink-600/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+                  {/* Delete Button - Top Right */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDeleteGroup(group.id, group.name)
+                    }}
+                    className="absolute top-2 right-2 z-20 p-1 rounded-lg bg-red-600/90 hover:bg-red-500 active:bg-red-700 text-white transition-all shadow-lg hover:shadow-xl opacity-0 group-hover:opacity-100 backdrop-blur-sm"
+                    title="Delete group"
+                    aria-label="Delete group"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                  <div className="relative z-10 flex flex-col items-center text-center">
+                    <div className="w-16 h-16 mb-2 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center border-2 border-purple-500/30">
+                      <span className="text-3xl">👥</span>
+                    </div>
+                    <h4 className="text-sm font-bold mb-1 text-white group-hover:text-purple-200 transition-colors line-clamp-1 w-full px-1">
+                      {group.name}
+                    </h4>
+                    <p className="text-xs text-slate-500 group-hover:text-slate-400 transition-colors mb-2 line-clamp-1 w-full px-1">
+                      {group.member_count || 0} {group.member_count === 1 ? 'member' : 'members'}
+                    </p>
+                    <div className="flex items-center gap-1 text-purple-300 font-medium text-xs group-hover:text-purple-200 transition-colors">
+                      <span>View</span>
+                      <span>→</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {/* Add Group Card */}
+              <button
+                onClick={() => setShowAddGroupModal(true)}
+                className="glass backdrop-blur-xl border-2 border-dashed border-purple-500/40 p-4 py-3 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 group relative hover:border-purple-400/60 hover:scale-[1.02]"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+                <div className="relative z-10 flex flex-col items-center text-center">
+                  <div className="w-16 h-16 mb-2 rounded-full bg-gradient-to-br from-purple-600/20 to-pink-600/20 flex items-center justify-center group-hover:from-purple-600/30 group-hover:to-pink-600/30 transition-all border-2 border-purple-500/30">
+                    <span className="text-3xl">➕</span>
+                  </div>
+                  <h4 className="text-sm font-bold mb-0.5 text-purple-200 group-hover:text-purple-100 transition-colors">
+                    Create Group
+                  </h4>
+                  <p className="text-xs text-slate-500 group-hover:text-slate-400 transition-colors mb-2">
+                    New group
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Family Dogs Section */}
         {!loading && tilePreferences['dog-feeding'] !== false && (
           <div className={`${contentWidth} mb-6 sm:mb-8`}>
@@ -1517,6 +1635,91 @@ export default function TopicsPage() {
                     {unlinking ? 'Unlinking...' : 'Yes, Unlink'}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Create Group Modal */}
+        {showAddGroupModal && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md border border-slate-600/50">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-2xl font-bold text-white">Create a Group</h3>
+                  <button
+                    onClick={() => {
+                      setShowAddGroupModal(false)
+                      setGroupName('')
+                      setGroupDescription('')
+                      setGroupError(null)
+                    }}
+                    className="text-slate-400 hover:text-white text-2xl min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors rounded-lg hover:bg-slate-700/50"
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {groupError && (
+                  <div className="mb-4 p-4 bg-red-900/30 border border-red-700/50 rounded-xl">
+                    <p className="text-sm text-red-300">{groupError}</p>
+                  </div>
+                )}
+
+                <form onSubmit={handleCreateGroup} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Group Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={groupName}
+                      onChange={(e) => setGroupName(e.target.value)}
+                      placeholder="Family, Friends, Work Team..."
+                      required
+                      className="w-full px-4 py-3 text-base border border-slate-600 bg-slate-700/50 text-white placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                      disabled={creatingGroup}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Description (Optional)
+                    </label>
+                    <textarea
+                      value={groupDescription}
+                      onChange={(e) => setGroupDescription(e.target.value)}
+                      placeholder="What's this group for?"
+                      rows={3}
+                      className="w-full px-4 py-3 text-base border border-slate-600 bg-slate-700/50 text-white placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all resize-none"
+                      disabled={creatingGroup}
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddGroupModal(false)
+                        setGroupName('')
+                        setGroupDescription('')
+                        setGroupError(null)
+                      }}
+                      disabled={creatingGroup}
+                      className="flex-1 px-6 py-3 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 active:bg-slate-500 text-sm font-medium transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={creatingGroup || !groupName.trim()}
+                      className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-500 hover:to-pink-500 active:from-purple-700 active:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
+                    >
+                      {creatingGroup ? 'Creating...' : 'Create Group'}
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           </div>

@@ -1134,3 +1134,552 @@ $$ LANGUAGE plpgsql;
 
 ALTER TABLE public.user_profiles 
 ADD COLUMN IF NOT EXISTS tile_preferences JSONB DEFAULT '{"shared-notes": true, "calendar": true, "recipes": true, "photo-gallery": true}'::jsonb;
+
+-- ============================================
+-- TODOS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.todos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  partner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  completed BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_todos_user_id ON public.todos(user_id);
+CREATE INDEX IF NOT EXISTS idx_todos_partner_id ON public.todos(partner_id);
+CREATE INDEX IF NOT EXISTS idx_todos_group_id ON public.todos(group_id);
+CREATE INDEX IF NOT EXISTS idx_todos_completed ON public.todos(completed);
+
+CREATE OR REPLACE FUNCTION set_todos_updated_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS set_todos_updated_at_trigger ON public.todos;
+CREATE TRIGGER set_todos_updated_at_trigger
+BEFORE UPDATE ON public.todos
+FOR EACH ROW
+EXECUTE FUNCTION set_todos_updated_at();
+
+ALTER TABLE public.todos ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their todos" ON public.todos;
+DROP POLICY IF EXISTS "Users can insert todos" ON public.todos;
+DROP POLICY IF EXISTS "Users can update shared todos" ON public.todos;
+DROP POLICY IF EXISTS "Users can delete shared todos" ON public.todos;
+
+CREATE POLICY "Users can view their todos"
+  ON public.todos FOR SELECT
+  USING (
+    auth.uid() = user_id OR
+    auth.uid() = partner_id OR
+    (
+      group_id IS NOT NULL AND
+      EXISTS (
+        SELECT 1 FROM public.group_members
+        WHERE group_members.group_id = todos.group_id
+        AND group_members.user_id = auth.uid()
+      )
+    )
+  );
+
+CREATE POLICY "Users can insert todos"
+  ON public.todos FOR INSERT
+  WITH CHECK (
+    auth.uid() = user_id AND
+    (
+      (partner_id IS NULL AND group_id IS NULL) OR
+      (partner_id IS NOT NULL AND are_partners(user_id, partner_id)) OR
+      (group_id IS NOT NULL AND EXISTS (
+        SELECT 1 FROM public.group_members
+        WHERE group_members.group_id = todos.group_id
+        AND group_members.user_id = auth.uid()
+      ))
+    )
+  );
+
+CREATE POLICY "Users can update shared todos"
+  ON public.todos FOR UPDATE
+  USING (
+    auth.uid() = user_id OR
+    auth.uid() = partner_id OR
+    (
+      group_id IS NOT NULL AND
+      EXISTS (
+        SELECT 1 FROM public.group_members
+        WHERE group_members.group_id = todos.group_id
+        AND group_members.user_id = auth.uid()
+      )
+    )
+  );
+
+CREATE POLICY "Users can delete shared todos"
+  ON public.todos FOR DELETE
+  USING (
+    auth.uid() = user_id OR
+    auth.uid() = partner_id OR
+    (
+      group_id IS NOT NULL AND
+      EXISTS (
+        SELECT 1 FROM public.group_members
+        WHERE group_members.group_id = todos.group_id
+        AND group_members.user_id = auth.uid()
+      )
+    )
+  );
+
+-- ============================================
+-- SHOPPING ITEMS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.shopping_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  partner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE,
+  item_name TEXT NOT NULL,
+  quantity TEXT,
+  notes TEXT,
+  purchased BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_shopping_items_user_id ON public.shopping_items(user_id);
+CREATE INDEX IF NOT EXISTS idx_shopping_items_partner_id ON public.shopping_items(partner_id);
+CREATE INDEX IF NOT EXISTS idx_shopping_items_group_id ON public.shopping_items(group_id);
+
+CREATE OR REPLACE FUNCTION set_shopping_items_updated_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS set_shopping_items_updated_at_trigger ON public.shopping_items;
+CREATE TRIGGER set_shopping_items_updated_at_trigger
+BEFORE UPDATE ON public.shopping_items
+FOR EACH ROW
+EXECUTE FUNCTION set_shopping_items_updated_at();
+
+ALTER TABLE public.shopping_items ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view shopping items" ON public.shopping_items;
+DROP POLICY IF EXISTS "Users can insert shopping items" ON public.shopping_items;
+DROP POLICY IF EXISTS "Users can update shopping items" ON public.shopping_items;
+DROP POLICY IF EXISTS "Users can delete shopping items" ON public.shopping_items;
+
+CREATE POLICY "Users can view shopping items"
+  ON public.shopping_items FOR SELECT
+  USING (
+    auth.uid() = user_id OR
+    auth.uid() = partner_id OR
+    (
+      group_id IS NOT NULL AND
+      EXISTS (
+        SELECT 1 FROM public.group_members
+        WHERE group_members.group_id = shopping_items.group_id
+        AND group_members.user_id = auth.uid()
+      )
+    )
+  );
+
+CREATE POLICY "Users can insert shopping items"
+  ON public.shopping_items FOR INSERT
+  WITH CHECK (
+    auth.uid() = user_id AND
+    (
+      (partner_id IS NULL AND group_id IS NULL) OR
+      (partner_id IS NOT NULL AND are_partners(user_id, partner_id)) OR
+      (group_id IS NOT NULL AND EXISTS (
+        SELECT 1 FROM public.group_members
+        WHERE group_members.group_id = shopping_items.group_id
+        AND group_members.user_id = auth.uid()
+      ))
+    )
+  );
+
+CREATE POLICY "Users can update shopping items"
+  ON public.shopping_items FOR UPDATE
+  USING (
+    auth.uid() = user_id OR
+    auth.uid() = partner_id OR
+    (
+      group_id IS NOT NULL AND
+      EXISTS (
+        SELECT 1 FROM public.group_members
+        WHERE group_members.group_id = shopping_items.group_id
+        AND group_members.user_id = auth.uid()
+      )
+    )
+  );
+
+CREATE POLICY "Users can delete shopping items"
+  ON public.shopping_items FOR DELETE
+  USING (
+    auth.uid() = user_id OR
+    auth.uid() = partner_id OR
+    (
+      group_id IS NOT NULL AND
+      EXISTS (
+        SELECT 1 FROM public.group_members
+        WHERE group_members.group_id = shopping_items.group_id
+        AND group_members.user_id = auth.uid()
+      )
+    )
+  );
+
+-- ============================================
+-- DOGS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.dogs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  partner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  meals_per_day INTEGER DEFAULT 2 CHECK (meals_per_day > 0),
+  weight_per_meal NUMERIC(10,2),
+  photo_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_dogs_user_id ON public.dogs(user_id);
+CREATE INDEX IF NOT EXISTS idx_dogs_partner_id ON public.dogs(partner_id);
+
+CREATE OR REPLACE FUNCTION set_dogs_updated_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS set_dogs_updated_at_trigger ON public.dogs;
+CREATE TRIGGER set_dogs_updated_at_trigger
+BEFORE UPDATE ON public.dogs
+FOR EACH ROW
+EXECUTE FUNCTION set_dogs_updated_at();
+
+ALTER TABLE public.dogs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view dogs" ON public.dogs;
+DROP POLICY IF EXISTS "Users can insert dogs" ON public.dogs;
+DROP POLICY IF EXISTS "Users can update dogs" ON public.dogs;
+DROP POLICY IF EXISTS "Users can delete dogs" ON public.dogs;
+
+CREATE POLICY "Users can view dogs"
+  ON public.dogs FOR SELECT
+  USING (
+    auth.uid() = user_id OR
+    auth.uid() = partner_id
+  );
+
+CREATE POLICY "Users can insert dogs"
+  ON public.dogs FOR INSERT
+  WITH CHECK (
+    auth.uid() = user_id AND
+    (partner_id IS NULL OR are_partners(user_id, partner_id))
+  );
+
+CREATE POLICY "Users can update dogs"
+  ON public.dogs FOR UPDATE
+  USING (
+    auth.uid() = user_id OR auth.uid() = partner_id
+  );
+
+CREATE POLICY "Users can delete dogs"
+  ON public.dogs FOR DELETE
+  USING (
+    auth.uid() = user_id OR auth.uid() = partner_id
+  );
+
+-- ============================================
+-- DOG MEALS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.dog_meals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  dog_id UUID REFERENCES public.dogs(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  meal_date DATE NOT NULL,
+  meal_index INTEGER NOT NULL CHECK (meal_index >= 0),
+  completed BOOLEAN DEFAULT TRUE,
+  completed_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(dog_id, meal_date, meal_index)
+);
+
+CREATE INDEX IF NOT EXISTS idx_dog_meals_dog_id ON public.dog_meals(dog_id);
+CREATE INDEX IF NOT EXISTS idx_dog_meals_meal_date ON public.dog_meals(meal_date);
+CREATE INDEX IF NOT EXISTS idx_dog_meals_dog_date ON public.dog_meals(dog_id, meal_date);
+
+ALTER TABLE public.dog_meals ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view dog meals" ON public.dog_meals;
+DROP POLICY IF EXISTS "Users can insert dog meals" ON public.dog_meals;
+DROP POLICY IF EXISTS "Users can update dog meals" ON public.dog_meals;
+DROP POLICY IF EXISTS "Users can delete dog meals" ON public.dog_meals;
+
+CREATE POLICY "Users can view dog meals"
+  ON public.dog_meals FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.dogs
+      WHERE dogs.id = dog_meals.dog_id
+      AND (dogs.user_id = auth.uid() OR dogs.partner_id = auth.uid())
+    )
+  );
+
+CREATE POLICY "Users can insert dog meals"
+  ON public.dog_meals FOR INSERT
+  WITH CHECK (
+    user_id = auth.uid() AND
+    EXISTS (
+      SELECT 1 FROM public.dogs
+      WHERE dogs.id = dog_meals.dog_id
+      AND (dogs.user_id = auth.uid() OR dogs.partner_id = auth.uid())
+    )
+  );
+
+CREATE POLICY "Users can update dog meals"
+  ON public.dog_meals FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.dogs
+      WHERE dogs.id = dog_meals.dog_id
+      AND (dogs.user_id = auth.uid() OR dogs.partner_id = auth.uid())
+    )
+  );
+
+CREATE POLICY "Users can delete dog meals"
+  ON public.dog_meals FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.dogs
+      WHERE dogs.id = dog_meals.dog_id
+      AND (dogs.user_id = auth.uid() OR dogs.partner_id = auth.uid())
+    )
+  );
+
+-- ============================================
+-- PHOTO ASSIGNMENTS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.photo_assignments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  widget_index INTEGER NOT NULL,
+  photo_id UUID REFERENCES public.photos(id) ON DELETE CASCADE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, widget_index)
+);
+
+CREATE INDEX IF NOT EXISTS idx_photo_assignments_user_widget 
+  ON public.photo_assignments(user_id, widget_index);
+
+ALTER TABLE public.photo_assignments ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their own photo assignments" ON public.photo_assignments;
+DROP POLICY IF EXISTS "Users can insert their own photo assignments" ON public.photo_assignments;
+DROP POLICY IF EXISTS "Users can update their own photo assignments" ON public.photo_assignments;
+DROP POLICY IF EXISTS "Users can delete their own photo assignments" ON public.photo_assignments;
+
+CREATE POLICY "Users can view their own photo assignments"
+  ON public.photo_assignments FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own photo assignments"
+  ON public.photo_assignments FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own photo assignments"
+  ON public.photo_assignments FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own photo assignments"
+  ON public.photo_assignments FOR DELETE
+  USING (auth.uid() = user_id);
+
+CREATE OR REPLACE FUNCTION update_photo_assignment_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS update_photo_assignment_timestamp_trigger ON public.photo_assignments;
+CREATE TRIGGER update_photo_assignment_timestamp_trigger
+BEFORE UPDATE ON public.photo_assignments
+FOR EACH ROW
+EXECUTE FUNCTION update_photo_assignment_timestamp();
+
+-- ============================================
+-- GROUPS AND GROUP MEMBERS TABLES
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.groups (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  description TEXT,
+  created_by UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.group_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  role TEXT DEFAULT 'member' CHECK (role IN ('admin', 'member')),
+  joined_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(group_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_group_members_group_id ON public.group_members(group_id);
+CREATE INDEX IF NOT EXISTS idx_group_members_user_id ON public.group_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_events_group_id ON public.events(group_id);
+CREATE INDEX IF NOT EXISTS idx_notes_group_id ON public.notes(group_id);
+
+ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.group_members ENABLE ROW LEVEL SECURITY;
+
+-- Groups policies
+DROP POLICY IF EXISTS "Users can view groups they belong to" ON public.groups;
+CREATE POLICY "Users can view groups they belong to"
+  ON public.groups FOR SELECT
+  USING (
+    auth.uid() = created_by OR
+    EXISTS (
+      SELECT 1 FROM public.group_members
+      WHERE group_members.group_id = groups.id
+      AND group_members.user_id = auth.uid()
+    )
+  );
+
+DROP POLICY IF EXISTS "Users can create groups" ON public.groups;
+CREATE POLICY "Users can create groups"
+  ON public.groups FOR INSERT
+  WITH CHECK (auth.uid() = created_by);
+
+DROP POLICY IF EXISTS "Group admins can update groups" ON public.groups;
+CREATE POLICY "Group admins can update groups"
+  ON public.groups FOR UPDATE
+  USING (
+    auth.uid() = created_by OR
+    EXISTS (
+      SELECT 1 FROM public.group_members
+      WHERE group_members.group_id = groups.id
+      AND group_members.user_id = auth.uid()
+      AND group_members.role = 'admin'
+    )
+  );
+
+DROP POLICY IF EXISTS "Group creators can delete groups" ON public.groups;
+CREATE POLICY "Group creators can delete groups"
+  ON public.groups FOR DELETE
+  USING (auth.uid() = created_by);
+
+-- Group members policies
+DROP POLICY IF EXISTS "Users can view group members" ON public.group_members;
+CREATE POLICY "Users can view group members"
+  ON public.group_members FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.groups
+      WHERE groups.id = group_members.group_id
+      AND (
+        groups.created_by = auth.uid() OR
+        EXISTS (
+          SELECT 1 FROM public.group_members gm
+          WHERE gm.group_id = groups.id
+          AND gm.user_id = auth.uid()
+        )
+      )
+    )
+  );
+
+DROP POLICY IF EXISTS "Group admins can add members" ON public.group_members;
+CREATE POLICY "Group admins can add members"
+  ON public.group_members FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.groups
+      WHERE groups.id = group_members.group_id
+      AND (
+        groups.created_by = auth.uid() OR
+        EXISTS (
+          SELECT 1 FROM public.group_members gm
+          WHERE gm.group_id = groups.id
+          AND gm.user_id = auth.uid()
+          AND gm.role = 'admin'
+        )
+      )
+    )
+  );
+
+DROP POLICY IF EXISTS "Group admins can remove members" ON public.group_members;
+CREATE POLICY "Group admins can remove members"
+  ON public.group_members FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.groups
+      WHERE groups.id = group_members.group_id
+      AND (
+        groups.created_by = auth.uid() OR
+        EXISTS (
+          SELECT 1 FROM public.group_members gm
+          WHERE gm.group_id = groups.id
+          AND gm.user_id = auth.uid()
+          AND gm.role = 'admin'
+        )
+      )
+    )
+    OR user_id = auth.uid()
+  );
+
+DROP POLICY IF EXISTS "Group admins can update member roles" ON public.group_members;
+CREATE POLICY "Group admins can update member roles"
+  ON public.group_members FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.groups
+      WHERE groups.id = group_members.group_id
+      AND groups.created_by = auth.uid()
+    )
+  );
+
+-- Function to automatically add creator as admin when group is created
+CREATE OR REPLACE FUNCTION add_group_creator_as_admin()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  INSERT INTO public.group_members (group_id, user_id, role)
+  VALUES (NEW.id, NEW.created_by, 'admin');
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS add_group_creator_trigger ON public.groups;
+CREATE TRIGGER add_group_creator_trigger
+  AFTER INSERT ON public.groups
+  FOR EACH ROW
+  EXECUTE FUNCTION add_group_creator_as_admin();
+
+-- Add group_id columns to notes table
+ALTER TABLE public.notes ADD COLUMN IF NOT EXISTS group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE;

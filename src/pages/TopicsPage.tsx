@@ -99,6 +99,12 @@ export default function TopicsPage() {
   const [creatingGroup, setCreatingGroup] = useState(false)
   const [groupError, setGroupError] = useState<string | null>(null)
 
+  const groupLookup = useMemo(() => {
+    const map = new Map<string, string>()
+    groups.forEach((group) => map.set(group.id, group.name))
+    return map
+  }, [groups])
+
   useEffect(() => {
     if (user) {
       loadDashboardData()
@@ -914,6 +920,17 @@ export default function TopicsPage() {
                                 .slice(0, 5)
                                 .map((todo) => {
                                   const partner = partners.find((p) => p.id === todo.partner_id)
+                                  const createdByPartner =
+                                    !todo.group_id && todo.user_id !== user?.id
+                                      ? partners.find((p) => p.id === todo.user_id)
+                                      : undefined
+                                  const sharedLabel = todo.group_id
+                                    ? `Group · ${groupLookup.get(todo.group_id) || 'Shared'}`
+                                    : partner
+                                    ? partner.username || partner.email
+                                    : createdByPartner
+                                    ? createdByPartner.username || createdByPartner.email
+                                    : 'Just you'
                                   return (
                                     <div
                                       key={todo.id}
@@ -930,9 +947,9 @@ export default function TopicsPage() {
                                       </button>
                                       <div className="flex-1 min-w-0">
                                         <p className="text-sm text-white">{todo.content}</p>
-                                        {partner && (
+                                        {sharedLabel && sharedLabel !== 'Just you' && (
                                           <p className="text-xs text-slate-500 mt-1">
-                                            Shared with {partner.username || partner.email}
+                                            Shared with {sharedLabel}
                                           </p>
                                         )}
                                       </div>
@@ -961,8 +978,19 @@ export default function TopicsPage() {
                               .map((item) => {
                                 const partner =
                                   item.partner_id && partners.find((p) => p.id === item.partner_id)
-                                const sharedLabel = partner
+                                const createdByPartner =
+                                  !item.group_id && !partner && item.user_id !== user?.id
+                                    ? partners.find((p) => p.id === item.user_id)
+                                    : undefined
+                                const groupName = item.group_id
+                                  ? groupLookup.get(item.group_id)
+                                  : null
+                                const sharedLabel = groupName
+                                  ? `Group · ${groupName || 'Shared'}`
+                                  : partner
                                   ? partner.username || partner.email
+                                  : createdByPartner
+                                  ? createdByPartner.username || createdByPartner.email
                                   : 'Just you'
 
                                 return (
@@ -976,9 +1004,11 @@ export default function TopicsPage() {
                                         <span className="text-lg">🛒</span>
                                         <div className="min-w-0">
                                           <p className="font-medium truncate">{item.item_name}</p>
-                                          <p className="mt-1 text-xs text-slate-400 line-clamp-1">
-                                            Shared with: {sharedLabel}
-                                          </p>
+                                          {sharedLabel && sharedLabel !== 'Just you' && (
+                                            <p className="mt-1 text-xs text-slate-400 line-clamp-1">
+                                              Shared with: {sharedLabel}
+                                            </p>
+                                          )}
                                         </div>
                                       </div>
                                       {item.quantity && (

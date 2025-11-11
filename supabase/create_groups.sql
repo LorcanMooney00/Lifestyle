@@ -36,9 +36,9 @@ BEGIN
     ALTER TABLE public.todos ADD COLUMN IF NOT EXISTS group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE;
   END IF;
 
-  -- Add group_id to shopping_items table if it exists
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'shopping_items') THEN
-    ALTER TABLE public.shopping_items ADD COLUMN IF NOT EXISTS group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE;
+  -- Add group_id to shopping_list_items table if it exists
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'shopping_list_items') THEN
+    ALTER TABLE public.shopping_list_items ADD COLUMN IF NOT EXISTS group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE;
   END IF;
 END $$;
 
@@ -335,21 +335,21 @@ BEGIN
   END IF;
 END $$;
 
--- Update shopping_items policies to include groups (only if table exists)
+-- Update shopping_list_items policies to include groups (only if table exists)
 DO $$ 
 BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'shopping_items') THEN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'shopping_list_items') THEN
     -- Drop old policies
-    EXECUTE 'DROP POLICY IF EXISTS "Users can view shopping items" ON public.shopping_items';
-    EXECUTE 'DROP POLICY IF EXISTS "Users can view shopping items shared with groups" ON public.shopping_items';
-    EXECUTE 'DROP POLICY IF EXISTS "Users can insert shopping items" ON public.shopping_items';
-    EXECUTE 'DROP POLICY IF EXISTS "Users can create group shopping items" ON public.shopping_items';
-    EXECUTE 'DROP POLICY IF EXISTS "Users can update shopping items" ON public.shopping_items';
-    EXECUTE 'DROP POLICY IF EXISTS "Users can delete shopping items" ON public.shopping_items';
+    EXECUTE 'DROP POLICY IF EXISTS "Users can view shopping items" ON public.shopping_list_items';
+    EXECUTE 'DROP POLICY IF EXISTS "Users can view shopping items shared with groups" ON public.shopping_list_items';
+    EXECUTE 'DROP POLICY IF EXISTS "Users can insert shopping items" ON public.shopping_list_items';
+    EXECUTE 'DROP POLICY IF EXISTS "Users can create group shopping items" ON public.shopping_list_items';
+    EXECUTE 'DROP POLICY IF EXISTS "Users can update shopping items" ON public.shopping_list_items';
+    EXECUTE 'DROP POLICY IF EXISTS "Users can delete shopping items" ON public.shopping_list_items';
     
     -- Create comprehensive policies for user, partner, and group sharing
     EXECUTE 'CREATE POLICY "Users can view shopping items"
-      ON public.shopping_items FOR SELECT
+      ON public.shopping_list_items FOR SELECT
       USING (
         user_id = auth.uid()
         OR partner_id = auth.uid()
@@ -357,7 +357,7 @@ BEGIN
       )';
 
     EXECUTE 'CREATE POLICY "Users can insert shopping items"
-      ON public.shopping_items FOR INSERT
+      ON public.shopping_list_items FOR INSERT
       WITH CHECK (
         user_id = auth.uid()
         AND (group_id IS NULL OR public.is_group_member(group_id))
@@ -365,7 +365,7 @@ BEGIN
       )';
       
     EXECUTE 'CREATE POLICY "Users can update shopping items"
-      ON public.shopping_items FOR UPDATE
+      ON public.shopping_list_items FOR UPDATE
       USING (
         user_id = auth.uid()
         OR partner_id = auth.uid()
@@ -373,7 +373,7 @@ BEGIN
       )';
       
     EXECUTE 'CREATE POLICY "Users can delete shopping items"
-      ON public.shopping_items FOR DELETE
+      ON public.shopping_list_items FOR DELETE
       USING (
         user_id = auth.uid()
         OR partner_id = auth.uid()
@@ -400,8 +400,8 @@ BEGIN
     CREATE INDEX IF NOT EXISTS idx_todos_group_id ON public.todos(group_id);
   END IF;
   
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'shopping_items') THEN
-    CREATE INDEX IF NOT EXISTS idx_shopping_items_group_id ON public.shopping_items(group_id);
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'shopping_list_items') THEN
+    CREATE INDEX IF NOT EXISTS idx_shopping_list_items_group_id ON public.shopping_list_items(group_id);
   END IF;
 END $$;
 

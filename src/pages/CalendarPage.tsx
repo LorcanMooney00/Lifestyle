@@ -417,10 +417,10 @@ export default function CalendarPage() {
         {/* Event Form Modal */}
         {showEventForm && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-            <div className="glass backdrop-blur-xl rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md sm:w-full max-h-[90vh] overflow-y-auto border-t sm:border border-slate-600/50">
-              <div className="p-4 sm:p-6">
-                <div className="flex justify-between items-center mb-4 sm:mb-6">
-                  <h3 className="text-lg sm:text-xl font-bold text-white">
+            <div className="glass backdrop-blur-xl rounded-t-2xl sm:rounded-xl shadow-2xl w-full sm:max-w-md sm:w-full max-h-[90vh] overflow-y-auto border-t sm:border border-slate-600/50">
+              <div className="p-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-white">
                     {selectedEvent ? 'Edit Event' : 'New Event'}
                   </h3>
                   <button
@@ -429,7 +429,7 @@ export default function CalendarPage() {
                       setSelectedEvent(null)
                       setError(null)
                     }}
-                    className="text-slate-400 hover:text-white text-2xl sm:text-xl min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors rounded-lg hover:bg-slate-700/50"
+                    className="text-slate-400 hover:text-white text-2xl min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors rounded-lg hover:bg-slate-700/50"
                     aria-label="Close"
                   >
                     ×
@@ -437,23 +437,23 @@ export default function CalendarPage() {
                 </div>
 
                 {error && (
-                  <div className="mb-4 p-4 bg-red-900/30 border border-red-700/50 rounded-xl">
+                  <div className="mb-3 p-3 bg-red-900/30 border border-red-700/50 rounded-lg">
                     <p className="text-sm text-red-300">{error}</p>
                   </div>
                 )}
 
-                <form onSubmit={handleSaveEvent} className="space-y-4 sm:space-y-4">
+                <form onSubmit={handleSaveEvent} className="space-y-3">
                   {/* Partner Selector - only show when creating new event and not in partner-specific calendar */}
                   {!selectedEvent && !partnerId && (
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                      <label className="block text-xs font-medium text-slate-400 mb-1.5">
                         Share with Partner *
                       </label>
                       <select
                         value={selectedPartnerId}
                         onChange={(e) => setSelectedPartnerId(e.target.value)}
                         required
-                        className="w-full px-4 py-3 text-base border border-slate-600 bg-slate-700/50 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                        className="w-full px-3 py-2 text-sm border border-slate-600 bg-slate-700/50 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                       >
                         <option value="">Select a partner...</option>
                         {partners.map((partner) => (
@@ -463,7 +463,7 @@ export default function CalendarPage() {
                         ))}
                       </select>
                       {partners.length === 0 && (
-                        <p className="mt-2 text-sm text-slate-400">
+                        <p className="mt-1.5 text-xs text-slate-400">
                           No partners yet.{' '}
                           <button
                             type="button"
@@ -481,7 +481,7 @@ export default function CalendarPage() {
                   )}
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5">
                       Title *
                     </label>
                     <input
@@ -489,78 +489,78 @@ export default function CalendarPage() {
                       value={eventTitle}
                       onChange={(e) => setEventTitle(e.target.value)}
                       required
-                      className="w-full px-4 py-3 text-base border border-slate-600 bg-slate-700/50 text-white placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                      className="w-full px-3 py-2 text-sm border border-slate-600 bg-slate-700/50 text-white placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                       placeholder="Event title"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Date *
-                    </label>
-                    <input
-                      type="date"
-                      value={eventDate}
-                      onChange={(e) => setEventDate(e.target.value)}
-                      required
-                      className="w-full px-4 py-3 text-base border border-slate-600 bg-slate-700/50 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                        Date *
+                      </label>
+                      <input
+                        type="date"
+                        value={eventDate}
+                        onChange={(e) => setEventDate(e.target.value)}
+                        required
+                        className="w-full px-3 py-2 text-sm border border-slate-600 bg-slate-700/50 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                        Time
+                      </label>
+                      <input
+                        type="time"
+                        value={eventTime}
+                        onChange={(e) => setEventTime(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-slate-600 bg-slate-700/50 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Time (optional)
-                    </label>
-                    <input
-                      type="time"
-                      value={eventTime}
-                      onChange={(e) => setEventTime(e.target.value)}
-                      className="w-full px-4 py-3 text-base border border-slate-600 bg-slate-700/50 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Description (optional)
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                      Description
                     </label>
                     <textarea
                       value={eventDescription}
                       onChange={(e) => setEventDescription(e.target.value)}
-                      rows={4}
-                      className="w-full px-4 py-3 text-base border border-slate-600 bg-slate-700/50 text-white placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none transition-all"
+                      rows={3}
+                      className="w-full px-3 py-2 text-sm border border-slate-600 bg-slate-700/50 text-white placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none transition-all"
                       placeholder="Event description"
                     />
                   </div>
 
-                  <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 sm:pt-4">
+                  <div className="flex gap-2 pt-2">
                     {selectedEvent && (
                       <button
                         type="button"
                         onClick={handleDeleteEvent}
-                        className="w-full sm:w-auto px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-500 active:bg-red-700 text-sm font-medium min-h-[44px] order-2 sm:order-1 transition-all shadow-lg hover:shadow-xl active:scale-95"
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 text-sm font-medium transition-all active:scale-95"
                       >
                         Delete
                       </button>
                     )}
-                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto order-1 sm:order-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowEventForm(false)
-                          setSelectedEvent(null)
-                        }}
-                        className="w-full sm:w-auto px-6 py-3 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 active:bg-slate-500 text-sm font-medium min-h-[44px] transition-all active:scale-95"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={saving || !eventTitle.trim() || !eventDate || (!selectedEvent && !selectedPartnerId)}
-                        className="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium min-h-[44px] transition-all shadow-lg hover:shadow-xl active:scale-95"
-                      >
-                        {saving ? 'Saving...' : 'Save'}
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowEventForm(false)
+                        setSelectedEvent(null)
+                      }}
+                      className="flex-1 px-4 py-2 bg-slate-700/50 text-slate-300 hover:text-white rounded-lg hover:bg-slate-700 text-sm font-medium transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={saving || !eventTitle.trim() || !eventDate || (!selectedEvent && !selectedPartnerId)}
+                      className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold transition-all active:scale-95"
+                    >
+                      {saving ? 'Saving...' : 'Save'}
+                    </button>
                   </div>
                 </form>
               </div>

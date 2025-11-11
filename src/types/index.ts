@@ -123,6 +123,12 @@ export interface PartnerLink {
   created_at: string
 }
 
+export interface Partner {
+  id: string
+  username: string | null
+  email: string
+}
+
 export interface Photo {
   id: string
   user_id: string

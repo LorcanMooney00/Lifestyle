@@ -12,7 +12,6 @@ export default function NotesPage() {
   const [notes, setNotes] = useState<Array<Note & { creator_username?: string | null; partners?: string[] }>>([])
   const [partners, setPartners] = useState<Partner[]>([])
   const [selectedNote, setSelectedNote] = useState<(Note & { creator_username?: string | null; partners?: string[] }) | null>(null)
-  const [selectedPartnerId, setSelectedPartnerId] = useState<string>('')
   const [showPartnerSelector, setShowPartnerSelector] = useState(false)
   const [loading, setLoading] = useState(true)
   const [noteTitle, setNoteTitle] = useState('')
@@ -111,7 +110,6 @@ export default function NotesPage() {
       await loadNotes()
       setSelectedNote(note)
       setShowPartnerSelector(false)
-      setSelectedPartnerId('')
     }
   }
 
@@ -385,10 +383,7 @@ export default function NotesPage() {
                   Share Note With
                 </h3>
                 <button
-                  onClick={() => {
-                    setShowPartnerSelector(false)
-                    setSelectedPartnerId('')
-                  }}
+                  onClick={() => setShowPartnerSelector(false)}
                   className="text-slate-400 hover:text-white text-2xl transition-colors"
                   aria-label="Close"
                 >

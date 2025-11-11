@@ -294,15 +294,20 @@ export default function ShoppingListPage() {
                 )}
               </div>
             )}
-            <label className="flex items-center gap-2 text-xs text-slate-400">
-              <input
-                type="checkbox"
-                checked={showPurchased}
-                onChange={(e) => setShowPurchased(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-indigo-500 focus:ring-indigo-400"
-              />
-              Show purchased
-            </label>
+            <button
+              onClick={() => setShowPurchased(!showPurchased)}
+              className={`p-2 rounded-lg transition-colors ${
+                showPurchased
+                  ? 'text-emerald-400 bg-emerald-500/20 hover:bg-emerald-500/30'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+              }`}
+              aria-label="Toggle purchased items"
+              title={showPurchased ? 'Hide purchased items' : 'Show purchased items'}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
           </div>
         </div>
 

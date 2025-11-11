@@ -7,8 +7,9 @@ import {
   getPartners,
   getShoppingItems,
   toggleShoppingItemPurchased,
+  getGroups,
 } from '../lib/api'
-import type { ShoppingItem } from '../types'
+import type { ShoppingItem, Group } from '../types'
 
 type PartnerInfo = {
   id: string
@@ -24,6 +25,7 @@ export default function ShoppingListPage() {
 
   const [items, setItems] = useState<ShoppingItem[]>([])
   const [partners, setPartners] = useState<PartnerInfo[]>([])
+  const [groups, setGroups] = useState<Group[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
@@ -32,6 +34,10 @@ export default function ShoppingListPage() {
   const [newItemName, setNewItemName] = useState('')
   const [newItemQuantity, setNewItemQuantity] = useState('')
   const [newItemPartnerId, setNewItemPartnerId] = useState<string>(partnerId ?? '')
+  const [newItemGroupId, setNewItemGroupId] = useState<string>('')
+  const [newItemShareType, setNewItemShareType] = useState<'personal' | 'partner' | 'group'>(
+    partnerId ? 'partner' : 'personal'
+  )
   const [filterPartnerId, setFilterPartnerId] = useState<string>(partnerId ?? 'all')
   const [showPurchased, setShowPurchased] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -46,8 +52,28 @@ export default function ShoppingListPage() {
     if (partnerId) {
       setNewItemPartnerId(partnerId)
       setFilterPartnerId(partnerId)
+    setNewItemShareType('partner')
+    setNewItemGroupId('')
+  } else {
+    setNewItemShareType('personal')
+    setNewItemPartnerId('')
+    setNewItemGroupId('')
     }
   }, [partnerId])
+
+useEffect(() => {
+  if (newItemShareType === 'partner' && !partnerId && partners.length > 0 && !newItemPartnerId) {
+    setNewItemPartnerId(partners[0].id)
+  }
+  if (newItemShareType === 'group') {
+    if (groups.length > 0 && !newItemGroupId) {
+      setNewItemGroupId(groups[0].id)
+    }
+    if (groups.length === 0 && newItemGroupId) {
+      setNewItemGroupId('')
+    }
+  }
+}, [newItemShareType, partners, groups, newItemPartnerId, newItemGroupId, partnerId])
 
   const partnerLookup = useMemo(() => {
     const map = new Map<string, PartnerInfo>()
@@ -57,6 +83,14 @@ export default function ShoppingListPage() {
     return map
   }, [partners])
 
+const groupLookup = useMemo(() => {
+  const map = new Map<string, string>()
+  groups.forEach((group) => {
+    map.set(group.id, group.name)
+  })
+  return map
+}, [groups])
+
   const loadData = async () => {
     if (!user) return
 
@@ -64,13 +98,15 @@ export default function ShoppingListPage() {
     setError(null)
 
     try {
-      const [itemsData, partnersData] = await Promise.all([
+      const [itemsData, partnersData, groupsData] = await Promise.all([
         getShoppingItems(user.id),
         getPartners(user.id),
+        getGroups(user.id),
       ])
 
       setItems(itemsData)
       setPartners(partnersData)
+      setGroups(groupsData)
 
       if (partnerId) {
         setNewItemPartnerId(partnerId)
@@ -97,8 +133,22 @@ export default function ShoppingListPage() {
     setCreating(true)
     setError(null)
 
+    const effectiveShareType = partnerId ? 'partner' : newItemShareType
     const assignedPartnerId =
-      partnerId ?? (newItemPartnerId && newItemPartnerId !== 'personal' ? newItemPartnerId : null)
+      partnerId ?? (effectiveShareType === 'partner' ? (newItemPartnerId || null) : null)
+    const assignedGroupId = effectiveShareType === 'group' ? (newItemGroupId || null) : null
+
+    if (effectiveShareType === 'partner' && !assignedPartnerId) {
+      setError('Please select a partner to share with.')
+      setCreating(false)
+      return
+    }
+
+    if (effectiveShareType === 'group' && !assignedGroupId) {
+      setError('Please select a group to share with.')
+      setCreating(false)
+      return
+    }
 
     const quantityValue = newItemQuantity.trim() ? newItemQuantity.trim() : null
 
@@ -106,7 +156,9 @@ export default function ShoppingListPage() {
       user.id,
       trimmedName,
       quantityValue,
-      assignedPartnerId
+      assignedPartnerId,
+      null,
+      assignedGroupId
     )
 
     if (createError || !item) {
@@ -117,6 +169,8 @@ export default function ShoppingListPage() {
       setNewItemQuantity('')
       if (!partnerId) {
         setNewItemPartnerId('')
+        setNewItemGroupId('')
+        setNewItemShareType('personal')
       }
       setShowAddModal(false)
     }
@@ -159,18 +213,25 @@ export default function ShoppingListPage() {
       return items
     }
 
+    if (!partnerId && filterPartnerId.startsWith('group:')) {
+      const groupId = filterPartnerId.replace('group:', '')
+      return items.filter((item) => item.group_id === groupId)
+    }
+
     if (!partnerId && filterPartnerId === 'personal') {
-      return items.filter((item) => item.partner_id === null)
+      return items.filter((item) => !item.partner_id && !item.group_id)
     }
 
     const targetPartnerId = partnerId ?? (filterPartnerId === 'personal' ? null : filterPartnerId)
 
     if (!targetPartnerId) {
-      return items.filter((item) => item.partner_id === null)
+      return items.filter((item) => !item.partner_id && !item.group_id)
     }
 
     return items.filter(
-      (item) => item.partner_id === targetPartnerId || item.user_id === targetPartnerId
+      (item) =>
+        !item.group_id &&
+        (item.partner_id === targetPartnerId || item.user_id === targetPartnerId)
     )
   }, [items, partnerId, filterPartnerId])
 
@@ -178,6 +239,11 @@ export default function ShoppingListPage() {
   const purchasedItems = filteredItems.filter((item) => item.purchased)
 
   const getPartnerLabel = (item: ShoppingItem) => {
+    if (item.group_id) {
+      const groupName = groupLookup.get(item.group_id)
+      return `Group · ${groupName || 'Shared'}`
+    }
+
     if (item.partner_id) {
       const partner = partnerLookup.get(item.partner_id)
       if (partner) {
@@ -328,6 +394,23 @@ export default function ShoppingListPage() {
                             }`}
                           >
                             {partner.username || partner.email}
+                          </button>
+                        ))}
+                        {groups.length > 0 && <div className="border-t border-slate-700/60 my-2" />}
+                        {groups.map((group) => (
+                          <button
+                            key={group.id}
+                            onClick={() => {
+                              setFilterPartnerId(`group:${group.id}`)
+                              setShowFilterDropdown(false)
+                            }}
+                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                              filterPartnerId === `group:${group.id}`
+                                ? 'bg-indigo-600 text-white'
+                                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                            }`}
+                          >
+                            Group · {group.name}
                           </button>
                         ))}
                       </div>
@@ -534,24 +617,119 @@ export default function ShoppingListPage() {
                     />
                   </div>
 
-                  {!partnerId && (
+                  {partnerId ? (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Sharing
+                      </label>
+                      <p className="text-sm text-slate-400">
+                        Shared with {partnerLookup.get(partnerId)?.username || partnerLookup.get(partnerId)?.email || 'your partner'}
+                      </p>
+                    </div>
+                  ) : (
                     <div>
                       <label className="block text-sm font-medium text-slate-300 mb-2">
                         Share With
                       </label>
-                      <select
-                        value={newItemPartnerId}
-                        onChange={(e) => setNewItemPartnerId(e.target.value)}
-                        className="w-full rounded-lg border border-slate-600 bg-slate-700/50 px-4 py-3 text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all"
-                        disabled={creating}
-                      >
-                        <option value="">Just me</option>
-                        {partners.map((partner) => (
-                          <option key={partner.id} value={partner.id}>
-                            {partner.username || partner.email}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewItemShareType('personal')
+                            setNewItemPartnerId('')
+                            setNewItemGroupId('')
+                          }}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                            newItemShareType === 'personal'
+                              ? 'bg-indigo-600 text-white'
+                              : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700 hover:text-white'
+                          }`}
+                        >
+                          Just me
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewItemShareType('partner')
+                            setNewItemGroupId('')
+                            if (!partnerId && partners.length > 0) {
+                              setNewItemPartnerId(partners[0].id)
+                            }
+                          }}
+                          disabled={partners.length === 0}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                            newItemShareType === 'partner'
+                              ? 'bg-purple-600 text-white'
+                              : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700 hover:text-white'
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          Partner
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewItemShareType('group')
+                            setNewItemPartnerId('')
+                            if (groups.length > 0) {
+                              setNewItemGroupId(groups[0].id)
+                            }
+                          }}
+                          disabled={groups.length === 0}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                            newItemShareType === 'group'
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700 hover:text-white'
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          Group
+                        </button>
+                      </div>
+
+                      {newItemShareType === 'partner' && (
+                        <div className="space-y-2">
+                          <select
+                            value={newItemPartnerId}
+                            onChange={(e) => setNewItemPartnerId(e.target.value)}
+                            className="w-full rounded-lg border border-slate-600 bg-slate-700/50 px-4 py-3 text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all"
+                            disabled={creating || partners.length === 0}
+                          >
+                            <option value="">Select a partner…</option>
+                            {partners.map((partner) => (
+                              <option key={partner.id} value={partner.id}>
+                                {partner.username || partner.email}
+                              </option>
+                            ))}
+                          </select>
+                          {partners.length === 0 && (
+                            <p className="text-xs text-slate-500">
+                              Link a partner first to share items directly.
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {newItemShareType === 'group' && (
+                        <div className="space-y-2">
+                          <select
+                            value={newItemGroupId}
+                            onChange={(e) => setNewItemGroupId(e.target.value)}
+                            className="w-full rounded-lg border border-slate-600 bg-slate-700/50 px-4 py-3 text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all"
+                            disabled={creating || groups.length === 0}
+                          >
+                            <option value="">Select a group…</option>
+                            {groups.map((group) => (
+                              <option key={group.id} value={group.id}>
+                                {group.name}
+                              </option>
+                            ))}
+                          </select>
+                          {groups.length === 0 && (
+                            <p className="text-xs text-slate-500">
+                              Create a group on your dashboard to share items with multiple people.
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import type { Todo } from '../types'
 
 interface PartnerOption {
@@ -11,6 +11,7 @@ interface PartnerOption {
 interface TodoWidgetProps {
   todos: Todo[]
   partners: PartnerOption[]
+  groups?: Array<{ id: string; name: string }>
   creating: boolean
   actionIds: string[]
   error: string | null
@@ -26,6 +27,7 @@ interface TodoWidgetProps {
 export default function TodoWidget({
   todos,
   partners,
+  groups = [],
   creating,
   actionIds,
   error,
@@ -38,6 +40,12 @@ export default function TodoWidget({
   className = '',
 }: TodoWidgetProps) {
   const [content, setContent] = useState('')
+
+  const groupLookup = useMemo(() => {
+    const map = new Map<string, string>()
+    groups.forEach((group) => map.set(group.id, group.name))
+    return map
+  }, [groups])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -104,6 +112,7 @@ export default function TodoWidget({
           <ul className="space-y-2">
             {displayedTodos.map((todo) => {
               const partner = partners.find((p) => p.id === todo.partner_id)
+              const groupName = todo.group_id ? groupLookup.get(todo.group_id) : null
               return (
                 <li
                   key={todo.id}
@@ -131,9 +140,14 @@ export default function TodoWidget({
                         <span>
                           Created {new Date(todo.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </span>
-                        {partner && (
+                        {partner && !groupName && (
                           <span className="rounded-md border border-purple-500/25 bg-purple-500/15 px-2 py-0.5 text-purple-200">
                             Shared with {partner.username || partner.email}
+                          </span>
+                        )}
+                        {groupName && (
+                          <span className="rounded-md border border-emerald-500/25 bg-emerald-500/15 px-2 py-0.5 text-emerald-200">
+                            Group · {groupName}
                           </span>
                         )}
                         {todo.completed && (

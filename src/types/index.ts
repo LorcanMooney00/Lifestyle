@@ -57,6 +57,7 @@ export interface TopicMember {
 export interface Note {
   id: string
   topic_id: string
+  group_id?: string | null
   title: string | null
   content: string | null
   created_by: string
@@ -70,6 +71,7 @@ export interface Todo {
   id: string
   user_id: string
   partner_id: string | null
+  group_id?: string | null
   content: string
   completed: boolean
   created_at: string
@@ -80,6 +82,7 @@ export interface ShoppingItem {
   id: string
   user_id: string
   partner_id: string | null
+  group_id?: string | null
   item_name: string
   quantity: string | null
   notes: string | null

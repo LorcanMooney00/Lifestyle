@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
-import { getTodos, createTodo, toggleTodoCompletion, deleteTodo, getPartners } from '../lib/api'
-import type { Todo } from '../types'
+import { getTodos, createTodo, toggleTodoCompletion, deleteTodo, getPartners, getGroups } from '../lib/api'
+import type { Todo, Group } from '../types'
 import TodoWidget from '../components/TodoWidget'
 
 type PartnerInfo = {
@@ -19,11 +19,12 @@ export default function TodosPage() {
 
   const [todos, setTodos] = useState<Todo[]>([])
   const [partners, setPartners] = useState<PartnerInfo[]>([])
+  const [groups, setGroups] = useState<Group[]>([])
   const [creatingTodo, setCreatingTodo] = useState(false)
   const [todoActionIds, setTodoActionIds] = useState<string[]>([])
   const [todoError, setTodoError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [showPartnerSelector, setShowPartnerSelector] = useState(false)
+  const [showShareSelector, setShowShareSelector] = useState(false)
   const [pendingTodoContent, setPendingTodoContent] = useState('')
 
   useEffect(() => {
@@ -38,12 +39,14 @@ export default function TodosPage() {
     setLoading(true)
     setTodoError(null)
     try {
-      const [todosData, partnersData] = await Promise.all([
-        getTodos(user.id),
+      const [todosData, partnersData, groupsData] = await Promise.all([
+        getTodos(user.id, partnerId || undefined),
         getPartners(user.id),
+        getGroups(user.id),
       ])
       setTodos(todosData)
       setPartners(partnersData)
+      setGroups(groupsData)
     } catch (error) {
       console.error('Error loading todos page:', error)
       setTodoError('Could not load your to-do list. Please try again later.')
@@ -52,29 +55,33 @@ export default function TodosPage() {
     }
   }
 
-  const handleCreateTodo = async (content: string, targetPartnerId?: string) => {
+  const handleCreateTodo = async (content: string, targetPartnerId?: string, targetGroupId?: string) => {
     if (!user) return
     
     // If no partnerId in URL and no targetPartnerId provided, show partner selector
-    if (!partnerId && !targetPartnerId) {
+    if (!partnerId && !targetPartnerId && !targetGroupId) {
       setPendingTodoContent(content)
-      setShowPartnerSelector(true)
+      setShowShareSelector(true)
       return
     }
 
-    const partnerToUse = targetPartnerId || partnerId
-    if (!partnerToUse) return
+    const partnerToUse = partnerId || targetPartnerId || null
+    const groupToUse = partnerId ? null : (targetGroupId || null)
+    if (!partnerToUse && !groupToUse) {
+      setTodoError('Please select a partner or group to share with.')
+      return
+    }
 
     setCreatingTodo(true)
     setTodoError(null)
     try {
-      const { todo, error } = await createTodo(user.id, content, partnerToUse)
+      const { todo, error } = await createTodo(user.id, content, partnerToUse, groupToUse)
       if (error || !todo) {
         setTodoError(error || 'Failed to create to-do. Please try again.')
         return
       }
       setTodos((prev) => [...prev, todo])
-      setShowPartnerSelector(false)
+      setShowShareSelector(false)
       setPendingTodoContent('')
     } catch (error) {
       console.error('Error creating todo:', error)
@@ -121,7 +128,11 @@ export default function TodosPage() {
   }
 
   const displayedTodos = partnerId
-    ? todos.filter((todo) => todo.partner_id === partnerId || todo.user_id === partnerId)
+    ? todos.filter(
+        (todo) =>
+          !todo.group_id &&
+          (todo.partner_id === partnerId || todo.user_id === partnerId)
+      )
     : todos
 
   if (loading) {
@@ -200,6 +211,7 @@ export default function TodosPage() {
         <TodoWidget
           todos={displayedTodos}
           partners={partners}
+          groups={groups}
           creating={creatingTodo}
           actionIds={todoActionIds}
           error={todoError}
@@ -209,8 +221,8 @@ export default function TodosPage() {
         />
       </main>
 
-      {/* Partner Selector Modal */}
-      {showPartnerSelector && (
+      {/* Share Selector Modal */}
+      {showShareSelector && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md border border-slate-600/50">
             <div className="p-6">
@@ -220,7 +232,7 @@ export default function TodosPage() {
                 </h3>
                 <button
                   onClick={() => {
-                    setShowPartnerSelector(false)
+                    setShowShareSelector(false)
                     setPendingTodoContent('')
                   }}
                   className="text-slate-400 hover:text-white text-2xl transition-colors"
@@ -230,47 +242,86 @@ export default function TodosPage() {
                 </button>
               </div>
 
-              {partners.length === 0 ? (
-                <div className="text-center py-4">
-                  <p className="text-sm text-slate-400 mb-4">
-                    No partners yet. Add a partner first to create shared to-dos.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setShowPartnerSelector(false)
-                      navigate('/app/topics')
-                    }}
-                    className="text-indigo-400 hover:text-indigo-300 underline text-sm"
-                  >
-                    Go to Dashboard →
-                  </button>
+              <div className="space-y-6">
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-200 mb-3">Partners</h4>
+                  {partners.length === 0 ? (
+                    <div className="text-center py-3">
+                      <p className="text-sm text-slate-400">
+                        No partners yet. Link a partner to share to-dos.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setShowShareSelector(false)
+                          navigate('/app/topics')
+                        }}
+                        className="text-indigo-400 hover:text-indigo-300 underline text-sm mt-2"
+                      >
+                        Go to Dashboard →
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {partners.map((partner) => (
+                        <button
+                          key={partner.id}
+                          onClick={() => handleCreateTodo(pendingTodoContent, partner.id)}
+                          className="w-full p-4 glass backdrop-blur-xl border border-slate-600/50 rounded-xl hover:border-indigo-500/50 transition-all text-left group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                              {(partner.username || partner.email || '?')[0].toUpperCase()}
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium text-white group-hover:text-indigo-200 transition-colors">
+                                {partner.username || partner.email}
+                              </p>
+                              <p className="text-sm text-slate-400">Create shared to-do</p>
+                            </div>
+                            <svg className="w-5 h-5 text-slate-400 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  {partners.map((partner) => (
-                    <button
-                      key={partner.id}
-                      onClick={() => handleCreateTodo(pendingTodoContent, partner.id)}
-                      className="w-full p-4 glass backdrop-blur-xl border border-slate-600/50 rounded-xl hover:border-indigo-500/50 transition-all text-left group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold">
-                          {(partner.username || partner.email || '?')[0].toUpperCase()}
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-white group-hover:text-indigo-200 transition-colors">
-                            {partner.username || partner.email}
-                          </p>
-                          <p className="text-sm text-slate-400">Create shared to-do</p>
-                        </div>
-                        <svg className="w-5 h-5 text-slate-400 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </button>
-                  ))}
+
+                <div className="pt-4 border-t border-slate-700/60">
+                  <h4 className="text-sm font-semibold text-slate-200 mb-3">Groups</h4>
+                  {groups.length === 0 ? (
+                    <div className="text-sm text-slate-400">
+                      No groups yet. Create a group on your dashboard to share with more people.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {groups.map((group) => (
+                        <button
+                          key={group.id}
+                          onClick={() => handleCreateTodo(pendingTodoContent, undefined, group.id)}
+                          className="w-full p-4 glass backdrop-blur-xl border border-purple-500/40 rounded-xl hover:border-purple-400/60 transition-all text-left group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold">
+                              {(group.name || '?')[0].toUpperCase()}
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium text-white group-hover:text-purple-200 transition-colors">
+                                {group.name}
+                              </p>
+                              <p className="text-sm text-slate-400">Share with group members</p>
+                            </div>
+                            <svg className="w-5 h-5 text-slate-400 group-hover:text-purple-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>

@@ -1,29 +1,43 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
-import { getAllNotes, createNote, updateNote, deleteNote, getPartners } from '../lib/api'
-import type { Note, Partner } from '../types'
+import { getAllNotes, createNote, updateNote, deleteNote, getPartners, getGroups } from '../lib/api'
+import type { Note, Partner, Group } from '../types'
 import { signOut } from '../lib/auth'
+
+type EnhancedNote = Note & {
+  creator_username?: string | null
+  partners?: string[]
+  shared_partner_id?: string | null
+  group_name?: string | null
+}
 
 export default function NotesPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { partnerId } = useParams<{ partnerId?: string }>()
-  const [notes, setNotes] = useState<Array<Note & { creator_username?: string | null; partners?: string[] }>>([])
+  const [notes, setNotes] = useState<EnhancedNote[]>([])
   const [partners, setPartners] = useState<Partner[]>([])
-  const [selectedNote, setSelectedNote] = useState<(Note & { creator_username?: string | null; partners?: string[] }) | null>(null)
-  const [showPartnerSelector, setShowPartnerSelector] = useState(false)
+  const [groups, setGroups] = useState<Group[]>([])
+  const [selectedNote, setSelectedNote] = useState<EnhancedNote | null>(null)
+  const [showShareSelector, setShowShareSelector] = useState(false)
   const [loading, setLoading] = useState(true)
   const [noteTitle, setNoteTitle] = useState('')
   const [noteContent, setNoteContent] = useState('')
   const [saving, setSaving] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
+  const groupLookup = useMemo(() => {
+    const map = new Map<string, string>()
+    groups.forEach((group) => map.set(group.id, group.name))
+    return map
+  }, [groups])
 
   useEffect(() => {
     if (user) {
       loadNotes()
       loadPartners()
+      loadGroups()
     }
   }, [user, partnerId])
 
@@ -43,6 +57,12 @@ export default function NotesPage() {
     if (!user) return
     const data = await getPartners(user.id)
     setPartners(data)
+  }
+
+  const loadGroups = async () => {
+    if (!user) return
+    const data = await getGroups(user.id)
+    setGroups(data)
   }
 
   const loadNotes = async () => {
@@ -91,23 +111,28 @@ export default function NotesPage() {
     setShowDiscardConfirm(false)
   }
 
-  const handleCreateNote = async (targetPartnerId?: string) => {
+  const handleCreateNote = async (targetPartnerId?: string | null, targetGroupId?: string | null) => {
     if (!user) return
-    
-    // If no partnerId in URL and no targetPartnerId provided, show partner selector
-    if (!partnerId && !targetPartnerId) {
-      setShowPartnerSelector(true)
+
+    if (partnerId) {
+      const note = await createNote('Untitled Note', '', user.id, partnerId)
+      if (note) {
+        await loadNotes()
+        setSelectedNote(note as EnhancedNote)
+      }
       return
     }
 
-    const partnerToUse = targetPartnerId || partnerId
-    if (!partnerToUse) return
+    if (!targetPartnerId && !targetGroupId) {
+      setShowShareSelector(true)
+      return
+    }
 
-    const note = await createNote('Untitled Note', '', user.id, partnerToUse)
+    const note = await createNote('Untitled Note', '', user.id, targetPartnerId ?? null, targetGroupId ?? null)
     if (note) {
       await loadNotes()
-      setSelectedNote(note)
-      setShowPartnerSelector(false)
+      setSelectedNote(note as EnhancedNote)
+      setShowShareSelector(false)
     }
   }
 
@@ -240,10 +265,18 @@ export default function NotesPage() {
             ) : (
               <div className="p-2">
                 {notes.map((note) => (
-                  <button
+                  <div
                     key={note.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setSelectedNote(note)}
-                    className={`w-full text-left p-3 rounded-xl mb-2 transition-all card-hover ${
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setSelectedNote(note)
+                      }
+                    }}
+                    className={`w-full text-left p-3 rounded-xl mb-2 transition-all card-hover cursor-pointer ${
                       selectedNote?.id === note.id
                         ? 'bg-indigo-500/20 border border-indigo-400/50 shadow-lg shadow-indigo-500/20'
                         : 'hover:bg-slate-700/30 border border-transparent'
@@ -273,12 +306,25 @@ export default function NotesPage() {
                               year: 'numeric'
                             })}
                           </p>
-                          {note.partners && note.partners.length > 0 && (
-                            <p className={`text-xs truncate ${
-                              selectedNote?.id === note.id ? 'text-indigo-400' : 'text-slate-500'
-                            }`}>
-                              {note.partners.join(' & ')}
+                          {note.group_id ? (
+                            <p
+                              className={`text-xs truncate ${
+                                selectedNote?.id === note.id ? 'text-indigo-400' : 'text-slate-500'
+                              }`}
+                            >
+                              Group · {note.group_name || groupLookup.get(note.group_id) || 'Shared'}
                             </p>
+                          ) : (
+                            note.partners &&
+                            note.partners.length > 0 && (
+                              <p
+                                className={`text-xs truncate ${
+                                  selectedNote?.id === note.id ? 'text-indigo-400' : 'text-slate-500'
+                                }`}
+                              >
+                                {note.partners.join(' & ')}
+                              </p>
+                            )
                           )}
                         </div>
                       </div>
@@ -297,7 +343,7 @@ export default function NotesPage() {
                         </svg>
                       </button>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -351,10 +397,17 @@ export default function NotesPage() {
                     placeholder="Note title"
                     className="flex-1 min-w-[200px] text-xl font-semibold border-none focus:outline-none focus:ring-0 bg-transparent text-white placeholder-slate-500"
                   />
-                  {selectedNote.partners && selectedNote.partners.length > 0 && (
+                  {selectedNote.group_id ? (
                     <span className="text-sm text-slate-400 whitespace-nowrap">
-                      {selectedNote.partners.join(' & ')}
+                      Group · {selectedNote.group_name || groupLookup.get(selectedNote.group_id) || 'Shared'}
                     </span>
+                  ) : (
+                    selectedNote.partners &&
+                    selectedNote.partners.length > 0 && (
+                      <span className="text-sm text-slate-400 whitespace-nowrap">
+                        {selectedNote.partners.join(' & ')}
+                      </span>
+                    )
                   )}
                 </div>
               </div>
@@ -408,8 +461,8 @@ export default function NotesPage() {
         </div>
       )}
 
-      {/* Partner Selector Modal */}
-      {showPartnerSelector && (
+      {/* Share Selector Modal */}
+      {showShareSelector && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md border border-slate-600/50">
             <div className="p-6">
@@ -418,7 +471,7 @@ export default function NotesPage() {
                   Share Note With
                 </h3>
                 <button
-                  onClick={() => setShowPartnerSelector(false)}
+                  onClick={() => setShowShareSelector(false)}
                   className="text-slate-400 hover:text-white text-2xl transition-colors"
                   aria-label="Close"
                 >
@@ -426,47 +479,86 @@ export default function NotesPage() {
                 </button>
               </div>
 
-              {partners.length === 0 ? (
-                <div className="text-center py-4">
-                  <p className="text-sm text-slate-400 mb-4">
-                    No partners yet. Add a partner first to create shared notes.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setShowPartnerSelector(false)
-                      navigate('/app/topics')
-                    }}
-                    className="text-indigo-400 hover:text-indigo-300 underline text-sm"
-                  >
-                    Go to Dashboard →
-                  </button>
+              <div className="space-y-6">
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-200 mb-3">Partners</h4>
+                  {partners.length === 0 ? (
+                    <div className="text-center py-3">
+                      <p className="text-sm text-slate-400">
+                        No partners yet. Link a partner to share notes.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setShowShareSelector(false)
+                          navigate('/app/topics')
+                        }}
+                        className="text-indigo-400 hover:text-indigo-300 underline text-sm mt-2"
+                      >
+                        Go to Dashboard →
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {partners.map((partner) => (
+                        <button
+                          key={partner.id}
+                          onClick={() => handleCreateNote(partner.id)}
+                          className="w-full p-4 glass backdrop-blur-xl border border-slate-600/50 rounded-xl hover:border-indigo-500/50 transition-all text-left group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                              {(partner.username || partner.email || '?')[0].toUpperCase()}
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium text-white group-hover:text-indigo-200 transition-colors">
+                                {partner.username || partner.email}
+                              </p>
+                              <p className="text-sm text-slate-400">Create shared note</p>
+                            </div>
+                            <svg className="w-5 h-5 text-slate-400 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  {partners.map((partner) => (
-                    <button
-                      key={partner.id}
-                      onClick={() => handleCreateNote(partner.id)}
-                      className="w-full p-4 glass backdrop-blur-xl border border-slate-600/50 rounded-xl hover:border-indigo-500/50 transition-all text-left group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold">
-                          {(partner.username || partner.email || '?')[0].toUpperCase()}
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-white group-hover:text-indigo-200 transition-colors">
-                            {partner.username || partner.email}
-                          </p>
-                          <p className="text-sm text-slate-400">Create shared note</p>
-                        </div>
-                        <svg className="w-5 h-5 text-slate-400 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </button>
-                  ))}
+
+                <div className="pt-4 border-t border-slate-700/60">
+                  <h4 className="text-sm font-semibold text-slate-200 mb-3">Groups</h4>
+                  {groups.length === 0 ? (
+                    <div className="text-sm text-slate-400">
+                      No groups yet. Create a group on your dashboard to share notes with everyone.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {groups.map((group) => (
+                        <button
+                          key={group.id}
+                          onClick={() => handleCreateNote(null, group.id)}
+                          className="w-full p-4 glass backdrop-blur-xl border border-purple-500/40 rounded-xl hover:border-purple-400/60 transition-all text-left group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold">
+                              {(group.name || '?')[0].toUpperCase()}
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium text-white group-hover:text-purple-200 transition-colors">
+                                {group.name}
+                              </p>
+                              <p className="text-sm text-slate-400">Share with group members</p>
+                            </div>
+                            <svg className="w-5 h-5 text-slate-400 group-hover:text-purple-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>

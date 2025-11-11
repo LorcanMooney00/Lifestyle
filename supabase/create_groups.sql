@@ -250,6 +250,7 @@ BEGIN
       ON public.notes FOR UPDATE
       USING (
         created_by = auth.uid() OR
+        public.is_group_member(notes.group_id) OR
         EXISTS (
           SELECT 1 FROM public.topics
           WHERE topics.id = notes.topic_id
@@ -269,6 +270,7 @@ BEGIN
       ON public.notes FOR DELETE
       USING (
         created_by = auth.uid() OR
+        public.is_group_member(notes.group_id) OR
         EXISTS (
           SELECT 1 FROM public.topics
           WHERE topics.id = notes.topic_id
@@ -298,32 +300,37 @@ BEGIN
     EXECUTE 'DROP POLICY IF EXISTS "Users can update shared todos" ON public.todos';
     EXECUTE 'DROP POLICY IF EXISTS "Users can delete shared todos" ON public.todos';
     
-    -- Create comprehensive policies (simplified to avoid recursion)
+    -- Create comprehensive policies for user, partner, and group sharing
     EXECUTE 'CREATE POLICY "Users can view their todos"
       ON public.todos FOR SELECT
       USING (
-        user_id = auth.uid() OR
-        partner_id = auth.uid()
+        user_id = auth.uid()
+        OR partner_id = auth.uid()
+        OR public.is_group_member(group_id)
       )';
 
     EXECUTE 'CREATE POLICY "Users can insert todos"
       ON public.todos FOR INSERT
       WITH CHECK (
         user_id = auth.uid()
+        AND (group_id IS NULL OR public.is_group_member(group_id))
+        AND (partner_id IS NULL OR group_id IS NULL)
       )';
       
     EXECUTE 'CREATE POLICY "Users can update shared todos"
       ON public.todos FOR UPDATE
       USING (
-        user_id = auth.uid() OR
-        partner_id = auth.uid()
+        user_id = auth.uid()
+        OR partner_id = auth.uid()
+        OR public.is_group_member(group_id)
       )';
       
     EXECUTE 'CREATE POLICY "Users can delete shared todos"
       ON public.todos FOR DELETE
       USING (
-        user_id = auth.uid() OR
-        partner_id = auth.uid()
+        user_id = auth.uid()
+        OR partner_id = auth.uid()
+        OR public.is_group_member(group_id)
       )';
   END IF;
 END $$;
@@ -340,32 +347,37 @@ BEGIN
     EXECUTE 'DROP POLICY IF EXISTS "Users can update shopping items" ON public.shopping_items';
     EXECUTE 'DROP POLICY IF EXISTS "Users can delete shopping items" ON public.shopping_items';
     
-    -- Create comprehensive policies (simplified to avoid recursion)
+    -- Create comprehensive policies for user, partner, and group sharing
     EXECUTE 'CREATE POLICY "Users can view shopping items"
       ON public.shopping_items FOR SELECT
       USING (
-        user_id = auth.uid() OR
-        partner_id = auth.uid()
+        user_id = auth.uid()
+        OR partner_id = auth.uid()
+        OR public.is_group_member(group_id)
       )';
 
     EXECUTE 'CREATE POLICY "Users can insert shopping items"
       ON public.shopping_items FOR INSERT
       WITH CHECK (
         user_id = auth.uid()
+        AND (group_id IS NULL OR public.is_group_member(group_id))
+        AND (partner_id IS NULL OR group_id IS NULL)
       )';
       
     EXECUTE 'CREATE POLICY "Users can update shopping items"
       ON public.shopping_items FOR UPDATE
       USING (
-        user_id = auth.uid() OR
-        partner_id = auth.uid()
+        user_id = auth.uid()
+        OR partner_id = auth.uid()
+        OR public.is_group_member(group_id)
       )';
       
     EXECUTE 'CREATE POLICY "Users can delete shopping items"
       ON public.shopping_items FOR DELETE
       USING (
-        user_id = auth.uid() OR
-        partner_id = auth.uid()
+        user_id = auth.uid()
+        OR partner_id = auth.uid()
+        OR public.is_group_member(group_id)
       )';
   END IF;
 END $$;

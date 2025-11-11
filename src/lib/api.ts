@@ -16,6 +16,20 @@ import type {
   GroupMember,
 } from '../types'
 
+async function getGroupIdsForUser(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('group_members')
+    .select('group_id')
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('Error fetching group memberships:', error)
+    return []
+  }
+
+  return (data || []).map((row: any) => row.group_id)
+}
+
 export async function getTopics(): Promise<Topic[]> {
   // RLS policies will automatically filter to topics user has access to
   // (owned, member of, or partner's topics)
@@ -67,15 +81,26 @@ export async function createTopic(name: string, ownerId: string): Promise<{ topi
   return { topic: data, error: null }
 }
 
-export async function getAllNotes(userId: string, filterPartnerId?: string): Promise<Array<Note & { creator_username?: string | null; partners?: string[] }>> {
-  // RLS policies will automatically filter to notes from topics user has access to
-  // (owned, member of, or partner's topics)
-  // First get all notes with their topics
+export async function getAllNotes(
+  userId: string,
+  filterPartnerId?: string,
+  filterGroupId?: string
+): Promise<
+  Array<
+    Note & {
+      creator_username?: string | null
+      partners?: string[]
+      shared_partner_id?: string | null
+      group_name?: string | null
+    }
+  >
+> {
   const { data: notesData, error: notesError } = await supabase
     .from('notes')
     .select(`
       *,
-      topic:topics!inner(id, name, owner_id)
+      topic:topics!inner(id, name, owner_id),
+      group:groups(id, name)
     `)
     .order('updated_at', { ascending: false })
 
@@ -86,23 +111,19 @@ export async function getAllNotes(userId: string, filterPartnerId?: string): Pro
 
   if (!notesData || notesData.length === 0) return []
 
-  // Get unique creator IDs and topic owner IDs
   const creatorIds = [...new Set(notesData.map((note: any) => note.created_by))]
   const topicOwnerIds = [...new Set(notesData.map((note: any) => note.topic?.owner_id).filter(Boolean))]
 
-  // Get all user IDs we need usernames for
   const allUserIds = [...new Set([...creatorIds, ...topicOwnerIds, userId])]
   if (filterPartnerId) {
     allUserIds.push(filterPartnerId)
   }
 
-  // Fetch usernames for all users
   const { data: profilesData } = await supabase
     .from('user_profiles')
     .select('id, username')
     .in('id', allUserIds)
 
-  // Create a map of user_id -> username
   const usernameMap = new Map<string, string | null>()
   if (profilesData) {
     profilesData.forEach((profile: any) => {
@@ -110,123 +131,132 @@ export async function getAllNotes(userId: string, filterPartnerId?: string): Pro
     })
   }
 
-  // Get current user's partners
   const partners = await getPartners(userId)
-  const partnerIds = partners.map(p => p.id)
-  
-  // If filtering by partner, get the partner's username to match topic names
+  const partnerIds = partners.map((p) => p.id)
+
+  const groupIds = await getGroupIdsForUser(userId)
+  const groupIdSet = new Set(groupIds)
+  const groupNameMap = new Map<string, string>()
+  notesData.forEach((note: any) => {
+    if (note.group_id && note.group?.name) {
+      groupNameMap.set(note.group_id, note.group.name)
+    }
+  })
+
   let filterPartnerUsername: string | null = null
   if (filterPartnerId) {
     filterPartnerUsername = usernameMap.get(filterPartnerId) || null
   }
 
-  // Map notes to include creator_username and partners
-  const mappedNotes = notesData.map((note: any) => {
+  let mappedNotes = notesData.map((note: any) => {
     const topicOwnerId = note.topic?.owner_id
     const topicName = note.topic?.name || ''
     const creatorId = note.created_by
-    
-    // Determine the two people involved in this note
+
     const currentUserUsername = usernameMap.get(userId) || 'You'
     let otherPersonUsername: string | null = null
     let otherPersonId: string | null = null
-    
-    // Strategy: Use topic name to identify partner if it matches "Notes with [Partner Name]"
+
+    if (note.group_id) {
+      const groupName = groupNameMap.get(note.group_id) || note.group?.name || 'Group'
+      return {
+        ...(note as Note),
+        creator_username: usernameMap.get(creatorId) || null,
+        partners: [`Group · ${groupName}`],
+        shared_partner_id: null,
+        group_name: groupName,
+      }
+    }
+
     if (topicName.startsWith('Notes with ')) {
       const partnerNameFromTopic = topicName.replace('Notes with ', '')
-      const partnerFromTopic = partners.find(p => p.username === partnerNameFromTopic)
+      const partnerFromTopic = partners.find((p) => p.username === partnerNameFromTopic)
       if (partnerFromTopic) {
         otherPersonUsername = partnerFromTopic.username || null
         otherPersonId = partnerFromTopic.id
       }
     }
-    
-    // If topic name didn't help, use creator/topic owner logic
+
     if (!otherPersonUsername) {
-      // If creator is a partner, that's definitely the other person
       if (creatorId !== userId && partnerIds.includes(creatorId)) {
         otherPersonUsername = usernameMap.get(creatorId) || null
         otherPersonId = creatorId
-      }
-      // If creator is current user, find which partner is involved
-      else if (creatorId === userId) {
-        // If topic owner is a partner, that's the other person
+      } else if (creatorId === userId) {
         if (topicOwnerId && topicOwnerId !== userId && partnerIds.includes(topicOwnerId)) {
           otherPersonUsername = usernameMap.get(topicOwnerId) || null
           otherPersonId = topicOwnerId
-        }
-        // If current user owns topic, we need to find which partner created notes in this topic
-        else if (topicOwnerId === userId) {
-          // Find all creators of notes in this same topic
+        } else if (topicOwnerId === userId) {
           const topicNotes = notesData.filter((n: any) => n.topic_id === note.topic_id)
           const otherCreators = topicNotes
             .map((n: any) => n.created_by)
             .filter((id: string) => id !== userId && partnerIds.includes(id))
-          
+
           if (otherCreators.length > 0) {
-            // Use the first partner who created a note in this topic
             const otherCreatorId = otherCreators[0]
             otherPersonUsername = usernameMap.get(otherCreatorId) || null
             otherPersonId = otherCreatorId
           } else if (partners.length > 0) {
-            // Fallback: if no partner has created notes yet, use first partner
             otherPersonUsername = partners[0].username || null
             otherPersonId = partners[0].id
           }
         }
       }
     }
-    
-    // Only show exactly 2 people: current user and the other person
+
     const partnersList: string[] = []
     if (otherPersonUsername) {
-      // Always show "You" first, then the partner
       partnersList.push('You', otherPersonUsername)
     } else {
-      // Only current user (shouldn't happen in shared notes, but handle it)
       partnersList.push(currentUserUsername)
     }
-    
+
     return {
-      ...note,
+      ...(note as Note),
       creator_username: usernameMap.get(creatorId) || null,
       partners: partnersList,
-      // Store the other person's ID for filtering
-      otherPersonId: otherPersonId,
+      shared_partner_id: otherPersonId,
+      group_name: null,
     }
   })
 
-  // If filtering by partner, only return notes involving that partner
+  if (filterGroupId) {
+    mappedNotes = mappedNotes.filter((note) => note.group_id === filterGroupId)
+  }
+
   if (filterPartnerId) {
-    // Get all topics that the partner is a member of
     const { data: partnerTopicMembers } = await supabase
       .from('topic_members')
       .select('topic_id')
       .eq('user_id', filterPartnerId)
-    
+
     const partnerTopicIds = partnerTopicMembers?.map((tm: any) => tm.topic_id) || []
-    
-    return mappedNotes.filter((note: any) => {
+
+    mappedNotes = mappedNotes.filter((note: any) => {
+      if (note.group_id) return false
+
       const topicId = note.topic_id
       const topicName = note.topic?.name || ''
       const topicOwnerId = note.topic?.owner_id
       const creatorId = note.created_by
-      
-      // Check if the note involves the specific partner:
-      // 1. Partner created the note
-      // 2. Partner owns the topic
-      // 3. Partner is a member of the topic
-      // 4. Partner is identified as the "other person" in the note
-      // 5. Topic name matches "Notes with [Partner Name]" (most reliable for partner-specific topics)
+
       const topicNameMatches = filterPartnerUsername && topicName === `Notes with ${filterPartnerUsername}`
-      
-      return creatorId === filterPartnerId || 
-             topicOwnerId === filterPartnerId ||
-             partnerTopicIds.includes(topicId) ||
-             note.otherPersonId === filterPartnerId ||
-             topicNameMatches === true
+
+      return (
+        creatorId === filterPartnerId ||
+        topicOwnerId === filterPartnerId ||
+        partnerTopicIds.includes(topicId) ||
+        note.shared_partner_id === filterPartnerId ||
+        topicNameMatches === true
+      )
     })
   }
+
+  mappedNotes = mappedNotes.filter((note) => {
+    if (note.group_id) {
+      return groupIdSet.has(note.group_id)
+    }
+    return note.created_by === userId || note.shared_partner_id === userId || partnerIds.includes(note.created_by)
+  })
 
   return mappedNotes
 }
@@ -250,8 +280,14 @@ export async function createNote(
   title: string | null,
   content: string | null,
   createdBy: string,
-  partnerId?: string
+  partnerId?: string | null,
+  groupId?: string | null
 ): Promise<Note | null> {
+  if (partnerId && groupId) {
+    console.warn('Cannot create note with both partnerId and groupId. Using partnerId.')
+    groupId = null
+  }
+
   let defaultTopic: Topic | null = null
 
   // If creating a note for a specific partner, find or create a topic for that partner
@@ -274,6 +310,17 @@ export async function createNote(
       if (defaultTopic && partnerId) {
         await addTopicMember(defaultTopic.id, partnerId, 'editor')
       }
+    }
+  } else if (groupId) {
+    const group = await getGroup(groupId)
+    const groupName = group?.name || 'Group'
+    const topics = await getTopics()
+    const topicName = `Group Notes - ${groupName}`
+    defaultTopic = topics.find((t) => t.name === topicName) || null
+
+    if (!defaultTopic) {
+      const result = await createTopic(topicName, createdBy)
+      defaultTopic = result.topic
     }
   } else {
     // Get or create a default topic for the user (general notes)
@@ -299,6 +346,7 @@ export async function createNote(
       title,
       content,
       created_by: createdBy,
+      group_id: groupId ?? null,
     })
     .select()
     .single()
@@ -1039,11 +1087,14 @@ export async function deleteEvent(eventId: string): Promise<boolean> {
 // TODOS API
 // ============================================
 
-export async function getTodos(userId: string): Promise<Todo[]> {
+export async function getTodos(
+  userId: string,
+  filterPartnerId?: string,
+  filterGroupId?: string
+): Promise<Todo[]> {
   const { data, error } = await supabase
     .from('todos')
     .select('*')
-    .or(`user_id.eq.${userId},partner_id.eq.${userId}`)
     .order('created_at', { ascending: true })
 
   if (error) {
@@ -1051,20 +1102,52 @@ export async function getTodos(userId: string): Promise<Todo[]> {
     return []
   }
 
-  return (data as Todo[]) || []
+  const groupIds = await getGroupIdsForUser(userId)
+  const groupSet = new Set(groupIds)
+
+  let todos = (data as Todo[]) || []
+
+  todos = todos.filter((todo) => {
+    if (todo.group_id) {
+      return groupSet.has(todo.group_id)
+    }
+    return todo.user_id === userId || todo.partner_id === userId
+  })
+
+  if (filterGroupId) {
+    todos = todos.filter((todo) => todo.group_id === filterGroupId)
+  }
+
+  if (filterPartnerId) {
+    todos = todos.filter((todo) => {
+      if (todo.group_id) return false
+      const isCreatorWithPartner = todo.user_id === userId && todo.partner_id === filterPartnerId
+      const isPartnerCreator = todo.user_id === filterPartnerId && todo.partner_id === userId
+      return isCreatorWithPartner || isPartnerCreator
+    })
+  }
+
+  return todos
 }
 
 export async function createTodo(
   userId: string,
   content: string,
-  partnerId: string | null
+  partnerId?: string | null,
+  groupId?: string | null
 ): Promise<{ todo: Todo | null; error: string | null }> {
+  if (partnerId && groupId) {
+    console.warn('Cannot create todo with both partner and group. Using partner.')
+    groupId = null
+  }
+
   const { data, error } = await supabase
     .from('todos')
     .insert({
       user_id: userId,
       content,
-      partner_id: partnerId,
+      partner_id: partnerId ?? null,
+      group_id: groupId ?? null,
     })
     .select()
     .single()
@@ -1127,11 +1210,14 @@ export async function deleteTodo(todoId: string): Promise<{ success: boolean; er
 // SHOPPING LIST API
 // ============================================
 
-export async function getShoppingItems(userId: string, filterPartnerId?: string | null): Promise<ShoppingItem[]> {
+export async function getShoppingItems(
+  userId: string,
+  filterPartnerId?: string | null,
+  filterGroupId?: string | null
+): Promise<ShoppingItem[]> {
   const { data, error } = await supabase
     .from('shopping_list_items')
     .select('*')
-    .or(`user_id.eq.${userId},partner_id.eq.${userId}`)
     .order('created_at', { ascending: true })
 
   if (error) {
@@ -1139,13 +1225,28 @@ export async function getShoppingItems(userId: string, filterPartnerId?: string 
     return []
   }
 
+  const groupIds = await getGroupIdsForUser(userId)
+  const groupSet = new Set(groupIds)
+
   let items = (data as ShoppingItem[]) || []
+
+  items = items.filter((item) => {
+    if (item.group_id) {
+      return groupSet.has(item.group_id)
+    }
+    return item.user_id === userId || item.partner_id === userId
+  })
+
+  if (filterGroupId) {
+    items = items.filter((item) => item.group_id === filterGroupId)
+  }
 
   if (filterPartnerId) {
     items = items.filter(
       (item) =>
-        item.partner_id === filterPartnerId ||
-        item.user_id === filterPartnerId
+        !item.group_id &&
+        (item.partner_id === filterPartnerId ||
+          (item.user_id === filterPartnerId && item.partner_id === userId))
     )
   }
 
@@ -1157,14 +1258,21 @@ export async function createShoppingItem(
   itemName: string,
   quantity?: string | null,
   partnerId?: string | null,
-  notes?: string | null
+  notes?: string | null,
+  groupId?: string | null
 ): Promise<{ item: ShoppingItem | null; error: string | null }> {
+  if (partnerId && groupId) {
+    console.warn('Cannot create shopping item with both partner and group. Using partner.')
+    groupId = null
+  }
+
   const payload = {
     user_id: userId,
     item_name: itemName,
     quantity: quantity ?? null,
     partner_id: partnerId ?? null,
     notes: notes ?? null,
+    group_id: groupId ?? null,
   }
 
   const { data, error } = await supabase

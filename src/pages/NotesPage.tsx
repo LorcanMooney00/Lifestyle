@@ -54,10 +54,8 @@ export default function NotesPage() {
     console.log('Partner ID filter:', partnerId)
     setNotes(data)
     setLoading(false)
-    // Only auto-select first note if viewing a specific partner's notes
-    if (partnerId && data.length > 0 && !selectedNote) {
-      setSelectedNote(data[0])
-    } else if (data.length === 0) {
+    // Don't auto-select any note - let the user choose which one to open
+    if (data.length === 0) {
       setSelectedNote(null)
     }
   }

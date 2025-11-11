@@ -1161,23 +1161,23 @@ export default function TopicsPage() {
                   <div
                     key={partner.id}
                     onClick={() => navigate(`/app/partner/${partner.id}`)}
-                    className="glass backdrop-blur-xl border border-slate-600/50 p-5 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 group relative cursor-pointer hover:scale-[1.02] hover:border-indigo-500/50"
+                    className="glass backdrop-blur-xl border border-slate-600/50 p-4 py-3 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 group relative cursor-pointer hover:scale-[1.02] hover:border-indigo-500/50"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
                     {/* Unlink Button - Top Right */}
                     <button
                       onClick={(e) => handleUnlinkPartner(partner, e)}
-                      className="absolute top-3 right-3 z-20 p-1.5 rounded-lg bg-red-600/90 hover:bg-red-500 active:bg-red-700 text-white transition-all shadow-lg hover:shadow-xl opacity-0 group-hover:opacity-100 backdrop-blur-sm"
+                      className="absolute top-2 right-2 z-20 p-1 rounded-lg bg-red-600/90 hover:bg-red-500 active:bg-red-700 text-white transition-all shadow-lg hover:shadow-xl opacity-0 group-hover:opacity-100 backdrop-blur-sm"
                       title="Unlink partner"
                       aria-label="Unlink partner"
                     >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
-                    <div className="relative z-10 flex flex-col items-center text-center py-2">
+                    <div className="relative z-10 flex flex-col items-center text-center">
                       {partner.profilePictureUrl ? (
-                        <div className="w-20 h-20 mb-3 rounded-full overflow-hidden border-2 border-indigo-500/50 shadow-lg group-hover:border-indigo-400/70 transition-colors">
+                        <div className="w-16 h-16 mb-2 rounded-full overflow-hidden border-2 border-indigo-500/50 shadow-lg group-hover:border-indigo-400/70 transition-colors">
                           <img
                             src={partner.profilePictureUrl}
                             alt={partner.username}
@@ -1185,16 +1185,18 @@ export default function TopicsPage() {
                           />
                         </div>
                       ) : (
-                        <div className="w-20 h-20 mb-3 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center border-2 border-indigo-500/30">
-                          <span className="text-4xl">👤</span>
+                        <div className="w-16 h-16 mb-2 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center border-2 border-indigo-500/30">
+                          <span className="text-3xl">👤</span>
                         </div>
                       )}
-                      <h4 className="text-base font-bold mb-1.5 text-white group-hover:text-indigo-200 transition-colors line-clamp-1 w-full px-1">
-                        {partner.username}
+                      <h4 className="text-sm font-bold mb-1 text-white group-hover:text-indigo-200 transition-colors line-clamp-1 w-full px-1">
+                        {partner.username || partner.email}
                       </h4>
-                      <p className="text-xs text-slate-400 mb-3 line-clamp-1 w-full px-1">{partner.email}</p>
-                      <div className="flex items-center gap-1.5 text-indigo-300 font-medium text-xs group-hover:text-indigo-200 transition-colors bg-indigo-900/30 px-3 py-1.5 rounded-full">
-                        <span>View Dashboard</span>
+                      {!partner.username && (
+                        <div className="h-4"></div>
+                      )}
+                      <div className="flex items-center gap-1 text-indigo-300 font-medium text-xs group-hover:text-indigo-200 transition-colors">
+                        <span>View</span>
                         <span>→</span>
                       </div>
                     </div>
@@ -1203,18 +1205,18 @@ export default function TopicsPage() {
               {/* Add Partner Card */}
               <button
                 onClick={handleOpenAddPartner}
-                className="glass backdrop-blur-xl border-2 border-dashed border-indigo-500/40 p-5 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 group relative hover:border-indigo-400/60 hover:scale-[1.02]"
+                className="glass backdrop-blur-xl border-2 border-dashed border-indigo-500/40 p-4 py-3 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 group relative hover:border-indigo-400/60 hover:scale-[1.02]"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
-                <div className="relative z-10 flex flex-col items-center text-center py-2">
-                  <div className="w-20 h-20 mb-3 rounded-full bg-gradient-to-br from-indigo-600/20 to-purple-600/20 flex items-center justify-center group-hover:from-indigo-600/30 group-hover:to-purple-600/30 transition-all border-2 border-indigo-500/30">
-                    <span className="text-4xl">➕</span>
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+                <div className="relative z-10 flex flex-col items-center text-center">
+                  <div className="w-16 h-16 mb-2 rounded-full bg-gradient-to-br from-indigo-600/20 to-purple-600/20 flex items-center justify-center group-hover:from-indigo-600/30 group-hover:to-purple-600/30 transition-all border-2 border-indigo-500/30">
+                    <span className="text-3xl">➕</span>
                   </div>
-                  <h4 className="text-base font-bold mb-1.5 text-indigo-200 group-hover:text-indigo-100 transition-colors">
+                  <h4 className="text-sm font-bold mb-0.5 text-indigo-200 group-hover:text-indigo-100 transition-colors">
                     Add Partner
                   </h4>
-                  <p className="text-xs text-slate-400 group-hover:text-slate-300 transition-colors mb-3">
-                    Link a new partner
+                  <p className="text-xs text-slate-500 group-hover:text-slate-400 transition-colors mb-2">
+                    Link new
                   </p>
                 </div>
               </button>

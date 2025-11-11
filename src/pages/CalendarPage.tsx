@@ -214,7 +214,7 @@ export default function CalendarPage() {
           }`}>
             {day}
           </div>
-          <div className="flex-1 flex flex-col gap-0.5 sm:gap-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
+          <div className="flex-1 flex flex-col gap-0.5 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
             {dayEvents.map((event) => (
               <div
                 key={event.id}
@@ -223,11 +223,11 @@ export default function CalendarPage() {
                   setSelectedEvent(event)
                 }}
                 className="text-[10px] sm:text-xs bg-gradient-to-r from-indigo-600 to-indigo-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md hover:from-indigo-500 hover:to-indigo-400 active:from-indigo-700 active:to-indigo-600 shadow-sm cursor-pointer transition-all truncate"
-                title={event.title + (event.event_time ? ` (${event.event_time})` : '') + (event.description ? ` - ${event.description}` : '')}
+                title={event.title + (event.event_time ? ` at ${event.event_time}` : '') + (event.description ? ` - ${event.description}` : '')}
               >
                 <span className="font-semibold leading-tight">
-                  {event.event_time && <span className="opacity-80 mr-1">{event.event_time}</span>}
                   {event.title}
+                  {event.event_time && <span className="opacity-80 ml-1 text-[9px] sm:text-[10px]">@ {event.event_time}</span>}
                 </span>
               </div>
             ))}
@@ -307,7 +307,7 @@ export default function CalendarPage() {
           <div className="overflow-x-auto -mx-2 sm:mx-0">
             <div className="min-w-[560px] sm:min-w-0">
               {/* Day Names Header */}
-              <div className="grid grid-cols-7 gap-2.5 sm:gap-3 mb-3 px-2 sm:px-0">
+              <div className="grid grid-cols-7 gap-1.5 sm:gap-2 mb-3 px-2 sm:px-0">
                 {dayNames.map((day) => (
                   <div key={day} className="text-center text-xs sm:text-sm font-bold text-slate-300 py-2">
                     {day}
@@ -316,7 +316,7 @@ export default function CalendarPage() {
               </div>
 
               {/* Calendar Days */}
-              <div className="grid grid-cols-7 gap-2.5 sm:gap-3 px-2 sm:px-0">
+              <div className="grid grid-cols-7 gap-1.5 sm:gap-2 px-2 sm:px-0">
                 {renderCalendarDays()}
               </div>
             </div>

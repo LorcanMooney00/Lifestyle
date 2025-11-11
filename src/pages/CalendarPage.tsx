@@ -264,10 +264,10 @@ export default function CalendarPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 gap-3">
             <button
-              onClick={() => navigate('/app/topics')}
+              onClick={() => navigate(partnerId ? `/app/partner/${partnerId}` : '/app/topics')}
               className="text-slate-300 hover:text-white p-2 rounded-lg transition-all hover:bg-slate-700/50 active:scale-95 flex-shrink-0"
               aria-label="Home"
-              title="Dashboard"
+              title={partnerId ? "Partner Workspace" : "Dashboard"}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -276,25 +276,25 @@ export default function CalendarPage() {
             
             <div className="flex items-center gap-2 flex-1 min-w-0 overflow-x-auto scrollbar-thin px-2">
               <button
-                onClick={() => navigate('/app/calendar')}
+                onClick={() => navigate(partnerId ? `/app/partner/${partnerId}/calendar` : '/app/calendar')}
                 className="px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-sm font-medium whitespace-nowrap flex-shrink-0"
               >
                 📅 Calendar
               </button>
               <button
-                onClick={() => navigate('/app/notes')}
+                onClick={() => navigate(partnerId ? `/app/partner/${partnerId}/notes` : '/app/notes')}
                 className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
               >
                 📝 Notes
               </button>
               <button
-                onClick={() => navigate('/app/todos')}
+                onClick={() => navigate(partnerId ? `/app/partner/${partnerId}/todos` : '/app/todos')}
                 className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
               >
                 ✓ To-Do
               </button>
               <button
-                onClick={() => navigate('/app/shopping')}
+                onClick={() => navigate(partnerId ? `/app/partner/${partnerId}/shopping` : '/app/shopping')}
                 className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
               >
                 🛒 Shopping
@@ -326,31 +326,29 @@ export default function CalendarPage() {
       <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8">
         <div className="glass backdrop-blur-sm rounded-2xl shadow-lg border border-slate-600/50">
           {/* Calendar Header */}
-          <div className="p-4 sm:p-6 border-b border-slate-600/50 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
-            <div className="flex items-center justify-between w-full sm:w-auto space-x-2 sm:space-x-4">
-              <button
-                onClick={goToPreviousMonth}
-                className="p-3 sm:p-2 hover:bg-slate-700/50 active:bg-slate-600 rounded-lg text-slate-300 hover:text-white text-xl sm:text-base min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center transition-all active:scale-95"
-                aria-label="Previous month"
-              >
-                ←
-              </button>
-              <h2 className="text-lg sm:text-2xl font-bold text-white text-center flex-1 sm:flex-none">
-                {monthNames[month]} {year}
-              </h2>
-              <button
-                onClick={goToNextMonth}
-                className="p-3 sm:p-2 hover:bg-slate-700/50 active:bg-slate-600 rounded-lg text-slate-300 hover:text-white text-xl sm:text-base min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center transition-all active:scale-95"
-                aria-label="Next month"
-              >
-                →
-              </button>
-            </div>
+          <div className="p-3 sm:p-4 border-b border-slate-600/50 flex items-center justify-between gap-2">
+            <button
+              onClick={goToPreviousMonth}
+              className="p-2 hover:bg-slate-700/50 active:bg-slate-600 rounded-lg text-slate-300 hover:text-white transition-all active:scale-95"
+              aria-label="Previous month"
+            >
+              ←
+            </button>
+            <h2 className="text-base sm:text-xl font-bold text-white text-center flex-1">
+              {monthNames[month]} {year}
+            </h2>
             <button
               onClick={goToToday}
-              className="w-full sm:w-auto px-6 py-3 sm:py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 active:bg-indigo-700 text-sm font-medium min-h-[44px] sm:min-h-0 transition-all shadow-lg hover:shadow-xl active:scale-95"
+              className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 active:bg-indigo-700 text-xs sm:text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
             >
               Today
+            </button>
+            <button
+              onClick={goToNextMonth}
+              className="p-2 hover:bg-slate-700/50 active:bg-slate-600 rounded-lg text-slate-300 hover:text-white transition-all active:scale-95"
+              aria-label="Next month"
+            >
+              →
             </button>
           </div>
 

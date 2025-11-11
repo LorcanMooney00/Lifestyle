@@ -161,21 +161,19 @@ export default function PartnerDashboardPage() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-20">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 pb-20">
         {/* Header Section */}
-        <div className="mb-8 sm:mb-10">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center">
-              <span className="text-2xl">🤝</span>
+        <div className="mb-4 sm:mb-6">
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center">
+              <span className="text-lg">🤝</span>
             </div>
-            <div>
-              <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
-                Shared Workspace
-              </h2>
-            </div>
+            <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
+              Shared Workspace
+            </h2>
           </div>
-          <p className="text-slate-400 text-sm sm:text-base ml-15">
-            Collaborate with <span className="text-slate-200 font-medium">{partnerUsername || partnerEmail}</span> on your shared apps
+          <p className="text-slate-400 text-xs sm:text-sm ml-10">
+            with <span className="text-slate-200 font-medium">{partnerUsername || partnerEmail}</span>
           </p>
         </div>
 
@@ -187,38 +185,36 @@ export default function PartnerDashboardPage() {
               <button
                 key={app.id}
                 onClick={() => navigate(app.route)}
-                className={`group relative overflow-hidden rounded-2xl border border-slate-700/50 glass backdrop-blur-xl p-6 text-left shadow-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl ${app.borderHover}`}
+                className={`group relative overflow-hidden rounded-xl border border-slate-700/50 glass backdrop-blur-xl p-4 text-left shadow-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl ${app.borderHover}`}
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${app.gradient} opacity-0 transition-opacity duration-300 group-hover:opacity-100`}></div>
                 
                 {/* Content */}
-                <div className="relative z-10 flex flex-col gap-4">
-                  {/* Category Badge */}
+                <div className="relative z-10 flex flex-col gap-3">
+                  {/* Icon and Category Badge */}
                   <div className="flex items-center justify-between">
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${app.categoryClass}`}>
+                    <div className={`w-10 h-10 rounded-lg ${app.iconBackground} flex items-center justify-center text-2xl shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                      {app.icon}
+                    </div>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${app.categoryClass}`}>
                       {app.category}
                     </span>
                   </div>
                   
-                  {/* Icon */}
-                  <div className={`w-14 h-14 rounded-xl ${app.iconBackground} flex items-center justify-center text-3xl shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                    {app.icon}
-                  </div>
-                  
                   {/* Title & Description */}
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-white mb-2 group-hover:text-indigo-200 transition-colors">
+                    <h3 className="text-base sm:text-lg font-bold text-white mb-1 group-hover:text-indigo-200 transition-colors">
                       {app.title}
                     </h3>
-                    <p className="text-sm text-slate-400 leading-relaxed">
+                    <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">
                       {app.description}
                     </p>
                   </div>
                   
                   {/* Action Button */}
-                  <div className="flex items-center gap-2 text-indigo-300 font-medium text-sm group-hover:text-indigo-200 transition-colors mt-2">
-                    <span>Open Workspace</span>
-                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex items-center gap-1.5 text-indigo-300 font-medium text-xs group-hover:text-indigo-200 transition-colors">
+                    <span>Open</span>
+                    <svg className="w-3 h-3 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                     </svg>
                   </div>

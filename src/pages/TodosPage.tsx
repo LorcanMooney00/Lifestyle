@@ -150,25 +150,25 @@ export default function TodosPage() {
             
             <div className="flex items-center gap-2 flex-1 min-w-0 overflow-x-auto scrollbar-thin px-2">
               <button
-                onClick={() => navigate('/app/calendar')}
+                onClick={() => navigate(partnerId ? `/app/partner/${partnerId}/calendar` : '/app/calendar')}
                 className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
               >
                 📅 Calendar
               </button>
               <button
-                onClick={() => navigate('/app/notes')}
+                onClick={() => navigate(partnerId ? `/app/partner/${partnerId}/notes` : '/app/notes')}
                 className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
               >
                 📝 Notes
               </button>
               <button
-                onClick={() => navigate('/app/todos')}
+                onClick={() => navigate(partnerId ? `/app/partner/${partnerId}/todos` : '/app/todos')}
                 className="px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-sm font-medium whitespace-nowrap flex-shrink-0"
               >
                 ✓ To-Do
               </button>
               <button
-                onClick={() => navigate('/app/shopping')}
+                onClick={() => navigate(partnerId ? `/app/partner/${partnerId}/shopping` : '/app/shopping')}
                 className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
               >
                 🛒 Shopping

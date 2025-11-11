@@ -201,10 +201,10 @@ export default function ShoppingListPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 gap-3">
             <button
-              onClick={() => navigate('/app/topics')}
+              onClick={() => navigate(partnerId ? `/app/partner/${partnerId}` : '/app/topics')}
               className="text-slate-300 hover:text-white p-2 rounded-lg transition-all hover:bg-slate-700/50 active:scale-95 flex-shrink-0"
               aria-label="Home"
-              title="Dashboard"
+              title={partnerId ? "Partner Workspace" : "Dashboard"}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -213,25 +213,25 @@ export default function ShoppingListPage() {
             
             <div className="flex items-center gap-2 flex-1 min-w-0 overflow-x-auto scrollbar-thin px-2">
               <button
-                onClick={() => navigate('/app/calendar')}
+                onClick={() => navigate(partnerId ? `/app/partner/${partnerId}/calendar` : '/app/calendar')}
                 className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
               >
                 📅 Calendar
               </button>
               <button
-                onClick={() => navigate('/app/notes')}
+                onClick={() => navigate(partnerId ? `/app/partner/${partnerId}/notes` : '/app/notes')}
                 className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
               >
                 📝 Notes
               </button>
               <button
-                onClick={() => navigate('/app/todos')}
+                onClick={() => navigate(partnerId ? `/app/partner/${partnerId}/todos` : '/app/todos')}
                 className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
               >
                 ✓ To-Do
               </button>
               <button
-                onClick={() => navigate('/app/shopping')}
+                onClick={() => navigate(partnerId ? `/app/partner/${partnerId}/shopping` : '/app/shopping')}
                 className="px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-sm font-medium whitespace-nowrap flex-shrink-0"
               >
                 🛒 Shopping

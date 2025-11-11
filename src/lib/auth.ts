@@ -74,7 +74,7 @@ export async function signUp(email: string, password: string, username: string):
 }
 
 export async function signOut() {
-  const { error } = await supabase.auth.signOut()
+  const { error } = await supabase.auth.signOut({ scope: 'local' })
   return { error }
 }
 

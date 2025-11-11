@@ -572,27 +572,23 @@ export default function CalendarPage() {
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md border border-slate-600/50">
-            <div className="p-6">
-              <div className="mb-4">
-                <h3 className="text-xl font-bold text-white mb-2">Delete event?</h3>
-                <p className="text-sm text-slate-400">
-                  Are you sure you want to delete "{selectedEvent?.title}"? This action cannot be undone.
-                </p>
-              </div>
+          <div className="glass backdrop-blur-xl rounded-xl shadow-2xl w-full max-w-sm border border-slate-600/50">
+            <div className="p-5">
+              <h3 className="text-lg font-semibold text-white mb-1">Delete "{selectedEvent?.title}"?</h3>
+              <p className="text-sm text-slate-400 mb-4">This action cannot be undone.</p>
               
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 px-4 py-3 text-sm font-medium text-white bg-slate-700 rounded-lg hover:bg-slate-600 transition-all"
+                  className="flex-1 px-4 py-2 text-sm font-medium text-slate-300 hover:text-white bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmDelete}
-                  className="flex-1 px-4 py-3 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-500 transition-all shadow-lg hover:shadow-xl active:scale-95"
+                  className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-500 transition-all active:scale-95"
                 >
-                  Delete event
+                  Delete
                 </button>
               </div>
             </div>

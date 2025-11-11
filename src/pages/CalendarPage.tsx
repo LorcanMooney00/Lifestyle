@@ -208,7 +208,7 @@ export default function CalendarPage() {
           }`}>
             {day}
           </div>
-          <div className="flex-1 flex flex-col gap-1 sm:gap-1.5 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
+          <div className="flex-1 flex flex-col gap-0.5 sm:gap-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
             {dayEvents.map((event) => (
               <div
                 key={event.id}
@@ -216,22 +216,13 @@ export default function CalendarPage() {
                   e.stopPropagation()
                   setSelectedEvent(event)
                 }}
-                className="text-xs bg-gradient-to-r from-indigo-600 to-indigo-500 text-white px-2 py-1.5 rounded-lg hover:from-indigo-500 hover:to-indigo-400 active:from-indigo-700 active:to-indigo-600 flex flex-col shadow-md cursor-pointer transition-all"
-                title={event.title + (event.description ? `: ${event.description}` : '')}
+                className="text-[10px] sm:text-xs bg-gradient-to-r from-indigo-600 to-indigo-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md hover:from-indigo-500 hover:to-indigo-400 active:from-indigo-700 active:to-indigo-600 shadow-sm cursor-pointer transition-all truncate"
+                title={event.title + (event.event_time ? ` (${event.event_time})` : '') + (event.description ? ` - ${event.description}` : '')}
               >
-                <div className="flex items-start justify-between gap-1">
-                  <span className="font-semibold leading-tight flex-1 break-words">{event.title}</span>
-                  {event.event_time && (
-                    <span className="text-[10px] opacity-90 font-medium whitespace-nowrap ml-1">
-                      {event.event_time}
-                    </span>
-                  )}
-                </div>
-                {event.description && (
-                  <span className="text-[10px] opacity-80 mt-0.5 leading-tight break-words line-clamp-2">
-                    {event.description}
-                  </span>
-                )}
+                <span className="font-semibold leading-tight">
+                  {event.event_time && <span className="opacity-80 mr-1">{event.event_time}</span>}
+                  {event.title}
+                </span>
               </div>
             ))}
           </div>

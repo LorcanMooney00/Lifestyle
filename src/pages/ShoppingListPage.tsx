@@ -327,62 +327,45 @@ export default function ShoppingListPage() {
                     : 'Nothing on your shopping list just yet. Add an item above to get started!'}
                 </p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {activeItems.map((item) => {
                     const isProcessing = actionIds.includes(item.id)
                     const assignedLabel = getPartnerLabel(item)
-                    const addedBy =
-                      item.user_id === user?.id
-                        ? 'You'
-                        : partnerLookup.get(item.user_id)?.username ||
-                          partnerLookup.get(item.user_id)?.email ||
-                          'Partner'
 
                     return (
                       <div
                         key={item.id}
-                        className="rounded-2xl border border-slate-800 bg-slate-900/70 px-5 py-4 shadow-lg transition hover:border-indigo-400/40"
+                        className="group flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-900/70 px-4 py-3 transition hover:border-indigo-400/40"
                       >
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-3">
-                              <span className="text-xl">🛒</span>
-                              <div>
-                                <p className="text-base font-semibold text-white">{item.item_name}</p>
-                                {item.quantity && (
-                                  <p className="text-xs uppercase tracking-wide text-indigo-300">
-                                    {item.quantity}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex flex-wrap gap-3 text-xs text-slate-400">
-                              <span className="rounded-md border border-slate-700 bg-slate-800 px-2 py-0.5">
-                                Shared with: {assignedLabel}
-                              </span>
-                              <span className="rounded-md border border-slate-700 bg-slate-800 px-2 py-0.5">
-                                Added by: {addedBy}
-                              </span>
-                            </div>
+                        <button
+                          onClick={() => handleTogglePurchased(item.id, true)}
+                          disabled={isProcessing}
+                          className="w-5 h-5 rounded border-2 border-slate-500 hover:border-emerald-400 transition-colors flex items-center justify-center disabled:opacity-50"
+                        >
+                          {isProcessing && (
+                            <div className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                          )}
+                        </button>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline gap-2">
+                            <p className="text-sm font-medium text-white">{item.item_name}</p>
+                            {item.quantity && (
+                              <span className="text-xs text-indigo-300">({item.quantity})</span>
+                            )}
                           </div>
-
-                          <div className="flex flex-col gap-2 sm:flex-row">
-                            <button
-                              onClick={() => handleTogglePurchased(item.id, true)}
-                              disabled={isProcessing}
-                              className="rounded-lg border border-emerald-500/40 bg-emerald-500/20 px-4 py-2 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              {isProcessing ? 'Saving…' : 'Mark purchased'}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteItem(item.id)}
-                              disabled={isProcessing}
-                              className="rounded-lg border border-red-500/30 bg-red-500/20 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              {isProcessing ? 'Removing…' : 'Delete'}
-                            </button>
-                          </div>
+                          <p className="text-xs text-slate-500">Shared with {assignedLabel}</p>
                         </div>
+
+                        <button
+                          onClick={() => handleDeleteItem(item.id)}
+                          disabled={isProcessing}
+                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-50"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
                       </div>
                     )
                   })}
@@ -398,64 +381,49 @@ export default function ShoppingListPage() {
                     Mark items as purchased to keep a history here.
                   </p>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {purchasedItems.map((item) => {
                       const isProcessing = actionIds.includes(item.id)
                       const assignedLabel = getPartnerLabel(item)
-                      const addedBy =
-                        item.user_id === user?.id
-                          ? 'You'
-                          : partnerLookup.get(item.user_id)?.username ||
-                            partnerLookup.get(item.user_id)?.email ||
-                            'Partner'
 
                       return (
                         <div
                           key={item.id}
-                          className="rounded-2xl border border-slate-800 bg-slate-900/50 px-5 py-4 shadow-inner"
+                          className="group flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 opacity-60"
                         >
-                          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-3">
-                                <span className="text-xl text-emerald-300">✔</span>
-                                <div>
-                                  <p className="text-base font-semibold text-slate-300 line-through">
-                                    {item.item_name}
-                                  </p>
-                                  {item.quantity && (
-                                    <p className="text-xs uppercase tracking-wide text-emerald-300/70 line-through">
-                                      {item.quantity}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex flex-wrap gap-3 text-xs text-slate-500">
-                                <span className="rounded-md border border-slate-700 bg-slate-800 px-2 py-0.5">
-                                  Shared with: {assignedLabel}
-                                </span>
-                                <span className="rounded-md border border-slate-700 bg-slate-800 px-2 py-0.5">
-                                  Added by: {addedBy}
-                                </span>
-                              </div>
+                          <button
+                            onClick={() => handleTogglePurchased(item.id, false)}
+                            disabled={isProcessing}
+                            className="w-5 h-5 rounded border-2 border-emerald-500 bg-emerald-500/20 hover:bg-emerald-500/30 transition-colors flex items-center justify-center disabled:opacity-50"
+                          >
+                            {isProcessing ? (
+                              <div className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <svg className="w-3 h-3 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </button>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-baseline gap-2">
+                              <p className="text-sm font-medium text-slate-400 line-through">{item.item_name}</p>
+                              {item.quantity && (
+                                <span className="text-xs text-slate-500 line-through">({item.quantity})</span>
+                              )}
                             </div>
-
-                            <div className="flex flex-col gap-2 sm:flex-row">
-                              <button
-                                onClick={() => handleTogglePurchased(item.id, false)}
-                                disabled={isProcessing}
-                                className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-indigo-400/50 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                {isProcessing ? 'Saving…' : 'Move back to list'}
-                              </button>
-                              <button
-                                onClick={() => handleDeleteItem(item.id)}
-                                disabled={isProcessing}
-                                className="rounded-lg border border-red-500/30 bg-red-500/20 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                {isProcessing ? 'Removing…' : 'Delete'}
-                              </button>
-                            </div>
+                            <p className="text-xs text-slate-600">Shared with {assignedLabel}</p>
                           </div>
+
+                          <button
+                            onClick={() => handleDeleteItem(item.id)}
+                            disabled={isProcessing}
+                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-50"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
                         </div>
                       )
                     })}

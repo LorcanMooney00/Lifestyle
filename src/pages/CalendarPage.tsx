@@ -208,30 +208,32 @@ export default function CalendarPage() {
           }`}>
             {day}
           </div>
-          <div className="flex-1 flex flex-col gap-1 sm:gap-1.5 overflow-hidden">
-            {dayEvents.slice(0, 3).map((event) => (
+          <div className="flex-1 flex flex-col gap-1 sm:gap-1.5 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
+            {dayEvents.map((event) => (
               <div
                 key={event.id}
                 onClick={(e) => {
                   e.stopPropagation()
                   setSelectedEvent(event)
                 }}
-                className="text-xs bg-gradient-to-r from-indigo-600 to-indigo-500 text-white px-2 py-1.5 rounded-lg truncate hover:from-indigo-500 hover:to-indigo-400 active:from-indigo-700 active:to-indigo-600 flex flex-col shadow-md cursor-pointer transition-all min-h-[32px] justify-center"
+                className="text-xs bg-gradient-to-r from-indigo-600 to-indigo-500 text-white px-2 py-1.5 rounded-lg hover:from-indigo-500 hover:to-indigo-400 active:from-indigo-700 active:to-indigo-600 flex flex-col shadow-md cursor-pointer transition-all"
                 title={event.title + (event.description ? `: ${event.description}` : '')}
               >
-                <span className="font-semibold truncate leading-tight">{event.title}</span>
+                <div className="flex items-start justify-between gap-1">
+                  <span className="font-semibold leading-tight flex-1 break-words">{event.title}</span>
+                  {event.event_time && (
+                    <span className="text-[10px] opacity-90 font-medium whitespace-nowrap ml-1">
+                      {event.event_time}
+                    </span>
+                  )}
+                </div>
                 {event.description && (
-                  <span className="text-[10px] opacity-80 truncate mt-0.5 leading-tight">
-                    {event.description.length > 25 ? `${event.description.substring(0, 25)}...` : event.description}
+                  <span className="text-[10px] opacity-80 mt-0.5 leading-tight break-words line-clamp-2">
+                    {event.description}
                   </span>
                 )}
               </div>
             ))}
-            {dayEvents.length > 3 && (
-              <div className="text-[11px] text-indigo-300 px-2 font-semibold mt-0.5">
-                +{dayEvents.length - 3} more
-              </div>
-            )}
           </div>
         </div>
       )

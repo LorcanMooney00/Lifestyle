@@ -18,7 +18,7 @@ export default function NotesPage() {
   const [noteTitle, setNoteTitle] = useState('')
   const [noteContent, setNoteContent] = useState('')
   const [saving, setSaving] = useState(false)
-  const [saveTimeout, setSaveTimeout] = useState<ReturnType<typeof setTimeout> | null>(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -31,9 +31,11 @@ export default function NotesPage() {
     if (selectedNote) {
       setNoteTitle(selectedNote.title || '')
       setNoteContent(selectedNote.content || '')
+      setHasUnsavedChanges(false)
     } else {
       setNoteTitle('')
       setNoteContent('')
+      setHasUnsavedChanges(false)
     }
   }, [selectedNote])
 
@@ -60,30 +62,30 @@ export default function NotesPage() {
     }
   }
 
-  const handleContentChange = (value: string) => {
-    setNoteContent(value)
+  const handleSaveNote = async () => {
+    if (!selectedNote || !user || !hasUnsavedChanges) return
 
-    if (saveTimeout) {
-      clearTimeout(saveTimeout)
+    setSaving(true)
+    const updated = await updateNote(selectedNote.id, {
+      title: noteTitle || null,
+      content: noteContent || null,
+    })
+    
+    if (updated) {
+      setSelectedNote(updated)
+      setNotes(notes.map((n) => (n.id === updated.id ? updated : n)))
+      setHasUnsavedChanges(false)
     }
+    setSaving(false)
+  }
 
-    const timeout = setTimeout(() => {
-      if (selectedNote && user) {
-        setSaving(true)
-        updateNote(selectedNote.id, {
-          title: noteTitle || null,
-          content: value || null,
-        }).then((updated) => {
-          if (updated) {
-            setSelectedNote(updated)
-            setNotes(notes.map((n) => (n.id === updated.id ? updated : n)))
-          }
-          setSaving(false)
-        })
-      }
-    }, 2000)
-
-    setSaveTimeout(timeout)
+  const handleDiscardChanges = () => {
+    if (!selectedNote) return
+    if (hasUnsavedChanges && !confirm('Discard unsaved changes?')) return
+    
+    setNoteTitle(selectedNote.title || '')
+    setNoteContent(selectedNote.content || '')
+    setHasUnsavedChanges(false)
   }
 
   const handleCreateNote = async (targetPartnerId?: string) => {
@@ -139,7 +141,13 @@ export default function NotesPage() {
               </button>
               <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Shared Notes</h1>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center gap-2">
+              {hasUnsavedChanges && (
+                <span className="text-xs text-amber-400 flex items-center gap-1">
+                  <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
+                  Unsaved changes
+                </span>
+              )}
               <button
                 onClick={() => navigate('/app/settings')}
                 className="text-slate-300 hover:text-white p-2 rounded-lg text-xl transition-all hover:bg-slate-700/50 active:scale-95"
@@ -147,9 +155,6 @@ export default function NotesPage() {
               >
                 ⚙️
               </button>
-              {saving && (
-                <span className="text-sm text-slate-400">Saving...</span>
-              )}
               <button
                 onClick={handleSignOut}
                 className="text-slate-300 hover:text-white p-2 rounded-lg transition-all hover:bg-slate-700/50 active:scale-95"
@@ -277,48 +282,48 @@ export default function NotesPage() {
                   </button>
                   <span className="text-sm text-slate-300">Back to Notes</span>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <input
                     type="text"
                     value={noteTitle}
                     onChange={(e) => {
-                      const newTitle = e.target.value
-                      setNoteTitle(newTitle)
-                      if (saveTimeout) {
-                        clearTimeout(saveTimeout)
-                      }
-                      const timeout = setTimeout(async () => {
-                        if (selectedNote && user) {
-                          setSaving(true)
-                          // Use the latest state values by reading them in the timeout
-                          const currentContent = noteContent
-                          const updated = await updateNote(selectedNote.id, {
-                            title: newTitle || null,
-                            content: currentContent || null,
-                          })
-                          if (updated) {
-                            setSelectedNote(updated)
-                            setNotes(notes.map((n) => (n.id === updated.id ? updated : n)))
-                          }
-                          setSaving(false)
-                        }
-                      }, 2000)
-                      setSaveTimeout(timeout)
+                      setNoteTitle(e.target.value)
+                      setHasUnsavedChanges(true)
                     }}
                     placeholder="Note title"
-                    className="flex-1 text-xl font-semibold border-none focus:outline-none focus:ring-0 bg-transparent text-white placeholder-slate-500"
+                    className="flex-1 min-w-[200px] text-xl font-semibold border-none focus:outline-none focus:ring-0 bg-transparent text-white placeholder-slate-500"
                   />
                   {selectedNote.partners && selectedNote.partners.length > 0 && (
                     <span className="text-sm text-slate-400 whitespace-nowrap">
                       {selectedNote.partners.join(' & ')}
                     </span>
                   )}
+                  <div className="flex gap-2">
+                    {hasUnsavedChanges && (
+                      <button
+                        onClick={handleDiscardChanges}
+                        className="px-3 py-1.5 text-sm text-slate-300 hover:text-white border border-slate-600 rounded-lg hover:bg-slate-700/50 transition-all"
+                      >
+                        Discard
+                      </button>
+                    )}
+                    <button
+                      onClick={handleSaveNote}
+                      disabled={!hasUnsavedChanges || saving}
+                      className="px-4 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl active:scale-95"
+                    >
+                      {saving ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="flex-1 p-4 overflow-y-auto min-h-0">
                 <textarea
                   value={noteContent}
-                  onChange={(e) => handleContentChange(e.target.value)}
+                  onChange={(e) => {
+                    setNoteContent(e.target.value)
+                    setHasUnsavedChanges(true)
+                  }}
                   placeholder="Start writing..."
                   className="w-full h-full border-none focus:outline-none focus:ring-0 resize-none text-white bg-transparent placeholder-slate-500"
                   style={{ minHeight: '400px' }}

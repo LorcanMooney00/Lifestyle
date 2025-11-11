@@ -135,42 +135,42 @@ export default function NotesPage() {
     <div className="h-screen flex flex-col overflow-hidden">
       <nav className="glass backdrop-blur-xl shadow-lg border-b border-slate-700/50 flex-shrink-0 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="flex justify-between items-center h-16 gap-3">
+            <button
+              onClick={() => navigate('/app/topics')}
+              className="text-slate-300 hover:text-white transition-colors whitespace-nowrap flex-shrink-0"
+            >
+              ← Dashboard
+            </button>
+            
+            <div className="flex items-center gap-2 flex-1 min-w-0 overflow-x-auto scrollbar-thin px-2">
               <button
-                onClick={() => navigate('/app/topics')}
-                className="text-slate-300 hover:text-white transition-colors whitespace-nowrap flex-shrink-0"
+                onClick={() => navigate('/app/calendar')}
+                className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
               >
-                ← Dashboard
+                📅 Calendar
               </button>
-              <div className="flex items-center gap-2 flex-shrink-0 overflow-x-auto scrollbar-thin">
-                <button
-                  onClick={() => navigate('/app/calendar')}
-                  className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap"
-                >
-                  📅 Calendar
-                </button>
-                <button
-                  onClick={() => navigate('/app/notes')}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-sm font-medium whitespace-nowrap"
-                >
-                  📝 Notes
-                </button>
-                <button
-                  onClick={() => navigate('/app/todos')}
-                  className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap"
-                >
-                  ✓ To-Do
-                </button>
-                <button
-                  onClick={() => navigate('/app/shopping')}
-                  className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap"
-                >
-                  🛒 Shopping
-                </button>
-              </div>
+              <button
+                onClick={() => navigate('/app/notes')}
+                className="px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-sm font-medium whitespace-nowrap flex-shrink-0"
+              >
+                📝 Notes
+              </button>
+              <button
+                onClick={() => navigate('/app/todos')}
+                className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
+              >
+                ✓ To-Do
+              </button>
+              <button
+                onClick={() => navigate('/app/shopping')}
+                className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
+              >
+                🛒 Shopping
+              </button>
             </div>
-            <div className="flex items-center gap-2">
+
+            <div className="flex items-center gap-2 flex-shrink-0">
               {hasUnsavedChanges && (
                 <span className="text-xs text-amber-400 flex items-center gap-1">
                   <span className="w-2 h-2 bg-amber-400 rounded-full"></span>

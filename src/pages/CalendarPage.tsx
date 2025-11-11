@@ -548,7 +548,7 @@ export default function CalendarPage() {
                       </button>
                       <button
                         type="submit"
-                        disabled={saving || !eventTitle.trim() || !eventDate || (!selectedEvent && !partnerId)}
+                        disabled={saving || !eventTitle.trim() || !eventDate || (!selectedEvent && !selectedPartnerId)}
                         className="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium min-h-[44px] transition-all shadow-lg hover:shadow-xl active:scale-95"
                       >
                         {saving ? 'Saving...' : 'Save'}

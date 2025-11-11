@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { signOut } from '../lib/auth'
-import { getEvents, createEvent, updateEvent, deleteEvent } from '../lib/api'
-import type { Event } from '../types'
+import { getEvents, createEvent, updateEvent, deleteEvent, getPartners } from '../lib/api'
+import type { Event, Partner } from '../types'
 
 export default function CalendarPage() {
   const { user } = useAuth()
@@ -11,8 +11,10 @@ export default function CalendarPage() {
   const { partnerId } = useParams<{ partnerId?: string }>()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [events, setEvents] = useState<Event[]>([])
+  const [partners, setPartners] = useState<Partner[]>([])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string>('')
   const [showEventForm, setShowEventForm] = useState(false)
   const [eventTitle, setEventTitle] = useState('')
   const [eventDescription, setEventDescription] = useState('')
@@ -24,6 +26,7 @@ export default function CalendarPage() {
   useEffect(() => {
     if (user) {
       loadEvents()
+      loadPartners()
     }
   }, [user, currentDate, partnerId])
 
@@ -36,6 +39,12 @@ export default function CalendarPage() {
       setShowEventForm(true)
     }
   }, [selectedEvent])
+
+  const loadPartners = async () => {
+    if (!user) return
+    const data = await getPartners(user.id)
+    setPartners(data)
+  }
 
   const loadEvents = async () => {
     if (!user) return
@@ -91,8 +100,8 @@ export default function CalendarPage() {
   }
   
   const handleAddEventForDay = () => {
-    // Don't allow creating new events without a partner selected
-    if (!partnerId || selectedDay === null) {
+    // Allow creating events from "View All" calendar or partner-specific calendar
+    if (selectedDay === null) {
       return
     }
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
@@ -100,6 +109,7 @@ export default function CalendarPage() {
     setEventTitle('')
     setEventDescription('')
     setEventTime('')
+    setSelectedPartnerId(partnerId || '') // Pre-select partner if viewing partner calendar
     setSelectedEvent(null)
     setError(null)
     setShowEventForm(true)
@@ -110,7 +120,8 @@ export default function CalendarPage() {
     if (!user || !eventTitle.trim() || !eventDate) return
 
     // Don't allow creating new events without a partner selected
-    if (!selectedEvent && !partnerId) {
+    if (!selectedEvent && !selectedPartnerId) {
+      setError('Please select a partner to share this event with')
       return
     }
 
@@ -133,9 +144,10 @@ export default function CalendarPage() {
           setError('Failed to update event. Please try again.')
         }
       } else {
-        // Create new event (only if partnerId is present)
-        if (!partnerId) {
+        // Create new event with selected partner
+        if (!selectedPartnerId) {
           setSaving(false)
+          setError('Please select a partner to share this event with')
           return
         }
         const newEvent = await createEvent(
@@ -144,13 +156,13 @@ export default function CalendarPage() {
           eventDate,
           eventTime || null,
           user.id,
-          partnerId || undefined
+          selectedPartnerId
         )
         if (newEvent) {
           await loadEvents()
           setShowEventForm(false)
         } else {
-          setError('Failed to create event. The partner_id column may be missing from your database. Please add it to enable event creation.')
+          setError('Failed to create event. Please try again.')
         }
       }
     } catch (err) {
@@ -339,14 +351,12 @@ export default function CalendarPage() {
                     year: 'numeric' 
                   })}
                 </h3>
-                {partnerId && (
-                  <button
-                    onClick={handleAddEventForDay}
-                    className="rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2 text-sm font-medium text-white transition-all hover:from-indigo-500 hover:to-purple-500 shadow-lg hover:shadow-xl active:scale-95"
-                  >
-                    + Add Event
-                  </button>
-                )}
+                <button
+                  onClick={handleAddEventForDay}
+                  className="rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2 text-sm font-medium text-white transition-all hover:from-indigo-500 hover:to-purple-500 shadow-lg hover:shadow-xl active:scale-95"
+                >
+                  + Add Event
+                </button>
               </div>
               
               <div className="space-y-2">
@@ -404,7 +414,7 @@ export default function CalendarPage() {
               <div className="p-4 sm:p-6">
                 <div className="flex justify-between items-center mb-4 sm:mb-6">
                   <h3 className="text-lg sm:text-xl font-bold text-white">
-                    {selectedEvent ? 'Edit Event' : partnerId ? 'New Event' : 'Select a Partner'}
+                    {selectedEvent ? 'Edit Event' : 'New Event'}
                   </h3>
                   <button
                     onClick={() => {
@@ -425,24 +435,44 @@ export default function CalendarPage() {
                   </div>
                 )}
 
-                {!selectedEvent && !partnerId && (
-                  <div className="mb-4 p-4 bg-yellow-900/30 border border-yellow-700/50 rounded-xl">
-                    <p className="text-sm text-yellow-300">
-                      Please select a partner from the dashboard to create new events.
-                    </p>
-                    <button
-                      onClick={() => {
-                        setShowEventForm(false)
-                        navigate('/app/topics')
-                      }}
-                      className="mt-2 text-sm text-yellow-400 hover:text-yellow-300 underline transition-colors"
-                    >
-                      Go to Dashboard →
-                    </button>
-                  </div>
-                )}
-
                 <form onSubmit={handleSaveEvent} className="space-y-4 sm:space-y-4">
+                  {/* Partner Selector - only show when creating new event and not in partner-specific calendar */}
+                  {!selectedEvent && !partnerId && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Share with Partner *
+                      </label>
+                      <select
+                        value={selectedPartnerId}
+                        onChange={(e) => setSelectedPartnerId(e.target.value)}
+                        required
+                        className="w-full px-4 py-3 text-base border border-slate-600 bg-slate-700/50 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                      >
+                        <option value="">Select a partner...</option>
+                        {partners.map((partner) => (
+                          <option key={partner.id} value={partner.id}>
+                            {partner.username || partner.email}
+                          </option>
+                        ))}
+                      </select>
+                      {partners.length === 0 && (
+                        <p className="mt-2 text-sm text-slate-400">
+                          No partners yet.{' '}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowEventForm(false)
+                              navigate('/app/topics')
+                            }}
+                            className="text-indigo-400 hover:text-indigo-300 underline"
+                          >
+                            Add a partner first →
+                          </button>
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
                       Title *

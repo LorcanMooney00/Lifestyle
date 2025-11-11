@@ -310,7 +310,7 @@ export default function CalendarPage() {
           <div className="overflow-x-auto -mx-2 sm:mx-0">
             <div className="min-w-[560px] sm:min-w-0">
               {/* Day Names Header */}
-              <div className="grid grid-cols-7 gap-1.5 sm:gap-2 mb-3 px-2 sm:px-0">
+              <div className="grid grid-cols-7 gap-2 sm:gap-2.5 mb-3 px-2 sm:px-0">
                 {dayNames.map((day) => (
                   <div key={day} className="text-center text-xs sm:text-sm font-bold text-slate-300 py-2">
                     {day}
@@ -319,7 +319,7 @@ export default function CalendarPage() {
               </div>
 
               {/* Calendar Days */}
-              <div className="grid grid-cols-7 gap-1.5 sm:gap-2 px-2 sm:px-0">
+              <div className="grid grid-cols-7 gap-2 sm:gap-2.5 px-2 sm:px-0">
                 {renderCalendarDays()}
               </div>
             </div>

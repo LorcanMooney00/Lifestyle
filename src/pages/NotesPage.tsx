@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
-import { getAllNotes, createNote, updateNote, deleteNote } from '../lib/api'
-import type { Note } from '../types'
+import { getAllNotes, createNote, updateNote, deleteNote, getPartners } from '../lib/api'
+import type { Note, Partner } from '../types'
 import { signOut } from '../lib/auth'
 
 export default function NotesPage() {
@@ -10,7 +10,10 @@ export default function NotesPage() {
   const navigate = useNavigate()
   const { partnerId } = useParams<{ partnerId?: string }>()
   const [notes, setNotes] = useState<Array<Note & { creator_username?: string | null; partners?: string[] }>>([])
+  const [partners, setPartners] = useState<Partner[]>([])
   const [selectedNote, setSelectedNote] = useState<(Note & { creator_username?: string | null; partners?: string[] }) | null>(null)
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string>('')
+  const [showPartnerSelector, setShowPartnerSelector] = useState(false)
   const [loading, setLoading] = useState(true)
   const [noteTitle, setNoteTitle] = useState('')
   const [noteContent, setNoteContent] = useState('')
@@ -20,6 +23,7 @@ export default function NotesPage() {
   useEffect(() => {
     if (user) {
       loadNotes()
+      loadPartners()
     }
   }, [user, partnerId])
 
@@ -32,6 +36,12 @@ export default function NotesPage() {
       setNoteContent('')
     }
   }, [selectedNote])
+
+  const loadPartners = async () => {
+    if (!user) return
+    const data = await getPartners(user.id)
+    setPartners(data)
+  }
 
   const loadNotes = async () => {
     if (!user) return
@@ -75,13 +85,24 @@ export default function NotesPage() {
     setSaveTimeout(timeout)
   }
 
-  const handleCreateNote = async () => {
-    if (!user || !partnerId) return // Don't allow creating notes without a partner selected
+  const handleCreateNote = async (targetPartnerId?: string) => {
+    if (!user) return
+    
+    // If no partnerId in URL and no targetPartnerId provided, show partner selector
+    if (!partnerId && !targetPartnerId) {
+      setShowPartnerSelector(true)
+      return
+    }
 
-    const note = await createNote('Untitled Note', '', user.id, partnerId)
+    const partnerToUse = targetPartnerId || partnerId
+    if (!partnerToUse) return
+
+    const note = await createNote('Untitled Note', '', user.id, partnerToUse)
     if (note) {
       await loadNotes()
       setSelectedNote(note)
+      setShowPartnerSelector(false)
+      setSelectedPartnerId('')
     }
   }
 
@@ -149,17 +170,12 @@ export default function NotesPage() {
         }`}>
           <div className="p-4 border-b border-slate-600/50 flex justify-between items-center flex-shrink-0">
             <h2 className="font-semibold text-white text-lg">Notes</h2>
-            {partnerId && (
-              <button
-                onClick={handleCreateNote}
-                className="bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-indigo-500 font-medium shadow-lg hover:shadow-xl transition-all active:scale-95"
-              >
-                + New
-              </button>
-            )}
-            {!partnerId && (
-              <span className="text-xs text-slate-500 px-2">Select a partner to create notes</span>
-            )}
+            <button
+              onClick={() => handleCreateNote()}
+              className="bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-indigo-500 font-medium shadow-lg hover:shadow-xl transition-all active:scale-95"
+            >
+              + New
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto min-h-0">
             {loading ? (
@@ -167,24 +183,14 @@ export default function NotesPage() {
             ) : notes.length === 0 ? (
               <div className="p-6 text-center">
                 <p className="text-sm text-slate-400 mb-4">
-                  {partnerId ? 'No notes yet.' : 'No notes found. Select a partner to view or create notes.'}
+                  No notes yet. Create one to get started!
                 </p>
-                {partnerId && (
-                  <button
-                    onClick={handleCreateNote}
-                    className="text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors"
-                  >
-                    Create your first note →
-                  </button>
-                )}
-                {!partnerId && (
-                  <button
-                    onClick={() => navigate('/app/topics')}
-                    className="text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors"
-                  >
-                    Go to Dashboard →
-                  </button>
-                )}
+                <button
+                  onClick={() => handleCreateNote()}
+                  className="text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors"
+                >
+                  Create your first note →
+                </button>
               </div>
             ) : (
               <div className="p-2">
@@ -321,12 +327,79 @@ export default function NotesPage() {
           ) : (
             <div className="flex-1 flex items-center justify-center text-slate-400">
               {notes.length === 0 
-                ? (partnerId ? 'Create your first note to get started!' : 'Select a note to view or select a partner to create notes')
+                ? 'Create your first note to get started!'
                 : 'Select a note to start editing'}
             </div>
           )}
         </div>
       </div>
+
+      {/* Partner Selector Modal */}
+      {showPartnerSelector && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md border border-slate-600/50">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-white">
+                  Share Note With
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowPartnerSelector(false)
+                    setSelectedPartnerId('')
+                  }}
+                  className="text-slate-400 hover:text-white text-2xl transition-colors"
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
+
+              {partners.length === 0 ? (
+                <div className="text-center py-4">
+                  <p className="text-sm text-slate-400 mb-4">
+                    No partners yet. Add a partner first to create shared notes.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setShowPartnerSelector(false)
+                      navigate('/app/topics')
+                    }}
+                    className="text-indigo-400 hover:text-indigo-300 underline text-sm"
+                  >
+                    Go to Dashboard →
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {partners.map((partner) => (
+                    <button
+                      key={partner.id}
+                      onClick={() => handleCreateNote(partner.id)}
+                      className="w-full p-4 glass backdrop-blur-xl border border-slate-600/50 rounded-xl hover:border-indigo-500/50 transition-all text-left group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                          {(partner.username || partner.email || '?')[0].toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-white group-hover:text-indigo-200 transition-colors">
+                            {partner.username || partner.email}
+                          </p>
+                          <p className="text-sm text-slate-400">Create shared note</p>
+                        </div>
+                        <svg className="w-5 h-5 text-slate-400 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

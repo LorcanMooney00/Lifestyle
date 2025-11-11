@@ -12,6 +12,7 @@ export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [events, setEvents] = useState<Event[]>([])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [selectedDay, setSelectedDay] = useState<number | null>(null)
   const [showEventForm, setShowEventForm] = useState(false)
   const [eventTitle, setEventTitle] = useState('')
   const [eventDescription, setEventDescription] = useState('')
@@ -85,11 +86,16 @@ export default function CalendarPage() {
   }
 
   const handleDayClick = (day: number) => {
+    // Select the day to show its events
+    setSelectedDay(day)
+  }
+  
+  const handleAddEventForDay = () => {
     // Don't allow creating new events without a partner selected
-    if (!partnerId) {
+    if (!partnerId || selectedDay === null) {
       return
     }
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
     setEventDate(dateStr)
     setEventTitle('')
     setEventDescription('')
@@ -316,6 +322,75 @@ export default function CalendarPage() {
             </div>
             </div>
           </div>
+          
+          {/* Selected Day Details */}
+          {selectedDay !== null && (
+            <div className="p-3 sm:p-6 border-t border-slate-700/50">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <span className="text-xl">📅</span>
+                  {new Date(year, month, selectedDay).toLocaleDateString('en-US', { 
+                    month: 'long', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                  })}
+                </h3>
+                {partnerId && (
+                  <button
+                    onClick={handleAddEventForDay}
+                    className="rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2 text-sm font-medium text-white transition-all hover:from-indigo-500 hover:to-purple-500 shadow-lg hover:shadow-xl active:scale-95"
+                  >
+                    + Add Event
+                  </button>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                {getEventsForDay(selectedDay).length === 0 ? (
+                  <p className="text-sm text-slate-400 py-4 text-center">
+                    No events scheduled for this day
+                  </p>
+                ) : (
+                  getEventsForDay(selectedDay).map((event) => (
+                    <div
+                      key={event.id}
+                      onClick={() => setSelectedEvent(event)}
+                      className="glass backdrop-blur-xl border border-slate-600/50 rounded-xl p-4 hover:border-indigo-500/50 cursor-pointer transition-all group"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-white group-hover:text-indigo-200 transition-colors">
+                            {event.title}
+                          </h4>
+                          {event.event_time && (
+                            <p className="text-sm text-indigo-300 mt-1">
+                              🕐 {event.event_time}
+                            </p>
+                          )}
+                          {event.description && (
+                            <p className="text-sm text-slate-400 mt-2">
+                              {event.description}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedEvent(event)
+                          }}
+                          className="text-slate-400 hover:text-indigo-300 transition-colors"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Event Form Modal */}

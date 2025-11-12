@@ -13,6 +13,7 @@ const defaultTilePreferences: Record<string, boolean> = {
   'shopping-list': true,
   'dog-feeding': true,
   'routines': true,
+  'notifications': true,
 }
 
 export default function SettingsPage() {
@@ -634,6 +635,24 @@ export default function SettingsPage() {
                 <span
                   className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
                     tilePreferences['routines'] ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Push Notifications Toggle */}
+            <div className="flex items-center justify-between bg-slate-800/40 p-2 rounded-lg border border-slate-700/50 hover:border-slate-600/50 transition-all">
+              <p className="font-medium text-slate-200 text-xs">Push Notifications</p>
+              <button
+                onClick={() => handleToggleTile('notifications')}
+                disabled={tilePreferencesLoading}
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
+                  tilePreferences['notifications'] ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-slate-600'
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                    tilePreferences['notifications'] ? 'translate-x-4' : 'translate-x-0'
                   }`}
                 />
               </button>

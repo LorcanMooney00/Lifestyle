@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signOut } from '../lib/auth'
 import { useAuth } from '../lib/auth'
+import { requestNotificationPermission, subscribeToCalendarEvents, showNotification } from '../lib/notifications'
 import {
   getAllNotes,
   getEvents,
@@ -41,6 +42,7 @@ const defaultTilePreferences: Record<string, boolean> = {
   'shopping-list': true,
   'dog-feeding': true,
   'routines': true,
+  'notifications': true,
 }
 
 const getTodayKey = () => new Date().toISOString().split('T')[0]
@@ -135,6 +137,66 @@ export default function TopicsPage() {
       loadDashboardData()
     }
   }, [user])
+
+  // Set up calendar event notifications
+  useEffect(() => {
+    if (!user) return
+    
+    // Only set up notifications if the user has enabled them in settings
+    if (tilePreferences['notifications'] !== true) {
+      return
+    }
+
+    let unsubscribe: (() => void) | null = null
+
+    // Request notification permission and set up calendar event notifications
+    requestNotificationPermission().then((granted) => {
+      if (granted) {
+        // Set up subscription for new calendar events
+        unsubscribe = subscribeToCalendarEvents(user.id, (newEvent) => {
+          // Find the partner who created the event (reload partners if needed)
+          const creator = partners.find(p => p.id === newEvent.created_by)
+          let creatorName = 'Someone'
+          
+          if (creator) {
+            creatorName = creator.username || creator.email || 'Someone'
+          } else {
+            // If partner not found, try to get it from the partners list
+            // This handles the case where partners haven't loaded yet
+            getPartners(user.id).then((partnerList) => {
+              const foundCreator = partnerList.find(p => p.id === newEvent.created_by)
+              if (foundCreator) {
+                creatorName = foundCreator.username || foundCreator.email || 'Someone'
+              }
+            })
+          }
+          
+          // Format the event date
+          const eventDate = new Date(newEvent.event_date)
+          const dateStr = eventDate.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric' 
+          })
+          
+          // Show notification
+          showNotification('New Calendar Event', {
+            body: `${creatorName} added "${newEvent.title}" on ${dateStr}${newEvent.event_time ? ` at ${newEvent.event_time}` : ''}`,
+            tag: `event-${newEvent.id}`,
+            requireInteraction: false,
+          })
+          
+          // Reload events to show the new one
+          loadDashboardData()
+        })
+      }
+    })
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe()
+      }
+    }
+  }, [user, partners, tilePreferences])
 
   // Refresh routine completions when the date changes (at midnight)
   useEffect(() => {
@@ -1794,10 +1856,87 @@ export default function TopicsPage() {
                               </button>
                             </div>
 
-            {/* Photo Widget - Below Partners */}
+            {/* Photo Widget - Below Partners with Routines beside it */}
               {tilePreferences['photo-gallery'] !== false && (
               <div className="mb-6 sm:mb-8">
-                <PhotoWidget photoIndex={0} mediumWide={true} />
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+                  <div className="aspect-square">
+                    <PhotoWidget photoIndex={0} />
+                  </div>
+                  
+                  {/* Routines beside Photo */}
+                  {tilePreferences['routines'] !== false && (() => {
+                    const todayRoutines = getRoutinesForToday()
+                    return todayRoutines.slice(0, 4).map((routine) => {
+                          const completion = routineCompletions[routine.id]
+                          const completedItems = completion?.completed_items || []
+                          const totalItems = routine.items?.length || 0
+                          const completedCount = completedItems.length
+                          const allCompleted = totalItems > 0 && completedCount === totalItems
+
+                      return (
+                        <div
+                          key={routine.id}
+                          className={`glass backdrop-blur-xl rounded-xl border-2 p-4 py-3 shadow-xl transition-all duration-300 cursor-pointer group hover:scale-[1.02] hover:shadow-2xl relative aspect-square flex flex-col ${
+                            allCompleted
+                              ? 'border-emerald-500/50 bg-emerald-500/5 hover:border-emerald-500/70 hover:bg-emerald-500/10'
+                              : 'border-slate-700/50 hover:border-emerald-500/30 hover:bg-slate-800/50'
+                          }`}
+                          onClick={() => handleOpenRoutineTracker(routine)}
+                        >
+                              {/* Subtle Edit/Delete buttons in top right */}
+                              <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleOpenEditRoutine(routine)
+                                  }}
+                                  className="p-1.5 text-slate-600 hover:text-indigo-300 hover:bg-slate-700/50 rounded-lg transition-all opacity-20 hover:opacity-100"
+                                  title="Edit routine"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleDeleteRoutine(routine.id, routine.name)
+                                  }}
+                                  className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-20 hover:opacity-100"
+                                  title="Delete routine"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
+
+                          <div className="flex-1 flex flex-col justify-center items-center">
+                            <h3 className="text-sm font-bold text-white mb-2 truncate w-full text-center group-hover:text-emerald-200 transition-colors drop-shadow-sm line-clamp-1 px-1">
+                              {routine.name}
+                            </h3>
+                            
+                            {/* Pie Chart */}
+                            <div className="flex justify-center items-center flex-1 w-full">
+                              <div className="transform group-hover:scale-105 transition-transform duration-300">
+                                <CategoryPieChart routine={routine} completion={completion} size={100} strokeWidth={10} id={routine.id} />
+                              </div>
+                            </div>
+
+                            {allCompleted && (
+                              <div className="mt-1 text-center">
+                                <span className="text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/40 shadow-lg shadow-emerald-500/20">
+                                  ✓ Complete!
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })
+                  })()}
+                </div>
               </div>
             )}
                 </div>
@@ -1879,8 +2018,8 @@ export default function TopicsPage() {
                               </div>
         )}
 
-        {/* Daily Routines Section */}
-        {!loading && tilePreferences['routines'] !== false && (
+        {/* Daily Routines Section - Only show if photo gallery is disabled or there are more than 4 routines */}
+        {!loading && tilePreferences['routines'] !== false && (tilePreferences['photo-gallery'] === false || getRoutinesForToday().length > 4) && (
           <div className={`${contentWidth} mb-4`}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
@@ -1908,7 +2047,8 @@ export default function TopicsPage() {
 
             {(() => {
               const todayRoutines = getRoutinesForToday()
-              return todayRoutines.length === 0 ? (
+              const routinesToShow = tilePreferences['photo-gallery'] !== false ? todayRoutines.slice(4) : todayRoutines
+              return routinesToShow.length === 0 ? (
                 <div className="glass backdrop-blur-xl rounded-xl border border-slate-700/50 p-5 text-center">
                   <p className="text-sm text-slate-400 mb-3">
                     {routines.length === 0
@@ -1924,7 +2064,7 @@ export default function TopicsPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {todayRoutines.map((routine) => {
+                  {routinesToShow.map((routine) => {
                     const completion = routineCompletions[routine.id]
                     const completedItems = completion?.completed_items || []
                     const totalItems = routine.items?.length || 0
@@ -1974,11 +2114,6 @@ export default function TopicsPage() {
                             <h3 className="text-base font-bold text-white mb-1.5 truncate group-hover:text-emerald-200 transition-colors drop-shadow-sm">
                               {routine.name}
                             </h3>
-                            <div className="mb-1.5">
-                              <span className="text-[10px] text-slate-400 bg-slate-800/60 backdrop-blur-sm px-2 py-0.5 rounded-full border border-slate-700/50 shadow-sm">
-                                {getDayLabel(routine.days_of_week || [])}
-                              </span>
-                            </div>
                             <p className="text-[11px] text-slate-400 font-medium">
                               {completedCount} of {totalItems} completed
                             </p>
@@ -1986,9 +2121,9 @@ export default function TopicsPage() {
                         </div>
 
                         {/* Pie Chart */}
-                        <div className="flex justify-center mb-2.5">
+                        <div className="flex justify-center items-center mb-2.5 py-4">
                           <div className="transform group-hover:scale-105 transition-transform duration-300">
-                            <CategoryPieChart routine={routine} completion={completion} size={75} strokeWidth={8} id={routine.id} />
+                            <CategoryPieChart routine={routine} completion={completion} size={150} strokeWidth={12} id={routine.id} />
                           </div>
                         </div>
 

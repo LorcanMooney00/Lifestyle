@@ -12,6 +12,7 @@ const defaultTilePreferences: Record<string, boolean> = {
   'shared-todos': true,
   'shopping-list': true,
   'dog-feeding': true,
+  'routines': true,
 }
 
 export default function SettingsPage() {
@@ -285,23 +286,23 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-gray-900">
       <nav className="glass backdrop-blur-xl shadow-lg border-b border-slate-700/50 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
+          <div className="flex justify-between h-14">
             <div className="flex items-center">
               <button
                 onClick={() => navigate('/app/topics')}
-                className="text-slate-300 hover:text-white mr-4 transition-colors"
+                className="text-slate-300 hover:text-white mr-3 transition-colors text-sm"
               >
                 ← Dashboard
               </button>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Settings</h1>
+              <h1 className="text-lg font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Settings</h1>
             </div>
             <div className="flex items-center">
               <button
                 onClick={handleSignOut}
-                className="text-slate-300 hover:text-white p-2 rounded-lg transition-all hover:bg-slate-700/50 active:scale-95"
+                className="text-slate-300 hover:text-white p-1.5 rounded-lg transition-all hover:bg-slate-700/50 active:scale-95"
                 aria-label="Sign Out"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
               </button>
@@ -310,331 +311,329 @@ export default function SettingsPage() {
         </div>
       </nav>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-20">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 pb-20">
         {/* Profile Section */}
-        <div className="glass backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-slate-700/50">
-          <div className="flex items-center space-x-2 mb-6">
-            <span className="text-2xl">👤</span>
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+        <div className="glass backdrop-blur-xl rounded-xl shadow-xl p-3 border border-slate-700/50">
+          <div className="flex items-center space-x-1.5 mb-3">
+            <span className="text-base">👤</span>
+            <h2 className="text-base font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
               Profile
             </h2>
           </div>
           
           {pictureError && (
-            <div className="mb-4 p-4 bg-red-900/30 border border-red-700/50 rounded-xl">
-              <p className="text-sm text-red-300">{pictureError}</p>
+            <div className="mb-2 p-2 bg-red-900/30 border border-red-700/50 rounded-lg">
+              <p className="text-[10px] text-red-300">{pictureError}</p>
             </div>
           )}
 
           {pictureSuccess && (
-            <div className="mb-4 p-4 bg-green-900/30 border border-green-700/50 rounded-xl">
-              <p className="text-sm text-green-300">{pictureSuccess}</p>
+            <div className="mb-2 p-2 bg-green-900/30 border border-green-700/50 rounded-lg">
+              <p className="text-[10px] text-green-300">{pictureSuccess}</p>
             </div>
           )}
 
-          {/* Profile Picture */}
-          <div className="mb-6 pb-6 border-b border-slate-700/50">
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-4">Profile Picture</h3>
-            <div className="flex items-center gap-6">
-              {profilePictureUrl ? (
-                <div className="relative">
-                  <img
-                    src={profilePictureUrl}
-                    alt="Profile"
-                    className="w-24 h-24 rounded-full object-cover border-2 border-indigo-500/50 shadow-lg"
-                  />
-                  <button
-                    onClick={handleRemoveProfilePicture}
+          {/* Profile Picture and Username Side by Side */}
+          <div className="grid grid-cols-3 gap-3">
+            {/* Profile Picture */}
+            <div className="col-span-2">
+              {!profilePictureUrl && (
+                <h3 className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Profile Picture</h3>
+              )}
+              <div className={`flex items-start gap-3 ${!profilePictureUrl ? '' : 'mt-0'}`}>
+                {profilePictureUrl ? (
+                  <div className="relative flex-shrink-0">
+                    <img
+                      src={profilePictureUrl}
+                      alt="Profile"
+                      className="w-16 h-16 rounded-full object-cover border-2 border-indigo-500/50 shadow-lg"
+                    />
+                    <button
+                      onClick={handleRemoveProfilePicture}
+                      disabled={uploadingPicture}
+                      className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-600 hover:bg-red-500 text-white text-[10px] flex items-center justify-center transition-all shadow-lg hover:shadow-xl disabled:opacity-50"
+                      title="Remove profile picture"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-2 border-slate-600/50 flex items-center justify-center text-xl flex-shrink-0">
+                    👤
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProfilePictureSelect}
+                    className="hidden"
+                    id="profile-picture-upload"
                     disabled={uploadingPicture}
-                    className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-red-600 hover:bg-red-500 text-white text-sm flex items-center justify-center transition-all shadow-lg hover:shadow-xl disabled:opacity-50"
-                    title="Remove profile picture"
+                  />
+                  <label
+                    htmlFor="profile-picture-upload"
+                    className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer mb-1.5 ${
+                      uploadingPicture
+                        ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-500 hover:to-purple-500 shadow-lg hover:shadow-xl active:scale-95'
+                    }`}
                   >
-                    ×
+                    {uploadingPicture ? '⏳ Uploading...' : profilePictureUrl ? '📷 Change' : '➕ Upload'}
+                  </label>
+                  <p className="text-[9px] text-slate-400">
+                    Max 2MB • JPG, PNG, or GIF
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Username */}
+            <div>
+              <h3 className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Username</h3>
+              {usernameEditing ? (
+                <form onSubmit={handleUpdateUsername} className="space-y-2">
+                  {usernameError && (
+                    <div className="bg-red-900/30 border border-red-700/50 text-red-300 px-2 py-1.5 rounded-lg">
+                      <p className="text-[10px]">{usernameError}</p>
+                    </div>
+                  )}
+                  
+                  {usernameSuccess && (
+                    <div className="bg-green-900/30 border border-green-700/50 text-green-300 px-2 py-1.5 rounded-lg">
+                      <p className="text-[10px]">{usernameSuccess}</p>
+                    </div>
+                  )}
+                  
+                  <div>
+                    <input
+                      id="username"
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="Enter your username"
+                      required
+                      className="w-full px-2.5 py-1.5 border border-slate-600/50 bg-slate-800/50 text-slate-100 placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-xs"
+                      disabled={usernameLoading}
+                    />
+                  </div>
+                  
+                  <div className="flex space-x-1.5">
+                    <button
+                      type="submit"
+                      disabled={usernameLoading || !username.trim()}
+                      className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-2.5 py-1.5 rounded-lg hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-[10px] font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
+                    >
+                      {usernameLoading ? '⏳ Saving...' : '✓ Save'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUsernameEditing(false)
+                        setUsernameError(null)
+                        setUsernameSuccess(null)
+                        loadUsername()
+                      }}
+                      disabled={usernameLoading}
+                      className="px-2.5 py-1.5 rounded-lg bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 disabled:opacity-50 text-[10px] font-medium transition-all"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="flex flex-col items-start gap-2">
+                  <div className="w-full">
+                    <p className="text-xs text-slate-200 font-medium truncate">
+                      {username || <span className="text-slate-500 italic">Not set</span>}
+                    </p>
+                    {!username && (
+                      <p className="text-[9px] text-slate-400 mt-0.5">
+                        Set a username so partners can easily identify you
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setUsernameEditing(true)
+                      setUsernameError(null)
+                      setUsernameSuccess(null)
+                    }}
+                    className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-2.5 py-1 rounded-lg hover:from-indigo-500 hover:to-purple-500 text-[10px] font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
+                  >
+                    {username ? '✏️ Edit' : '➕ Add'}
                   </button>
                 </div>
-              ) : (
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-2 border-slate-600/50 flex items-center justify-center text-4xl">
-                  👤
-                </div>
               )}
-              <div className="flex-1">
-                <p className="text-sm text-slate-300 mb-3">
-                  {profilePictureUrl ? 'Update your profile picture' : 'Add a profile picture so partners can recognize you'}
-                </p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleProfilePictureSelect}
-                  className="hidden"
-                  id="profile-picture-upload"
-                  disabled={uploadingPicture}
-                />
-                <label
-                  htmlFor="profile-picture-upload"
-                  className={`inline-block px-5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
-                    uploadingPicture
-                      ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-500 hover:to-purple-500 shadow-lg hover:shadow-xl active:scale-95'
-                  }`}
-                >
-                  {uploadingPicture ? '⏳ Uploading...' : profilePictureUrl ? '📷 Change Picture' : '➕ Upload Picture'}
-                </label>
-                <p className="text-xs text-slate-400 mt-2">
-                  Max 2MB • JPG, PNG, or GIF
-                </p>
-              </div>
             </div>
-          </div>
-
-          {/* Username */}
-          <div>
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-4">Username</h3>
-          
-          {usernameEditing ? (
-            <form onSubmit={handleUpdateUsername} className="space-y-4">
-              {usernameError && (
-                <div className="bg-red-900/30 border border-red-700/50 text-red-300 px-4 py-3 rounded-xl">
-                  {usernameError}
-                </div>
-              )}
-              
-              {usernameSuccess && (
-                <div className="bg-green-900/30 border border-green-700/50 text-green-300 px-4 py-3 rounded-xl">
-                  {usernameSuccess}
-                </div>
-              )}
-              
-              <div>
-                <input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your username"
-                  required
-                  className="w-full px-4 py-2.5 border border-slate-600/50 bg-slate-800/50 text-slate-100 placeholder-slate-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                  disabled={usernameLoading}
-                />
-              </div>
-              
-              <div className="flex space-x-3">
-                <button
-                  type="submit"
-                  disabled={usernameLoading || !username.trim()}
-                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2.5 rounded-xl hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
-                >
-                  {usernameLoading ? '⏳ Saving...' : '✓ Save'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUsernameEditing(false)
-                    setUsernameError(null)
-                    setUsernameSuccess(null)
-                    loadUsername()
-                  }}
-                  disabled={usernameLoading}
-                  className="px-4 py-2.5 rounded-xl bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 disabled:opacity-50 text-sm font-medium transition-all"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          ) : (
-            <div className="flex items-center justify-between bg-slate-800/30 rounded-xl p-4">
-              <div>
-                <p className="text-slate-200 font-medium">
-                  {username || <span className="text-slate-500 italic">Not set</span>}
-                </p>
-                {!username && (
-                  <p className="text-xs text-slate-400 mt-1">
-                    Set a username so partners can easily identify you
-                  </p>
-                )}
-              </div>
-              <button
-                onClick={() => {
-                  setUsernameEditing(true)
-                  setUsernameError(null)
-                  setUsernameSuccess(null)
-                }}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-xl hover:from-indigo-500 hover:to-purple-500 text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
-              >
-                {username ? '✏️ Edit' : '➕ Add'}
-              </button>
-            </div>
-          )}
           </div>
         </div>
 
         {/* Dashboard Widgets Section */}
-        <div className="glass backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-slate-700/50 mt-6">
-          <div className="flex items-center space-x-2 mb-3">
-            <span className="text-2xl">🎛️</span>
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+        <div className="glass backdrop-blur-xl rounded-xl shadow-xl p-4 border border-slate-700/50 mt-4">
+          <div className="flex items-center space-x-2 mb-2">
+            <span className="text-lg">🎛️</span>
+            <h2 className="text-lg font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
               Dashboard Widgets
             </h2>
           </div>
-          <p className="text-sm text-slate-400 mb-6">
+          <p className="text-xs text-slate-400 mb-4">
             Customize which features appear on your dashboard
           </p>
 
           {tilePreferencesError && (
-            <div className="bg-red-900/30 border border-red-700/50 text-red-300 px-4 py-3 rounded-xl mb-4">
-              {tilePreferencesError}
+            <div className="bg-red-900/30 border border-red-700/50 text-red-300 px-3 py-2 rounded-lg mb-3">
+              <p className="text-xs">{tilePreferencesError}</p>
             </div>
           )}
 
           {tilePreferencesSuccess && (
-            <div className="bg-green-900/30 border border-green-700/50 text-green-300 px-4 py-3 rounded-xl mb-4">
-              {tilePreferencesSuccess}
+            <div className="bg-green-900/30 border border-green-700/50 text-green-300 px-3 py-2 rounded-lg mb-3">
+              <p className="text-xs">{tilePreferencesSuccess}</p>
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             {/* Shared Notes Toggle */}
-            <div className="flex items-center justify-between bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 hover:border-slate-600/50 transition-all">
-              <div className="flex items-center space-x-3">
-                <span className="text-xl">📝</span>
-                <p className="font-medium text-slate-200 text-sm">Shared Notes</p>
-              </div>
+            <div className="flex items-center justify-between bg-slate-800/40 p-2 rounded-lg border border-slate-700/50 hover:border-slate-600/50 transition-all">
+              <p className="font-medium text-slate-200 text-xs">Shared Notes</p>
               <button
                 onClick={() => handleToggleTile('shared-notes')}
                 disabled={tilePreferencesLoading}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
                   tilePreferences['shared-notes'] ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-slate-600'
                 }`}
               >
                 <span
-                  className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
-                    tilePreferences['shared-notes'] ? 'translate-x-5' : 'translate-x-0'
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                    tilePreferences['shared-notes'] ? 'translate-x-4' : 'translate-x-0'
                   }`}
                 />
               </button>
             </div>
 
             {/* Calendar Toggle */}
-            <div className="flex items-center justify-between bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 hover:border-slate-600/50 transition-all">
-              <div className="flex items-center space-x-3">
-                <span className="text-xl">📅</span>
-                <p className="font-medium text-slate-200 text-sm">Calendar</p>
-              </div>
+            <div className="flex items-center justify-between bg-slate-800/40 p-2 rounded-lg border border-slate-700/50 hover:border-slate-600/50 transition-all">
+              <p className="font-medium text-slate-200 text-xs">Calendar</p>
               <button
                 onClick={() => handleToggleTile('calendar')}
                 disabled={tilePreferencesLoading}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
                   tilePreferences['calendar'] ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-slate-600'
                 }`}
               >
                 <span
-                  className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
-                    tilePreferences['calendar'] ? 'translate-x-5' : 'translate-x-0'
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                    tilePreferences['calendar'] ? 'translate-x-4' : 'translate-x-0'
                   }`}
                 />
               </button>
             </div>
 
             {/* Recipes Toggle */}
-            <div className="flex items-center justify-between bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 hover:border-slate-600/50 transition-all">
-              <div className="flex items-center space-x-3">
-                <span className="text-xl">🍳</span>
-                <p className="font-medium text-slate-200 text-sm">Recipes</p>
-              </div>
+            <div className="flex items-center justify-between bg-slate-800/40 p-2 rounded-lg border border-slate-700/50 hover:border-slate-600/50 transition-all">
+              <p className="font-medium text-slate-200 text-xs">Recipes</p>
               <button
                 onClick={() => handleToggleTile('recipes')}
                 disabled={tilePreferencesLoading}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
                   tilePreferences['recipes'] ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-slate-600'
                 }`}
               >
                 <span
-                  className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
-                    tilePreferences['recipes'] ? 'translate-x-5' : 'translate-x-0'
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                    tilePreferences['recipes'] ? 'translate-x-4' : 'translate-x-0'
                   }`}
                 />
               </button>
             </div>
 
             {/* Shared To-Do List Toggle */}
-            <div className="flex items-center justify-between bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 hover:border-slate-600/50 transition-all">
-              <div className="flex items-center space-x-3">
-                <span className="text-xl">✅</span>
-                <p className="font-medium text-slate-200 text-sm">To-Do List</p>
-              </div>
+            <div className="flex items-center justify-between bg-slate-800/40 p-2 rounded-lg border border-slate-700/50 hover:border-slate-600/50 transition-all">
+              <p className="font-medium text-slate-200 text-xs">To-Do List</p>
               <button
                 onClick={() => handleToggleTile('shared-todos')}
                 disabled={tilePreferencesLoading}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
                   tilePreferences['shared-todos'] ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-slate-600'
                 }`}
               >
                 <span
-                  className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
-                    tilePreferences['shared-todos'] ? 'translate-x-5' : 'translate-x-0'
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                    tilePreferences['shared-todos'] ? 'translate-x-4' : 'translate-x-0'
                   }`}
                 />
               </button>
             </div>
 
             {/* Shopping List Toggle */}
-            <div className="flex items-center justify-between bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 hover:border-slate-600/50 transition-all">
-              <div className="flex items-center space-x-3">
-                <span className="text-xl">🛒</span>
-                <p className="font-medium text-slate-200 text-sm">Shopping List</p>
-              </div>
+            <div className="flex items-center justify-between bg-slate-800/40 p-2 rounded-lg border border-slate-700/50 hover:border-slate-600/50 transition-all">
+              <p className="font-medium text-slate-200 text-xs">Shopping List</p>
               <button
                 onClick={() => handleToggleTile('shopping-list')}
                 disabled={tilePreferencesLoading}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
                   tilePreferences['shopping-list'] ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-slate-600'
                 }`}
               >
                 <span
-                  className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
-                    tilePreferences['shopping-list'] ? 'translate-x-5' : 'translate-x-0'
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                    tilePreferences['shopping-list'] ? 'translate-x-4' : 'translate-x-0'
                   }`}
                 />
               </button>
             </div>
 
             {/* Dog Feeding Toggle */}
-            <div className="flex items-center justify-between bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 hover:border-slate-600/50 transition-all">
-              <div className="flex items-center space-x-3">
-                <span className="text-xl">🐕</span>
-                <p className="font-medium text-slate-200 text-sm">Dog Feeding</p>
-              </div>
+            <div className="flex items-center justify-between bg-slate-800/40 p-2 rounded-lg border border-slate-700/50 hover:border-slate-600/50 transition-all">
+              <p className="font-medium text-slate-200 text-xs">Dog Feeding</p>
               <button
                 onClick={() => handleToggleTile('dog-feeding')}
                 disabled={tilePreferencesLoading}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
                   tilePreferences['dog-feeding'] ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-slate-600'
                 }`}
               >
                 <span
-                  className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
-                    tilePreferences['dog-feeding'] ? 'translate-x-5' : 'translate-x-0'
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                    tilePreferences['dog-feeding'] ? 'translate-x-4' : 'translate-x-0'
                   }`}
                 />
               </button>
             </div>
 
             {/* Photo Gallery Toggle */}
-            <div className="flex items-center justify-between bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 hover:border-slate-600/50 transition-all">
-              <div className="flex items-center space-x-3">
-                <span className="text-xl">📸</span>
-                <p className="font-medium text-slate-200 text-sm">Photo Gallery</p>
-              </div>
+            <div className="flex items-center justify-between bg-slate-800/40 p-2 rounded-lg border border-slate-700/50 hover:border-slate-600/50 transition-all">
+              <p className="font-medium text-slate-200 text-xs">Photo Gallery</p>
               <button
                 onClick={() => handleToggleTile('photo-gallery')}
                 disabled={tilePreferencesLoading}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
                   tilePreferences['photo-gallery'] ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-slate-600'
                 }`}
               >
                 <span
-                  className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
-                    tilePreferences['photo-gallery'] ? 'translate-x-5' : 'translate-x-0'
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                    tilePreferences['photo-gallery'] ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Routines Toggle */}
+            <div className="flex items-center justify-between bg-slate-800/40 p-2 rounded-lg border border-slate-700/50 hover:border-slate-600/50 transition-all">
+              <p className="font-medium text-slate-200 text-xs">Daily Routines</p>
+              <button
+                onClick={() => handleToggleTile('routines')}
+                disabled={tilePreferencesLoading}
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 ${
+                  tilePreferences['routines'] ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-slate-600'
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                    tilePreferences['routines'] ? 'translate-x-4' : 'translate-x-0'
                   }`}
                 />
               </button>
@@ -643,51 +642,51 @@ export default function SettingsPage() {
         </div>
 
         {/* Account Information Section */}
-        <div className="glass backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-slate-700/50 mt-6">
-          <div className="flex items-center space-x-2 mb-6">
-            <span className="text-2xl">🔐</span>
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+        <div className="glass backdrop-blur-xl rounded-xl shadow-xl p-4 border border-slate-700/50 mt-4">
+          <div className="flex items-center space-x-2 mb-4">
+            <span className="text-lg">🔐</span>
+            <h2 className="text-lg font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
               Account & Security
             </h2>
           </div>
 
           {/* Email Info */}
-          <div className="mb-6 pb-6 border-b border-slate-700/50">
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">Account Information</h3>
-            <div className="bg-slate-800/30 rounded-xl p-4 space-y-2">
+          <div className="mb-4 pb-4 border-b border-slate-700/50">
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Account Information</h3>
+            <div className="bg-slate-800/30 rounded-lg p-3 space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-400 uppercase">Email</span>
-                <span className="text-sm text-slate-200 font-medium">{user?.email}</span>
+                <span className="text-[10px] text-slate-400 uppercase">Email</span>
+                <span className="text-xs text-slate-200 font-medium">{user?.email}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-400 uppercase">User ID</span>
-                <span className="text-xs text-slate-500 font-mono">{user?.id?.slice(0, 8)}...</span>
+                <span className="text-[10px] text-slate-400 uppercase">User ID</span>
+                <span className="text-[10px] text-slate-500 font-mono">{user?.id?.slice(0, 8)}...</span>
               </div>
             </div>
           </div>
 
           {/* Password Change */}
           <div>
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-4">Change Password</h3>
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Change Password</h3>
           
           {passwordEditing ? (
-            <form onSubmit={handleChangePassword} className="space-y-4">
+            <form onSubmit={handleChangePassword} className="space-y-3">
               {passwordError && (
-                <div className="bg-red-900/30 border border-red-700/50 text-red-300 px-4 py-3 rounded-xl">
-                  {passwordError}
+                <div className="bg-red-900/30 border border-red-700/50 text-red-300 px-3 py-2 rounded-lg">
+                  <p className="text-xs">{passwordError}</p>
                 </div>
               )}
               
               {passwordSuccess && (
-                <div className="bg-green-900/30 border border-green-700/50 text-green-300 px-4 py-3 rounded-xl">
-                  {passwordSuccess}
+                <div className="bg-green-900/30 border border-green-700/50 text-green-300 px-3 py-2 rounded-lg">
+                  <p className="text-xs">{passwordSuccess}</p>
                 </div>
               )}
               
               <div>
                 <label
                   htmlFor="new-password"
-                  className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wide"
+                  className="block text-[10px] font-medium text-slate-400 mb-1.5 uppercase tracking-wide"
                 >
                   New Password
                 </label>
@@ -699,7 +698,7 @@ export default function SettingsPage() {
                   placeholder="Enter new password (min 6 characters)"
                   required
                   minLength={6}
-                  className="w-full px-4 py-2.5 border border-slate-600/50 bg-slate-800/50 text-slate-100 placeholder-slate-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 border border-slate-600/50 bg-slate-800/50 text-slate-100 placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm"
                   disabled={passwordLoading}
                 />
               </div>
@@ -707,7 +706,7 @@ export default function SettingsPage() {
               <div>
                 <label
                   htmlFor="confirm-password"
-                  className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wide"
+                  className="block text-[10px] font-medium text-slate-400 mb-1.5 uppercase tracking-wide"
                 >
                   Confirm New Password
                 </label>
@@ -719,16 +718,16 @@ export default function SettingsPage() {
                   placeholder="Confirm new password"
                   required
                   minLength={6}
-                  className="w-full px-4 py-2.5 border border-slate-600/50 bg-slate-800/50 text-slate-100 placeholder-slate-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 border border-slate-600/50 bg-slate-800/50 text-slate-100 placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm"
                   disabled={passwordLoading}
                 />
               </div>
               
-              <div className="flex space-x-3">
+              <div className="flex space-x-2">
                 <button
                   type="submit"
                   disabled={passwordLoading || !newPassword || !confirmPassword}
-                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2.5 rounded-xl hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
+                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-3 py-2 rounded-lg hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
                 >
                   {passwordLoading ? '⏳ Changing...' : '✓ Change Password'}
                 </button>
@@ -742,15 +741,15 @@ export default function SettingsPage() {
                     setConfirmPassword('')
                   }}
                   disabled={passwordLoading}
-                  className="px-4 py-2.5 rounded-xl bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 disabled:opacity-50 text-sm font-medium transition-all"
+                  className="px-3 py-2 rounded-lg bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 disabled:opacity-50 text-xs font-medium transition-all"
                 >
                   Cancel
                 </button>
               </div>
             </form>
           ) : (
-            <div className="bg-slate-800/30 rounded-xl p-4">
-              <p className="text-sm text-slate-300 mb-3">
+            <div className="bg-slate-800/30 rounded-lg p-3">
+              <p className="text-xs text-slate-300 mb-2">
                 Keep your account secure by regularly updating your password
               </p>
               <button
@@ -759,7 +758,7 @@ export default function SettingsPage() {
                   setPasswordError(null)
                   setPasswordSuccess(null)
                 }}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-xl hover:from-indigo-500 hover:to-purple-500 text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-3 py-1.5 rounded-lg hover:from-indigo-500 hover:to-purple-500 text-xs font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
               >
                 🔑 Change Password
               </button>
@@ -769,57 +768,57 @@ export default function SettingsPage() {
         </div>
 
         {/* Account Deletion Section */}
-        <div className="glass backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-red-700/50 mt-6">
-          <div className="flex items-center space-x-2 mb-6">
-            <span className="text-2xl">⚠️</span>
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-red-400 to-pink-400 bg-clip-text text-transparent">
+        <div className="glass backdrop-blur-xl rounded-xl shadow-xl p-4 border border-red-700/50 mt-4">
+          <div className="flex items-center space-x-2 mb-4">
+            <span className="text-lg">⚠️</span>
+            <h2 className="text-lg font-bold bg-gradient-to-r from-red-400 to-pink-400 bg-clip-text text-transparent">
               Danger Zone
             </h2>
           </div>
           
           {!showDeleteConfirm ? (
-            <div className="bg-red-950/30 border border-red-900/50 rounded-xl p-5">
-              <h3 className="text-sm font-semibold text-red-300 mb-2">Delete Account</h3>
-              <p className="text-sm text-slate-300 mb-2">
+            <div className="bg-red-950/30 border border-red-900/50 rounded-lg p-3">
+              <h3 className="text-xs font-semibold text-red-300 mb-1.5">Delete Account</h3>
+              <p className="text-xs text-slate-300 mb-1.5">
                 Permanently delete your account and all associated data
               </p>
-              <p className="text-xs text-red-400/80 mb-4">
+              <p className="text-[10px] text-red-400/80 mb-3">
                 ⚠️ This will delete all your notes, events, recipes, and partner links. This action cannot be undone.
               </p>
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
+                className="bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
               >
                 🗑️ Delete Account
               </button>
             </div>
           ) : (
-            <div className="bg-red-950/30 border border-red-900/50 rounded-xl p-5 space-y-4">
+            <div className="bg-red-950/30 border border-red-900/50 rounded-lg p-3 space-y-3">
               {deleteError && (
-                <div className="bg-red-900/30 border border-red-700/50 text-red-300 px-4 py-3 rounded-xl">
-                  {deleteError}
+                <div className="bg-red-900/30 border border-red-700/50 text-red-300 px-3 py-2 rounded-lg">
+                  <p className="text-xs">{deleteError}</p>
                 </div>
               )}
               
               <div>
-                <p className="text-sm text-slate-200 mb-3">
-                  Type <span className="font-mono font-bold text-red-400 bg-red-950/50 px-2 py-1 rounded">DELETE</span> to confirm:
+                <p className="text-xs text-slate-200 mb-2">
+                  Type <span className="font-mono font-bold text-red-400 bg-red-950/50 px-1.5 py-0.5 rounded">DELETE</span> to confirm:
                 </p>
                 <input
                   type="text"
                   value={deleteConfirmText}
                   onChange={(e) => setDeleteConfirmText(e.target.value)}
                   placeholder="Type DELETE to confirm"
-                  className="w-full px-4 py-2.5 border border-red-700/50 bg-slate-900/50 text-slate-100 placeholder-slate-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 border border-red-700/50 bg-slate-900/50 text-slate-100 placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all text-sm"
                   disabled={deleting}
                 />
               </div>
               
-              <div className="flex space-x-3">
+              <div className="flex space-x-2">
                 <button
                   onClick={handleDeleteAccount}
                   disabled={deleting || deleteConfirmText !== 'DELETE'}
-                  className="flex-1 bg-red-600 hover:bg-red-500 text-white px-4 py-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
+                  className="flex-1 bg-red-600 hover:bg-red-500 text-white px-3 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
                 >
                   {deleting ? '⏳ Deleting...' : '🗑️ Permanently Delete'}
                 </button>
@@ -830,7 +829,7 @@ export default function SettingsPage() {
                     setDeleteError(null)
                   }}
                   disabled={deleting}
-                  className="px-4 py-2.5 rounded-xl bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 disabled:opacity-50 text-sm font-medium transition-all"
+                  className="px-3 py-2 rounded-lg bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 disabled:opacity-50 text-xs font-medium transition-all"
                 >
                   Cancel
                 </button>

@@ -22,8 +22,14 @@ import {
   getGroups,
   createGroup,
   deleteGroup,
+  getRoutines,
+  createRoutine,
+  updateRoutine,
+  deleteRoutine,
+  getRoutineCompletion,
+  toggleRoutineItem,
 } from '../lib/api'
-import type { Note, Event, Todo, ShoppingItem, Dog, Group } from '../types'
+import type { Note, Event, Todo, ShoppingItem, Dog, Group, Routine, RoutineCompletion } from '../types'
 import PhotoWidget from '../components/PhotoWidget'
 
 const defaultTilePreferences: Record<string, boolean> = {
@@ -34,6 +40,7 @@ const defaultTilePreferences: Record<string, boolean> = {
   'shared-todos': true,
   'shopping-list': true,
   'dog-feeding': true,
+  'routines': true,
 }
 
 const getTodayKey = () => new Date().toISOString().split('T')[0]
@@ -99,6 +106,24 @@ export default function TopicsPage() {
   const [creatingGroup, setCreatingGroup] = useState(false)
   const [groupError, setGroupError] = useState<string | null>(null)
 
+  // Routines state
+  const [routines, setRoutines] = useState<Routine[]>([])
+  const [routineCompletions, setRoutineCompletions] = useState<Record<string, RoutineCompletion>>({})
+  const [showAddRoutineModal, setShowAddRoutineModal] = useState(false)
+  const [showRoutineTrackerModal, setShowRoutineTrackerModal] = useState(false)
+  const [selectedRoutineForTracking, setSelectedRoutineForTracking] = useState<Routine | null>(null)
+  const [routineModalMode, setRoutineModalMode] = useState<'add' | 'edit'>('add')
+  const [routineFormName, setRoutineFormName] = useState('')
+  const [routineFormDescription, setRoutineFormDescription] = useState('')
+  const [routineFormItems, setRoutineFormItems] = useState<Array<{ name: string; category: 'fitness' | 'work' | 'food' | 'routine' }>>([{ name: '', category: 'routine' }])
+  const [routineFormDays, setRoutineFormDays] = useState<number[]>([])
+  const [routineSaving, setRoutineSaving] = useState(false)
+  const [routineError, setRoutineError] = useState<string | null>(null)
+  const [routineModalTargetId, setRoutineModalTargetId] = useState<string | null>(null)
+
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  const dayAbbreviations = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
   const groupLookup = useMemo(() => {
     const map = new Map<string, string>()
     groups.forEach((group) => map.set(group.id, group.name))
@@ -111,6 +136,34 @@ export default function TopicsPage() {
     }
   }, [user])
 
+  // Refresh routine completions when the date changes (at midnight)
+  useEffect(() => {
+    if (!user || routines.length === 0) return
+
+    const checkDateChange = () => {
+      const currentDate = getTodayKey()
+      // Reload completions for today
+      loadRoutineCompletions(routines, currentDate)
+    }
+
+    // Check immediately
+    checkDateChange()
+
+    // Set up interval to check every minute (to catch midnight)
+    const interval = setInterval(checkDateChange, 60000)
+
+    // Also check when window regains focus (user comes back to the app)
+    const handleFocus = () => {
+      checkDateChange()
+    }
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [user, routines])
+
   const loadDashboardData = async () => {
     if (!user) return
     setLoading(true)
@@ -119,7 +172,7 @@ export default function TopicsPage() {
       const nextMonth = new Date(today)
       nextMonth.setDate(today.getDate() + 30)
 
-      const [notesData, partnersData, preferencesData, todosData, eventsData, shoppingData, dogsData, groupsData] = await Promise.all([
+      const [notesData, partnersData, preferencesData, todosData, eventsData, shoppingData, dogsData, groupsData, routinesData] = await Promise.all([
         getAllNotes(user.id),
         getPartners(user.id),
         getTilePreferences(user.id),
@@ -128,6 +181,7 @@ export default function TopicsPage() {
         getShoppingItems(user.id),
         getDogs(user.id),
         getGroups(user.id),
+        getRoutines(user.id),
       ])
 
       setNotes(notesData)
@@ -143,10 +197,16 @@ export default function TopicsPage() {
       const sortedDogs = sortDogs(dogsData || [])
       setDogs(sortedDogs)
       setGroups(groupsData || [])
+      setRoutines(routinesData || [])
       
       // Load dog meals for today
       if (sortedDogs.length > 0) {
         await loadDogMeals(sortedDogs)
+      }
+
+      // Load routine completions for today
+      if (routinesData && routinesData.length > 0) {
+        await loadRoutineCompletions(routinesData, getTodayKey())
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error)
@@ -546,6 +606,446 @@ export default function TopicsPage() {
     }
   }
 
+  const loadRoutineCompletions = async (routinesList: Routine[], date: string) => {
+    if (!user) return
+
+    const completions: Record<string, RoutineCompletion> = {}
+    await Promise.all(
+      routinesList.map(async (routine) => {
+        const completion = await getRoutineCompletion(routine.id, user.id, date)
+        if (completion) {
+          completions[routine.id] = completion
+        }
+      })
+    )
+    setRoutineCompletions(completions)
+  }
+
+  const handleRoutineItemToggle = async (routineId: string, itemId: string, completed: boolean) => {
+    if (!user) return
+
+    const today = getTodayKey()
+    const success = await toggleRoutineItem(routineId, user.id, itemId, today, completed)
+
+    if (success.success) {
+      // Reload completions for this routine
+      const completion = await getRoutineCompletion(routineId, user.id, today)
+      const updatedCompletions = {
+        ...routineCompletions,
+        [routineId]: completion || ({} as RoutineCompletion),
+      }
+      setRoutineCompletions(updatedCompletions)
+      
+      // Update the selected routine if it's the one being tracked
+      if (selectedRoutineForTracking && selectedRoutineForTracking.id === routineId) {
+        // The modal will re-render with updated routineCompletions state
+      }
+    }
+  }
+
+  const handleOpenAddRoutine = () => {
+    setRoutineModalMode('add')
+    setRoutineFormName('')
+    setRoutineFormDescription('')
+    setRoutineFormItems([{ name: '', category: 'routine' }])
+    setRoutineFormDays([])
+    setRoutineError(null)
+    setRoutineModalTargetId(null)
+    setShowAddRoutineModal(true)
+  }
+
+  const handleOpenEditRoutine = (routine: Routine) => {
+    setRoutineModalMode('edit')
+    setRoutineFormName(routine.name)
+    setRoutineFormDescription(routine.description || '')
+    setRoutineFormItems(routine.items && routine.items.length > 0 ? routine.items.map((item) => ({ name: item.name, category: item.category || 'routine' })) : [{ name: '', category: 'routine' }])
+    setRoutineFormDays(routine.days_of_week || [])
+    setRoutineError(null)
+    setRoutineModalTargetId(routine.id)
+    setShowAddRoutineModal(true)
+  }
+
+  const handleCloseRoutineModal = () => {
+    setShowAddRoutineModal(false)
+    setRoutineFormName('')
+    setRoutineFormDescription('')
+    setRoutineFormItems([{ name: '', category: 'routine' }])
+    setRoutineFormDays([])
+    setRoutineError(null)
+    setRoutineModalTargetId(null)
+  }
+
+  const handleRoutineFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user) return
+
+    const trimmedName = routineFormName.trim()
+    if (!trimmedName) {
+      setRoutineError('Please give your routine a name.')
+      return
+    }
+
+    const validItems = routineFormItems.filter((item) => item.name.trim().length > 0)
+    if (validItems.length === 0) {
+      setRoutineError('Please add at least one routine item.')
+      return
+    }
+
+    setRoutineSaving(true)
+    setRoutineError(null)
+
+    if (routineModalMode === 'add') {
+      const { routine, error } = await createRoutine(
+        user.id,
+        trimmedName,
+        routineFormDescription.trim() || null,
+        validItems.map((item) => ({ name: item.name.trim(), category: item.category })),
+        routineFormDays
+      )
+
+      if (error || !routine) {
+        setRoutineError(error || 'Failed to create routine.')
+      } else {
+        await loadDashboardData()
+        handleCloseRoutineModal()
+      }
+    } else {
+      if (!routineModalTargetId) {
+        setRoutineError('Invalid routine ID.')
+        setRoutineSaving(false)
+        return
+      }
+
+      const { routine, error } = await updateRoutine(
+        routineModalTargetId,
+        trimmedName,
+        routineFormDescription.trim() || null,
+        validItems.map((item) => ({ name: item.name.trim(), category: item.category })),
+        routineFormDays
+      )
+
+      if (error || !routine) {
+        setRoutineError(error || 'Failed to update routine.')
+      } else {
+        await loadDashboardData()
+        handleCloseRoutineModal()
+      }
+    }
+
+    setRoutineSaving(false)
+  }
+
+  const handleDeleteRoutine = async (routineId: string, routineName: string) => {
+    if (!window.confirm(`Delete routine "${routineName}"? This cannot be undone.`)) return
+
+    const { success, error } = await deleteRoutine(routineId)
+    if (success) {
+      await loadDashboardData()
+    } else {
+      alert(error || 'Failed to delete routine.')
+    }
+  }
+
+  const addRoutineItemField = () => {
+    setRoutineFormItems([...routineFormItems, { name: '', category: 'routine' }])
+  }
+
+  const removeRoutineItemField = (index: number) => {
+    if (routineFormItems.length > 1) {
+      setRoutineFormItems(routineFormItems.filter((_, i) => i !== index))
+    }
+  }
+
+  const updateRoutineItemField = (index: number, value: string) => {
+    const newItems = [...routineFormItems]
+    newItems[index] = { ...newItems[index], name: value }
+    setRoutineFormItems(newItems)
+  }
+
+  const updateRoutineItemCategory = (index: number, category: 'fitness' | 'work' | 'food' | 'routine') => {
+    const newItems = [...routineFormItems]
+    newItems[index] = { ...newItems[index], category }
+    setRoutineFormItems(newItems)
+  }
+
+  const toggleRoutineDay = (day: number) => {
+    if (routineFormDays.includes(day)) {
+      setRoutineFormDays(routineFormDays.filter((d) => d !== day))
+    } else {
+      setRoutineFormDays([...routineFormDays, day].sort())
+    }
+  }
+
+  const getRoutinesForToday = () => {
+    const today = new Date().getDay() // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    return routines.filter((routine) => {
+      // If no days specified, show every day (backward compatibility)
+      if (!routine.days_of_week || routine.days_of_week.length === 0) {
+        return true
+      }
+      return routine.days_of_week.includes(today)
+    })
+  }
+
+  const getDayLabel = (days: number[]) => {
+    if (!days || days.length === 0) {
+      return 'Every day'
+    }
+    if (days.length === 7) {
+      return 'Every day'
+    }
+    if (days.length === 5 && days.every((d) => [1, 2, 3, 4, 5].includes(d))) {
+      return 'Weekdays'
+    }
+    if (days.length === 2 && days.every((d) => [0, 6].includes(d))) {
+      return 'Weekends'
+    }
+    return days.map((d) => dayAbbreviations[d]).join(', ')
+  }
+
+  const handleOpenRoutineTracker = (routine: Routine) => {
+    setSelectedRoutineForTracking(routine)
+    setShowRoutineTrackerModal(true)
+  }
+
+  const handleCloseRoutineTracker = () => {
+    setShowRoutineTrackerModal(false)
+    setSelectedRoutineForTracking(null)
+  }
+
+  const getCategoryColor = (category: 'fitness' | 'work' | 'food' | 'routine'): string => {
+    switch (category) {
+      case 'fitness':
+        return '#22c55e' // vibrant green
+      case 'work':
+        return '#2563eb' // vibrant blue
+      case 'food':
+        return '#f59e0b' // vibrant orange/amber
+      default:
+        return '#8b5cf6' // vibrant purple (default)
+    }
+  }
+
+  const CategoryPieChart = ({ 
+    routine, 
+    completion, 
+    size = 80, 
+    strokeWidth = 8, 
+    id = 'default' 
+  }: { 
+    routine: Routine
+    completion?: RoutineCompletion
+    size?: number
+    strokeWidth?: number
+    id?: string
+  }) => {
+    const totalItems = routine.items?.length || 0
+    const completedItems = completion?.completed_items || []
+    const completedCount = completedItems.length
+    const progress = totalItems > 0 ? (completedCount / totalItems) * 100 : 0
+
+    // Group items by category and calculate progress per category
+    const categoryProgress: Record<string, { completed: number; total: number }> = {
+      fitness: { completed: 0, total: 0 },
+      work: { completed: 0, total: 0 },
+      food: { completed: 0, total: 0 },
+      routine: { completed: 0, total: 0 },
+    }
+
+    routine.items?.forEach((item) => {
+      const category = item.category || 'routine'
+      categoryProgress[category].total++
+      if (completedItems.includes(item.id)) {
+        categoryProgress[category].completed++
+      }
+    })
+
+    const radius = (size - strokeWidth) / 2
+    const circumference = 2 * Math.PI * radius
+    const center = size / 2
+
+    // Calculate segments for each category
+    const segments: Array<{ category: string; startAngle: number; endAngle: number; progress: number; itemIds: string[] }> = []
+    let currentAngle = -90 // Start at top
+
+    // Group items by category to match segments
+    const categoryItemMap: Record<string, string[]> = {
+      fitness: [],
+      work: [],
+      food: [],
+      routine: [],
+    }
+
+    routine.items?.forEach((item) => {
+      const category = item.category || 'routine'
+      categoryItemMap[category].push(item.id)
+    })
+
+    Object.entries(categoryProgress).forEach(([category, stats]) => {
+      if (stats.total > 0) {
+        const categoryTotalProgress = (stats.completed / stats.total) * 100
+        const segmentAngle = (stats.total / totalItems) * 360
+        segments.push({
+          category,
+          startAngle: currentAngle,
+          endAngle: currentAngle + segmentAngle,
+          progress: categoryTotalProgress,
+          itemIds: categoryItemMap[category],
+        })
+        currentAngle += segmentAngle
+      }
+    })
+
+    // Calculate green segments based on completed items within each category segment
+    const greenSegments: Array<{ startAngle: number; endAngle: number }> = []
+    
+    segments.forEach((segment) => {
+      const segmentItemIds = segment.itemIds
+      const completedInSegment = segmentItemIds.filter(id => completedItems.includes(id))
+      
+      if (completedInSegment.length > 0) {
+        // Calculate how much of this segment is completed
+        const itemsPerSegment = segmentItemIds.length
+        const anglePerItem = (segment.endAngle - segment.startAngle) / itemsPerSegment
+        
+        // Find which items in this segment are completed
+        segmentItemIds.forEach((itemId, index) => {
+          if (completedItems.includes(itemId)) {
+            const itemStartAngle = segment.startAngle + (index * anglePerItem)
+            const itemEndAngle = itemStartAngle + anglePerItem
+            greenSegments.push({
+              startAngle: itemStartAngle,
+              endAngle: itemEndAngle,
+            })
+          }
+        })
+      }
+    })
+
+    return (
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="transform drop-shadow-lg">
+          <defs>
+            <linearGradient id={`gradient-fitness-${id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#22c55e" />
+              <stop offset="100%" stopColor="#16a34a" />
+            </linearGradient>
+            <linearGradient id={`gradient-work-${id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#2563eb" />
+              <stop offset="100%" stopColor="#1d4ed8" />
+            </linearGradient>
+            <linearGradient id={`gradient-food-${id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#f59e0b" />
+              <stop offset="100%" stopColor="#d97706" />
+            </linearGradient>
+            <linearGradient id={`gradient-routine-${id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#8b5cf6" />
+              <stop offset="100%" stopColor="#7c3aed" />
+            </linearGradient>
+            <filter id={`glow-${id}`}>
+              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          
+          {/* Background circle with subtle shadow */}
+          <circle
+            cx={center}
+            cy={center}
+            r={radius}
+            fill="none"
+            stroke="rgba(148, 163, 184, 0.15)"
+            strokeWidth={strokeWidth}
+          />
+
+          {/* Category segments */}
+          {segments.map((segment, idx) => {
+            const segmentProgress = (segment.progress / 100) * (segment.endAngle - segment.startAngle)
+
+            const startRad = (segment.startAngle * Math.PI) / 180
+            const endRad = ((segment.startAngle + segmentProgress) * Math.PI) / 180
+
+            const x1 = center + radius * Math.cos(startRad)
+            const y1 = center + radius * Math.sin(startRad)
+            const x2 = center + radius * Math.cos(endRad)
+            const y2 = center + radius * Math.sin(endRad)
+
+            const largeArcFlag = segmentProgress > 180 ? 1 : 0
+
+            const pathData = [
+              `M ${center} ${center}`,
+              `L ${x1} ${y1}`,
+              `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+              'Z',
+            ].join(' ')
+
+            const color = getCategoryColor(segment.category as 'fitness' | 'work' | 'food' | 'routine')
+
+            return (
+              <path
+                key={idx}
+                d={pathData}
+                fill={color}
+                opacity={0.9}
+                className="transition-all duration-500"
+                style={{ filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))' }}
+              />
+            )
+          })}
+
+          {/* Red base ring with subtle shadow */}
+          <circle
+            cx={center}
+            cy={center}
+            r={radius}
+            fill="none"
+            stroke="#ef4444"
+            strokeWidth={strokeWidth}
+            strokeDasharray={circumference}
+            strokeDashoffset={0}
+            strokeLinecap="round"
+            className="transform -rotate-90 transition-all duration-500 ease-out"
+            style={{ transformOrigin: 'center', filter: 'drop-shadow(0 1px 2px rgba(239, 68, 68, 0.3))' }}
+          />
+
+          {/* Green segments for completed items - aligned with category segments */}
+          {greenSegments.map((greenSegment, idx) => {
+            const segmentCircumference = ((greenSegment.endAngle - greenSegment.startAngle) / 360) * circumference
+            const startOffset = ((greenSegment.startAngle + 90) / 360) * circumference
+
+            return (
+              <circle
+                key={`completed-segment-${idx}`}
+                cx={center}
+                cy={center}
+                r={radius}
+                fill="none"
+                stroke="#10b981"
+                strokeWidth={strokeWidth}
+                strokeDasharray={`${segmentCircumference} ${circumference}`}
+                strokeDashoffset={-startOffset}
+                strokeLinecap="round"
+                className="transform -rotate-90 transition-all duration-500 ease-out"
+                style={{ transformOrigin: 'center', filter: 'drop-shadow(0 2px 4px rgba(16, 185, 129, 0.4))' }}
+              />
+            )
+          })}
+        </svg>
+        {/* Center text with subtle background */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="flex flex-col items-center">
+            <div className={`${size >= 100 ? 'w-12 h-12' : 'w-9 h-9'} rounded-full bg-slate-900/60 backdrop-blur-sm border border-slate-700/50 flex items-center justify-center shadow-lg`}>
+              <span className={`${size >= 100 ? 'text-base' : 'text-sm'} font-bold text-white drop-shadow-sm`}>{Math.round(progress)}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const handleOpenAddPartner = () => {
     setShowAddPartnerModal(true)
     setPartnerEmail('')
@@ -654,7 +1154,7 @@ export default function TopicsPage() {
                   
                   {/* Activity Tabs at Bottom */}
                   <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5 opacity-70 group-hover/hero:opacity-100 transition-opacity duration-300">
-                    <div className="relative">
+              <div className="relative">
                       <div className="pointer-events-none absolute inset-y-0 left-0 w-8 rounded-l-2xl bg-gradient-to-r from-slate-950 via-slate-950/60 to-transparent z-10" />
                       <div className="pointer-events-none absolute inset-y-0 right-0 w-8 rounded-r-2xl bg-gradient-to-l from-slate-950 via-slate-950/60 to-transparent z-10" />
                       <div className="scrollbar-none flex snap-x snap-mandatory gap-2 overflow-x-auto p-1">
@@ -672,25 +1172,25 @@ export default function TopicsPage() {
                         : config.title
 
                     return (
-                        <button
-                          key={config.type}
-                          onClick={() => setHighlightIndex(index)}
+                      <button
+                        key={config.type}
+                        onClick={() => setHighlightIndex(index)}
                           className={`group flex snap-start items-center gap-2 rounded-xl px-4 py-2.5 transition-all backdrop-blur-md ${
-                            isActive
+                          isActive
                               ? 'bg-white/20 text-white shadow-lg border border-white/30'
                               : 'bg-black/30 text-slate-200 hover:bg-black/40 hover:text-white border border-white/10'
-                          }`}
-                          aria-pressed={isActive}
-                        >
-                          <span className="text-lg">{config.icon}</span>
+                        }`}
+                        aria-pressed={isActive}
+                      >
+                        <span className="text-lg">{config.icon}</span>
                           <span className="text-xs font-semibold uppercase tracking-wide sm:text-sm whitespace-nowrap">
-                            {label}
-                          </span>
-                        </button>
-                      )
-                    })}
-                      </div>
-                    </div>
+                          {label}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
                   </div>
                 </div>
               ) : (
@@ -805,39 +1305,39 @@ export default function TopicsPage() {
                                   
                                   const isYourEvent = event.created_by === user?.id
                                   const partnerName = partners.find(p => p.id === event.partner_id)?.username
-                                  
-                                  return (
-                                    <div
-                                      key={event.id}
-                                      className="rounded-xl border border-slate-700/60 bg-slate-800/60 px-4 py-3 text-sm text-white transition-colors hover:border-indigo-400/50 cursor-pointer"
-                                      onClick={() => navigate('/app/calendar')}
-                                    >
-                                      <div className="flex items-center justify-between gap-3">
-                                        <div className="flex-1 min-w-0 flex items-center gap-3">
-                                          <span className="text-lg">📅</span>
-                                          <div className="min-w-0">
-                                            <p className="font-medium truncate">{event.title}</p>
-                                            {event.description && (
-                                              <p className="mt-1 text-xs text-slate-400 line-clamp-1">
-                                                {event.description}
-                                              </p>
-                                            )}
+
+                                return (
+                                  <div
+                                    key={event.id}
+                                    className="rounded-xl border border-slate-700/60 bg-slate-800/60 px-4 py-3 text-sm text-white transition-colors hover:border-indigo-400/50 cursor-pointer"
+                                    onClick={() => navigate('/app/calendar')}
+                                  >
+                                    <div className="flex items-center justify-between gap-3">
+                                      <div className="flex-1 min-w-0 flex items-center gap-3">
+                                        <span className="text-lg">📅</span>
+                                        <div className="min-w-0">
+                                          <p className="font-medium truncate">{event.title}</p>
+                                          {event.description && (
+                                            <p className="mt-1 text-xs text-slate-400 line-clamp-1">
+                                              {event.description}
+                                            </p>
+                                          )}
                                             <p className="mt-1 text-xs text-slate-500">
                                               {isYourEvent 
                                                 ? (partnerName ? `Your calendar with ${partnerName}` : 'Your calendar')
                                                 : `${eventCreator}'s calendar`}
                                             </p>
-                                          </div>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-1 text-xs text-slate-300 whitespace-nowrap">
-                                          {event.event_time && <span>{event.event_time}</span>}
-                                          <span className="rounded-md border border-slate-600/50 bg-slate-700/60 px-2 py-0.5">
-                                            {timeLabel}
-                                          </span>
                                         </div>
                                       </div>
+                                      <div className="flex flex-col items-end gap-1 text-xs text-slate-300 whitespace-nowrap">
+                                        {event.event_time && <span>{event.event_time}</span>}
+                                        <span className="rounded-md border border-slate-600/50 bg-slate-700/60 px-2 py-0.5">
+                                          {timeLabel}
+                                        </span>
+                                      </div>
                                     </div>
-                                  )
+                                  </div>
+                                )
                                 }
                               })
                           )}
@@ -1005,9 +1505,9 @@ export default function TopicsPage() {
                                         <div className="min-w-0">
                                           <p className="font-medium truncate">{item.item_name}</p>
                                           {sharedLabel && sharedLabel !== 'Just you' && (
-                                            <p className="mt-1 text-xs text-slate-400 line-clamp-1">
-                                              Shared with: {sharedLabel}
-                                            </p>
+                                          <p className="mt-1 text-xs text-slate-400 line-clamp-1">
+                                            Shared with: {sharedLabel}
+                                          </p>
                                           )}
                                         </div>
                                       </div>
@@ -1207,9 +1707,9 @@ export default function TopicsPage() {
                     </button>
                   </div>
                 </form>
-                </div>
               </div>
-            </div>
+                    </div>
+                  </div>
           </div>
         )}
 
@@ -1219,7 +1719,7 @@ export default function TopicsPage() {
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
                 <span className="text-2xl sm:text-3xl">👥</span>
-                Your Partners
+              Your Partners
               </h2>
               {partners.length > 0 && (
                 <span className="text-sm text-slate-400 bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-700/50">
@@ -1228,8 +1728,8 @@ export default function TopicsPage() {
               )}
             </div>
             {/* Partners Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 mb-4">
-              {partners.map((partner) => (
+            <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 mb-4">
+                {partners.map((partner) => (
                   <div
                     key={partner.id}
                     onClick={() => navigate(`/app/partner/${partner.id}`)}
@@ -1237,7 +1737,7 @@ export default function TopicsPage() {
                   >
                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
                     {/* Unlink Button - Top Right */}
-                    <button
+                            <button
                       onClick={(e) => handleUnlinkPartner(partner, e)}
                       className="absolute top-2 right-2 z-20 p-1 rounded-lg bg-red-600/90 hover:bg-red-500 active:bg-red-700 text-white transition-all shadow-lg hover:shadow-xl opacity-0 group-hover:opacity-100 backdrop-blur-sm"
                       title="Unlink partner"
@@ -1259,8 +1759,8 @@ export default function TopicsPage() {
                       ) : (
                         <div className="w-16 h-16 mb-2 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center border-2 border-indigo-500/30">
                           <span className="text-3xl">👤</span>
-                        </div>
-                      )}
+                                </div>
+                              )}
                       <h4 className="text-sm font-bold mb-1 text-white group-hover:text-indigo-200 transition-colors line-clamp-1 w-full px-1">
                         {partner.username || partner.email}
                       </h4>
@@ -1270,13 +1770,13 @@ export default function TopicsPage() {
                       <div className="flex items-center gap-1 text-indigo-300 font-medium text-xs group-hover:text-indigo-200 transition-colors">
                         <span>View</span>
                         <span>→</span>
-                      </div>
+                              </div>
                     </div>
                   </div>
                 ))}
-              {/* Add Partner Card */}
-              <button
-                onClick={handleOpenAddPartner}
+                {/* Add Partner Card */}
+                              <button
+                  onClick={handleOpenAddPartner}
                 className="glass backdrop-blur-xl border-2 border-dashed border-indigo-500/40 p-4 py-3 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 group relative hover:border-indigo-400/60 hover:scale-[1.02]"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
@@ -1285,23 +1785,23 @@ export default function TopicsPage() {
                     <span className="text-3xl">➕</span>
                   </div>
                   <h4 className="text-sm font-bold mb-0.5 text-indigo-200 group-hover:text-indigo-100 transition-colors">
-                    Add Partner
-                  </h4>
+                      Add Partner
+                    </h4>
                   <p className="text-xs text-slate-500 group-hover:text-slate-400 transition-colors mb-2">
                     Link new
-                  </p>
-                </div>
-              </button>
-            </div>
+                    </p>
+                  </div>
+                              </button>
+                            </div>
 
             {/* Photo Widget - Below Partners */}
-            {tilePreferences['photo-gallery'] !== false && (
+              {tilePreferences['photo-gallery'] !== false && (
               <div className="mb-6 sm:mb-8">
                 <PhotoWidget photoIndex={0} mediumWide={true} />
               </div>
             )}
-          </div>
-        )}
+                </div>
+              )}
 
         {/* Groups Section */}
         {!loading && (
@@ -1329,7 +1829,7 @@ export default function TopicsPage() {
                   {/* Delete Button - Top Right */}
                   <button
                     onClick={(e) => {
-                      e.stopPropagation()
+                                        e.stopPropagation()
                       handleDeleteGroup(group.id, group.name)
                     }}
                     className="absolute top-2 right-2 z-20 p-1 rounded-lg bg-red-600/90 hover:bg-red-500 active:bg-red-700 text-white transition-all shadow-lg hover:shadow-xl opacity-0 group-hover:opacity-100 backdrop-blur-sm"
@@ -1343,7 +1843,7 @@ export default function TopicsPage() {
                   <div className="relative z-10 flex flex-col items-center text-center">
                     <div className="w-16 h-16 mb-2 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center border-2 border-purple-500/30">
                       <span className="text-3xl">👥</span>
-                    </div>
+                                      </div>
                     <h4 className="text-sm font-bold mb-1 text-white group-hover:text-purple-200 transition-colors line-clamp-1 w-full px-1">
                       {group.name}
                     </h4>
@@ -1353,8 +1853,8 @@ export default function TopicsPage() {
                     <div className="flex items-center gap-1 text-purple-300 font-medium text-xs group-hover:text-purple-200 transition-colors">
                       <span>View</span>
                       <span>→</span>
-                    </div>
-                  </div>
+                                      </div>
+                                    </div>
                 </div>
               ))}
               {/* Add Group Card */}
@@ -1376,31 +1876,160 @@ export default function TopicsPage() {
                 </div>
               </button>
             </div>
-          </div>
+                              </div>
         )}
+
+        {/* Daily Routines Section */}
+        {!loading && tilePreferences['routines'] !== false && (
+          <div className={`${contentWidth} mb-4`}>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                <span className="text-xl sm:text-2xl">🔄</span>
+                Daily Routines
+              </h2>
+              <div className="flex items-center gap-2">
+                {routines.length > 0 && (
+                  <span className="text-xs text-slate-400 bg-slate-800/50 px-2.5 py-1 rounded-full border border-slate-700/50">
+                    {routines.length} {routines.length === 1 ? 'Routine' : 'Routines'}
+                  </span>
+                )}
+                {routines.length > 0 && (
+                  <button
+                    onClick={handleOpenAddRoutine}
+                    className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 px-3 py-1.5 text-xs font-medium text-white transition-all hover:from-emerald-500 hover:to-teal-500 shadow-lg hover:shadow-xl active:scale-95"
+                    title="Add Routine"
+                  >
+                    <span>➕</span>
+                    <span>Add</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {(() => {
+              const todayRoutines = getRoutinesForToday()
+              return todayRoutines.length === 0 ? (
+                <div className="glass backdrop-blur-xl rounded-xl border border-slate-700/50 p-5 text-center">
+                  <p className="text-sm text-slate-400 mb-3">
+                    {routines.length === 0
+                      ? 'No routines yet. Create one to start tracking your daily habits!'
+                      : `No routines scheduled for ${dayNames[new Date().getDay()]}. Create one or edit existing routines to add days.`}
+                  </p>
+                  <button
+                    onClick={handleOpenAddRoutine}
+                    className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-500 hover:to-teal-500 transition-all shadow-lg hover:shadow-xl active:scale-95 text-sm font-medium"
+                  >
+                    + Create Routine
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {todayRoutines.map((routine) => {
+                    const completion = routineCompletions[routine.id]
+                    const completedItems = completion?.completed_items || []
+                    const totalItems = routine.items?.length || 0
+                    const completedCount = completedItems.length
+                    const allCompleted = totalItems > 0 && completedCount === totalItems
+
+                    return (
+                      <div
+                        key={routine.id}
+                        className={`glass backdrop-blur-xl rounded-xl border-2 p-3.5 shadow-xl transition-all duration-300 cursor-pointer group hover:scale-[1.02] hover:shadow-2xl relative ${
+                          allCompleted
+                            ? 'border-emerald-500/50 bg-emerald-500/5 hover:border-emerald-500/70 hover:bg-emerald-500/10'
+                            : 'border-slate-700/50 hover:border-emerald-500/30 hover:bg-slate-800/50'
+                        }`}
+                        onClick={() => handleOpenRoutineTracker(routine)}
+                      >
+                        {/* Subtle Edit/Delete buttons in top right */}
+                        <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                    <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleOpenEditRoutine(routine)
+                            }}
+                            className="p-1.5 text-slate-600 hover:text-indigo-300 hover:bg-slate-700/50 rounded-lg transition-all opacity-20 hover:opacity-100"
+                            title="Edit routine"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteRoutine(routine.id, routine.name)
+                            }}
+                            className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-20 hover:opacity-100"
+                            title="Delete routine"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+
+                        <div className="flex items-start justify-between mb-2.5">
+                          <div className="flex-1 min-w-0 pr-10">
+                            <h3 className="text-base font-bold text-white mb-1.5 truncate group-hover:text-emerald-200 transition-colors drop-shadow-sm">
+                              {routine.name}
+                            </h3>
+                            <div className="mb-1.5">
+                              <span className="text-[10px] text-slate-400 bg-slate-800/60 backdrop-blur-sm px-2 py-0.5 rounded-full border border-slate-700/50 shadow-sm">
+                                {getDayLabel(routine.days_of_week || [])}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 font-medium">
+                              {completedCount} of {totalItems} completed
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Pie Chart */}
+                        <div className="flex justify-center mb-2.5">
+                          <div className="transform group-hover:scale-105 transition-transform duration-300">
+                            <CategoryPieChart routine={routine} completion={completion} size={75} strokeWidth={8} id={routine.id} />
+                          </div>
+                        </div>
+
+                        {allCompleted && (
+                          <div className="text-center">
+                            <span className="text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded-full border border-emerald-500/40 shadow-lg shadow-emerald-500/20">
+                              ✓ Complete!
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+              </div>
+              )
+            })()}
+                </div>
+              )}
 
         {/* Family Dogs Section */}
         {!loading && tilePreferences['dog-feeding'] !== false && (
-          <div className={`${contentWidth} mb-6 sm:mb-8`}>
-            <div className="glass backdrop-blur-xl rounded-2xl border border-slate-700/50 p-5 sm:p-6 shadow-2xl">
-              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className={`${contentWidth} mb-4`}>
+            <div className="glass backdrop-blur-xl rounded-xl border border-slate-700/50 p-4 shadow-2xl">
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-                    <span className="text-2xl">🐕</span>
+                  <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                    <span className="text-xl">🐕</span>
                     Family Dogs
                   </h3>
-                  <p className="text-xs text-slate-400 sm:text-sm mt-1">Track feeding schedules for your pups</p>
+                  <p className="text-[11px] text-slate-400 sm:text-xs mt-0.5">Track feeding schedules for your pups</p>
                 </div>
                 <button
                   onClick={() => openDogModal('add')}
-                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 text-sm font-medium text-white transition-all hover:from-indigo-500 hover:to-purple-500 shadow-lg hover:shadow-xl active:scale-95 whitespace-nowrap"
+                  className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-1.5 text-xs font-medium text-white transition-all hover:from-indigo-500 hover:to-purple-500 shadow-lg hover:shadow-xl active:scale-95 whitespace-nowrap"
                 >
                   <span>➕</span>
                   <span>Add Dog</span>
                 </button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {dogs.map((dog) => {
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {dogs.map((dog) => {
                       const mealCount = Math.max(1, dog.meals_per_day ?? 2)
                       const status = dogMealStatus[dog.id]
                       const completed: boolean[] =
@@ -1413,111 +2042,110 @@ export default function TopicsPage() {
                       return (
                         <div
                           key={dog.id}
-                          className={`relative flex flex-col gap-3 rounded-2xl border p-4 shadow-lg transition ${
+                          className={`relative flex flex-col gap-1.5 rounded-xl border p-2.5 shadow-lg transition ${
                             allComplete
                               ? 'border-green-500/40 bg-gradient-to-br from-green-900/30 to-slate-900/70'
                               : 'border-slate-700/60 bg-slate-900/70 hover:border-indigo-400/60'
                           }`}
                         >
                           {/* Header with dog info */}
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-start gap-3 flex-1 min-w-0">
-                              {dog.photo_signed_url || dog.photo_url ? (
-                                <img
-                                  src={dog.photo_signed_url || dog.photo_url || ''}
-                                  alt={dog.name}
-                                  className="h-14 w-14 rounded-xl object-cover border border-indigo-500/30 flex-shrink-0"
-                                />
-                              ) : (
-                                <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-500/20 text-xl text-indigo-100 font-bold">
-                                  {dog.name.charAt(0).toUpperCase()}
-                                </div>
-                              )}
-                              <div className="min-w-0 space-y-1 flex-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <p className="text-base font-bold text-white">{dog.name}</p>
-                                  {allComplete && (
-                                    <span className="flex items-center gap-1 rounded-full bg-green-500/20 border border-green-500/40 px-2 py-0.5 text-[10px] font-semibold text-green-200">
-                                      ✓ Fed
-                                    </span>
+                          <div className="flex items-start gap-2.5">
+                            {dog.photo_signed_url || dog.photo_url ? (
+                              <img
+                                src={dog.photo_signed_url || dog.photo_url || ''}
+                                alt={dog.name}
+                                className="h-16 w-16 rounded-xl object-cover border-2 border-indigo-500/40 flex-shrink-0 shadow-md"
+                              />
+                            ) : (
+                              <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-500/20 text-2xl text-indigo-100 font-bold border-2 border-indigo-500/40 shadow-md">
+                                {dog.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                                    <p className="text-sm font-bold text-white truncate">{dog.name}</p>
+                                    {allComplete && (
+                                      <span className="flex items-center gap-0.5 rounded-full bg-green-500/20 border border-green-500/40 px-1.5 py-0.5 text-[9px] font-semibold text-green-200 flex-shrink-0">
+                                        ✓ Fed
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mb-0.5">
+                                    <span>{completedCount}/{mealCount} meals</span>
+                                    {dog.weight_per_meal && <span>• {dog.weight_per_meal}g</span>}
+                                  </div>
+                                  {dog.partner_id && (
+                                    <p className="text-[9px] text-slate-500 truncate">
+                                      👥 {partnerMap.get(dog.partner_id)?.username || partnerMap.get(dog.partner_id)?.email || 'partner'}
+                                    </p>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-2 text-xs text-slate-400">
-                                  <span>{completedCount}/{mealCount} meals today</span>
-                                  {dog.weight_per_meal && <span>• {dog.weight_per_meal}g each</span>}
+                                {/* Action buttons */}
+                                <div className="flex gap-1 flex-shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => openDogModal('edit', dog)}
+                                    className="rounded-lg border border-indigo-500/40 bg-indigo-500/20 p-1 text-indigo-200 transition hover:bg-indigo-500/30 hover:text-indigo-100"
+                                    title="Edit dog"
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteDog(dog.id)}
+                                    className="rounded-lg border border-red-500/40 bg-red-500/20 p-1 text-red-200 transition hover:bg-red-500/30 hover:text-red-100"
+                                    title="Remove dog"
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
                                 </div>
-                                {dog.partner_id && (
-                                  <p className="text-[11px] text-slate-500">
-                                    👥 {partnerMap.get(dog.partner_id)?.username || partnerMap.get(dog.partner_id)?.email || 'partner'}
-                                  </p>
-                                )}
                               </div>
-                            </div>
-                            
-                            {/* Action buttons */}
-                            <div className="flex gap-1.5 flex-shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => openDogModal('edit', dog)}
-                                className="rounded-lg border border-indigo-500/40 bg-indigo-500/20 p-1.5 text-indigo-200 transition hover:bg-indigo-500/30 hover:text-indigo-100"
-                                title="Edit dog"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteDog(dog.id)}
-                                className="rounded-lg border border-red-500/40 bg-red-500/20 p-1.5 text-red-200 transition hover:bg-red-500/30 hover:text-red-100"
-                                title="Remove dog"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
                             </div>
                           </div>
 
                           {/* Meals list - always visible */}
-                          <div className="space-y-2 pt-2 border-t border-slate-700/50">
-                            {Array.from({ length: mealCount }).map((_, mealIndex) => (
-                              <label
-                                key={mealIndex}
-                                className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition cursor-pointer ${
-                                  completed[mealIndex]
-                                    ? 'border-green-500/40 bg-green-900/20 text-green-100'
-                                    : 'border-slate-700/50 bg-slate-800/60 text-slate-200 hover:border-indigo-400/60 hover:bg-slate-800/80'
-                                }`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  className="h-5 w-5 rounded border-slate-600 bg-slate-900 text-indigo-500 focus:ring-indigo-400 focus:ring-offset-slate-900 cursor-pointer"
-                                  checked={completed[mealIndex]}
-                                  onChange={() => handleDogMealAction(dog, mealIndex)}
-                                />
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 text-sm font-semibold">
-                                    <span className="text-lg">
+                          <div className="space-y-1 pt-1.5 border-t border-slate-700/50">
+                              {Array.from({ length: mealCount }).map((_, mealIndex) => (
+                                <label
+                                  key={mealIndex}
+                                  className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-left transition cursor-pointer ${
+                                    completed[mealIndex]
+                                      ? 'border-green-500/40 bg-green-900/20 text-green-100'
+                                      : 'border-slate-700/50 bg-slate-800/60 text-slate-200 hover:border-indigo-400/60 hover:bg-slate-800/80'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    className="h-3.5 w-3.5 rounded border-slate-600 bg-slate-900 text-indigo-500 focus:ring-indigo-400 focus:ring-offset-slate-900 cursor-pointer"
+                                    checked={completed[mealIndex]}
+                                    onChange={() => handleDogMealAction(dog, mealIndex)}
+                                  />
+                                  <div className="flex-1 flex items-center gap-1.5">
+                                    <span className="text-xs">
                                       {mealIndex === 0 ? '🍳' : mealIndex === 1 ? '🍲' : '🥣'}
                                     </span>
-                                    <span>{getMealLabel(mealIndex)}</span>
+                                    <span className="text-[11px] font-medium">{getMealLabel(mealIndex)}</span>
+                                    {dog.weight_per_meal && (
+                                      <span className="text-[9px] text-slate-400 ml-auto">
+                                        {dog.weight_per_meal}g
+                                      </span>
+                                    )}
                                   </div>
-                                  {dog.weight_per_meal && (
-                                    <div className="text-[11px] text-slate-400 ml-7">
-                                      {dog.weight_per_meal} g
-                                    </div>
+                                  {completed[mealIndex] && (
+                                    <span className="text-green-400 text-xs">✓</span>
                                   )}
-                                </div>
-                                {completed[mealIndex] && (
-                                  <span className="text-green-400 text-sm">✓</span>
-                                )}
-                              </label>
-                            ))}
+                                </label>
+                              ))}
                           </div>
                         </div>
                       )
-                })}
+                    })}
               </div>
             </div>
           </div>
@@ -1750,6 +2378,291 @@ export default function TopicsPage() {
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Routine Tracker Modal */}
+        {showRoutineTrackerModal && selectedRoutineForTracking && (
+          <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm p-4 overscroll-contain" onClick={handleCloseRoutineTracker}>
+            <div className="flex min-h-full items-center justify-center py-4">
+              <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md border border-slate-600/50 my-8" onClick={(e) => e.stopPropagation()}>
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex-1">
+                      <h3 className="text-2xl font-bold text-white mb-2">{selectedRoutineForTracking.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500 bg-slate-800/50 px-2 py-1 rounded-full border border-slate-700/50">
+                          {getDayLabel(selectedRoutineForTracking.days_of_week || [])}
+                        </span>
+                        {selectedRoutineForTracking.description && (
+                          <span className="text-xs text-slate-400">{selectedRoutineForTracking.description}</span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleCloseRoutineTracker}
+                      className="text-slate-400 hover:text-white text-2xl min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors rounded-lg hover:bg-slate-700/50"
+                      aria-label="Close tracker"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  {(() => {
+                    const completion = routineCompletions[selectedRoutineForTracking.id]
+                    const completedItems = completion?.completed_items || []
+                    const totalItems = selectedRoutineForTracking.items?.length || 0
+                    const completedCount = completedItems.length
+                    const allCompleted = totalItems > 0 && completedCount === totalItems
+
+                    return (
+                      <>
+                        {/* Large Pie Chart */}
+                        <div className="flex justify-center mb-6">
+                          <CategoryPieChart routine={selectedRoutineForTracking} completion={completion} size={150} strokeWidth={12} id={`modal-${selectedRoutineForTracking.id}`} />
+                        </div>
+
+                        {/* Progress Text */}
+                        <div className="text-center mb-6">
+                          <p className="text-2xl font-bold text-white mb-1">
+                            {completedCount} / {totalItems}
+                          </p>
+                          <p className="text-sm text-slate-400">Items completed</p>
+                          {allCompleted && (
+                            <div className="mt-3">
+                              <span className="text-sm bg-emerald-500/20 text-emerald-300 px-4 py-2 rounded-full border border-emerald-500/30">
+                                🎉 All done! Great job!
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Items List */}
+                        {selectedRoutineForTracking.items && selectedRoutineForTracking.items.length > 0 && (
+                          <div className="space-y-2 max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800/50">
+                            {selectedRoutineForTracking.items.map((item) => {
+                              const isCompleted = completedItems.includes(item.id)
+                              return (
+                                <div
+                                  key={item.id}
+                                  className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                                    isCompleted
+                                      ? 'bg-emerald-500/10 border-emerald-500/50'
+                                      : 'bg-slate-800/40 border-slate-700/50 hover:border-slate-600/50'
+                                  }`}
+                                >
+                                  <button
+                                    onClick={() => {
+                                      handleRoutineItemToggle(selectedRoutineForTracking.id, item.id, !isCompleted)
+                                    }}
+                                    className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all flex-shrink-0 ${
+                                      isCompleted
+                                        ? 'bg-emerald-500 border-emerald-500 scale-110'
+                                        : 'border-slate-500 hover:border-emerald-400 hover:scale-110'
+                                    }`}
+                                  >
+                                    {isCompleted && (
+                                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    )}
+                                  </button>
+                                  <div className="flex-1 flex items-center gap-2">
+                                    <span
+                                      className={`text-base font-medium ${
+                                        isCompleted ? 'text-emerald-200 line-through' : 'text-white'
+                                      }`}
+                                    >
+                                      {item.name}
+                                    </span>
+                                    <span
+                                      className="text-xs px-2 py-0.5 rounded-full border"
+                                      style={{
+                                        backgroundColor: getCategoryColor(item.category || 'routine') + '20',
+                                        borderColor: getCategoryColor(item.category || 'routine') + '40',
+                                        color: getCategoryColor(item.category || 'routine')
+                                      }}
+                                    >
+                                      {item.category === 'fitness' ? '💪' : item.category === 'work' ? '💼' : item.category === 'food' ? '🍽️' : '🔄'}
+                                    </span>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </>
+                    )
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Create/Edit Routine Modal */}
+        {showAddRoutineModal && (
+          <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm p-4 overscroll-contain" onClick={handleCloseRoutineModal}>
+            <div className="flex min-h-full items-center justify-center py-4">
+              <div className="glass backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-lg border border-slate-600/50 my-8" onClick={(e) => e.stopPropagation()}>
+                <div className="p-6 max-h-[80vh] overflow-y-auto overscroll-contain">
+                  <div className="flex items-start justify-between mb-6">
+                    <div>
+                      <h3 className="text-2xl font-bold text-white">{routineModalMode === 'add' ? 'Create Routine' : 'Edit Routine'}</h3>
+                      <p className="text-sm text-slate-400 mt-1">
+                        Track your daily habits and tasks.
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleCloseRoutineModal}
+                      className="text-slate-400 hover:text-white text-2xl min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors rounded-lg hover:bg-slate-700/50"
+                      aria-label="Close routine modal"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  {routineError && (
+                    <div className="mb-4 p-4 bg-red-900/30 border border-red-700/50 rounded-xl">
+                      <p className="text-sm text-red-300">{routineError}</p>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleRoutineFormSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Routine Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={routineFormName}
+                        onChange={(e) => setRoutineFormName(e.target.value)}
+                        placeholder="Morning Routine, Evening Routine..."
+                        required
+                        className="w-full px-4 py-3 text-base border border-slate-600 bg-slate-700/50 text-white placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                        disabled={routineSaving}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Description (Optional)
+                      </label>
+                      <textarea
+                        value={routineFormDescription}
+                        onChange={(e) => setRoutineFormDescription(e.target.value)}
+                        placeholder="What's this routine for?"
+                        rows={2}
+                        className="w-full px-4 py-3 text-base border border-slate-600 bg-slate-700/50 text-white placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all resize-none"
+                        disabled={routineSaving}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Days of Week (Optional - leave empty for every day)
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {dayAbbreviations.map((abbr, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => toggleRoutineDay(index)}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                              routineFormDays.includes(index)
+                                ? 'bg-emerald-600 text-white border-2 border-emerald-500'
+                                : 'bg-slate-700/50 text-slate-300 border-2 border-slate-600 hover:border-slate-500'
+                            }`}
+                            disabled={routineSaving}
+                          >
+                            {abbr}
+                          </button>
+                        ))}
+                      </div>
+                      {routineFormDays.length > 0 && (
+                        <p className="mt-2 text-xs text-slate-400">
+                          Selected: {getDayLabel(routineFormDays)}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-slate-300">
+                          Routine Items *
+                        </label>
+                        <button
+                          type="button"
+                          onClick={addRoutineItemField}
+                          className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
+                        >
+                          + Add Item
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        {routineFormItems.map((item, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={item.name}
+                              onChange={(e) => updateRoutineItemField(index, e.target.value)}
+                              placeholder={`Item ${index + 1}`}
+                              className="flex-1 px-4 py-2 text-base border border-slate-600 bg-slate-700/50 text-white placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                              disabled={routineSaving}
+                            />
+                            <select
+                              value={item.category}
+                              onChange={(e) => updateRoutineItemCategory(index, e.target.value as 'fitness' | 'work' | 'food' | 'routine')}
+                              className="px-3 py-2 text-sm border border-slate-600 bg-slate-700/50 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                              disabled={routineSaving}
+                              style={{ 
+                                backgroundColor: getCategoryColor(item.category) + '20',
+                                borderColor: getCategoryColor(item.category) + '40'
+                              }}
+                            >
+                              <option value="routine">🔄 Routine</option>
+                              <option value="fitness">💪 Fitness</option>
+                              <option value="work">💼 Work</option>
+                              <option value="food">🍽️ Food</option>
+                            </select>
+                            {routineFormItems.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeRoutineItemField(index)}
+                                className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                                disabled={routineSaving}
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <button
+                        type="button"
+                        onClick={handleCloseRoutineModal}
+                        disabled={routineSaving}
+                        className="flex-1 px-6 py-3 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 active:bg-slate-500 text-sm font-medium transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={routineSaving || !routineFormName.trim() || routineFormItems.filter((item) => item.name.trim().length > 0).length === 0}
+                        className="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-500 hover:to-teal-500 active:from-emerald-700 active:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
+                      >
+                        {routineSaving ? (routineModalMode === 'add' ? 'Creating...' : 'Saving...') : (routineModalMode === 'add' ? 'Create Routine' : 'Save Changes')}
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </div>
             </div>
           </div>

@@ -162,3 +162,32 @@ export interface GroupMember {
   email?: string
 }
 
+export interface Routine {
+  id: string
+  user_id: string
+  name: string
+  description: string | null
+  days_of_week: number[] // Array of day numbers: 0=Sunday, 1=Monday, ..., 6=Saturday
+  created_at: string
+  updated_at: string
+  items?: RoutineItem[]
+}
+
+export interface RoutineItem {
+  id: string
+  routine_id: string
+  name: string
+  order_index: number
+  category: 'fitness' | 'work' | 'food' | 'routine'
+  created_at: string
+}
+
+export interface RoutineCompletion {
+  id: string
+  routine_id: string
+  user_id: string
+  completion_date: string
+  completed_items: string[] // Array of routine_item IDs
+  created_at: string
+}
+

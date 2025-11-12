@@ -28,41 +28,54 @@ export async function requestNotificationPermission(): Promise<boolean> {
 
 // Register for Web Push API
 async function registerPushSubscription(): Promise<void> {
+  console.log('Starting push subscription registration...')
+  
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    console.log('Push notifications are not supported in this browser')
+    console.error('Push notifications are not supported in this browser')
     return
   }
 
   try {
+    console.log('Waiting for service worker...')
     const registration = await navigator.serviceWorker.ready
+    console.log('Service worker ready')
     
     // Check if we already have a subscription
     let subscription = await registration.pushManager.getSubscription()
+    console.log('Existing subscription:', subscription ? 'Found' : 'None')
     
     if (!subscription) {
       // Subscribe to push notifications
-      // Note: You'll need to add VAPID public key here
-      // For now, we'll try without it (some browsers support it)
       const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY
       
       if (!vapidPublicKey) {
-        console.warn('VAPID public key not configured. Push notifications may not work.')
+        console.error('❌ VAPID public key not configured! Check your .env file.')
+        console.error('Add: VITE_VAPID_PUBLIC_KEY=BK49yP6BmhAxqdqF9UOQaK5YKKVv19A14UZGSbQg--GhY4k1LJEFDQu0wGmPLyBBsroK29G1FTNQKphB7ZMH9c8')
         return
       }
 
+      console.log('Subscribing to push notifications with VAPID key...')
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
       })
+      console.log('✅ Push subscription created:', subscription.endpoint)
     }
 
     // Get the current user
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError) {
+      console.error('Error getting user:', userError)
+      return
+    }
+    
     if (!user) {
-      console.log('No user logged in, cannot save push subscription')
+      console.error('No user logged in, cannot save push subscription')
       return
     }
 
+    console.log('Saving push subscription for user:', user.id)
+    
     // Extract subscription details
     const subscriptionData: PushSubscription = {
       user_id: user.id,
@@ -72,10 +85,15 @@ async function registerPushSubscription(): Promise<void> {
     }
 
     // Save to database
-    await savePushSubscription(subscriptionData)
-    console.log('Push subscription registered and saved')
+    const result = await savePushSubscription(subscriptionData)
+    if (result.success) {
+      console.log('✅ Push subscription registered and saved to database!')
+    } else {
+      console.error('❌ Failed to save push subscription:', result.error)
+    }
   } catch (error) {
-    console.error('Error registering push subscription:', error)
+    console.error('❌ Error registering push subscription:', error)
+    console.error('Error details:', error instanceof Error ? error.message : String(error))
   }
 }
 

@@ -10,6 +10,16 @@ if ('serviceWorker' in navigator) {
       .register('/sw.js')
       .then((registration) => {
         console.log('Service Worker registered:', registration.scope)
+        
+        // Check for updates when page becomes visible (user returns to tab)
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden) {
+            registration.update()
+          }
+        })
+        
+        // Also check on page load
+        registration.update()
       })
       .catch((error) => {
         console.log('Service Worker registration failed:', error)

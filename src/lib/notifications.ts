@@ -58,9 +58,12 @@ export function subscribeToCalendarEvents(
 ) {
   console.log('Setting up calendar event subscription for user:', userId)
   
+  // Create a unique channel name per device to ensure both devices can subscribe independently
+  const channelName = `calendar-events-${userId}-${Date.now()}`
+  
   // Subscribe to all new events and filter in code (more reliable than filter syntax)
   const channel = supabase
-    .channel(`calendar-events-${userId}`)
+    .channel(channelName)
     .on(
       'postgres_changes',
       {
@@ -88,6 +91,11 @@ export function subscribeToCalendarEvents(
     )
     .subscribe((status) => {
       console.log('Subscription status:', status)
+      if (status === 'SUBSCRIBED') {
+        console.log('Successfully subscribed to calendar events on this device')
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('Error subscribing to calendar events')
+      }
     })
 
   return () => {

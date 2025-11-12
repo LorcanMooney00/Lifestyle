@@ -150,7 +150,7 @@ export default function TopicsPage() {
 
     console.log('Setting up notifications for user:', user.id)
     let unsubscribe: (() => void) | null = null
-    let reconnectTimeout: NodeJS.Timeout | null = null
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
 
     const setupSubscription = () => {
       // Clean up existing subscription

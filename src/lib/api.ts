@@ -2452,3 +2452,61 @@ export async function toggleRoutineItem(
   return { success: true, error: null }
 }
 
+// Push subscription management
+export interface PushSubscription {
+  id?: string
+  user_id: string
+  endpoint: string
+  p256dh: string
+  auth: string
+}
+
+export async function savePushSubscription(subscription: PushSubscription): Promise<{ success: boolean; error: string | null }> {
+  const { error } = await supabase
+    .from('push_subscriptions')
+    .upsert({
+      user_id: subscription.user_id,
+      endpoint: subscription.endpoint,
+      p256dh: subscription.p256dh,
+      auth: subscription.auth,
+    }, {
+      onConflict: 'user_id,endpoint'
+    })
+
+  if (error) {
+    console.error('Error saving push subscription:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true, error: null }
+}
+
+export async function deletePushSubscription(userId: string, endpoint: string): Promise<{ success: boolean; error: string | null }> {
+  const { error } = await supabase
+    .from('push_subscriptions')
+    .delete()
+    .eq('user_id', userId)
+    .eq('endpoint', endpoint)
+
+  if (error) {
+    console.error('Error deleting push subscription:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true, error: null }
+}
+
+export async function getPushSubscriptions(userId: string): Promise<PushSubscription[]> {
+  const { data, error } = await supabase
+    .from('push_subscriptions')
+    .select('*')
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('Error fetching push subscriptions:', error)
+    return []
+  }
+
+  return (data || []) as PushSubscription[]
+}
+

@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient'
+import { savePushSubscription, type PushSubscription } from './api'
 
-// Request notification permission
+// Request notification permission and register for push
 export async function requestNotificationPermission(): Promise<boolean> {
   if (!('Notification' in window)) {
     console.log('This browser does not support notifications')
@@ -8,15 +9,96 @@ export async function requestNotificationPermission(): Promise<boolean> {
   }
 
   if (Notification.permission === 'granted') {
+    // Already granted, try to register for push
+    await registerPushSubscription()
     return true
   }
 
   if (Notification.permission !== 'denied') {
     const permission = await Notification.requestPermission()
-    return permission === 'granted'
+    if (permission === 'granted') {
+      // Register for push notifications
+      await registerPushSubscription()
+      return true
+    }
   }
 
   return false
+}
+
+// Register for Web Push API
+async function registerPushSubscription(): Promise<void> {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.log('Push notifications are not supported in this browser')
+    return
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready
+    
+    // Check if we already have a subscription
+    let subscription = await registration.pushManager.getSubscription()
+    
+    if (!subscription) {
+      // Subscribe to push notifications
+      // Note: You'll need to add VAPID public key here
+      // For now, we'll try without it (some browsers support it)
+      const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY
+      
+      if (!vapidPublicKey) {
+        console.warn('VAPID public key not configured. Push notifications may not work.')
+        return
+      }
+
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+      })
+    }
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      console.log('No user logged in, cannot save push subscription')
+      return
+    }
+
+    // Extract subscription details
+    const subscriptionData: PushSubscription = {
+      user_id: user.id,
+      endpoint: subscription.endpoint,
+      p256dh: arrayBufferToBase64(subscription.getKey('p256dh')!),
+      auth: arrayBufferToBase64(subscription.getKey('auth')!),
+    }
+
+    // Save to database
+    await savePushSubscription(subscriptionData)
+    console.log('Push subscription registered and saved')
+  } catch (error) {
+    console.error('Error registering push subscription:', error)
+  }
+}
+
+// Helper function to convert VAPID key
+function urlBase64ToUint8Array(base64String: string): BufferSource {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const rawData = window.atob(base64)
+  const outputArray = new Uint8Array(rawData.length)
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i)
+  }
+  return outputArray.buffer
+}
+
+// Helper function to convert ArrayBuffer to base64
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  return window.btoa(binary)
 }
 
 // Show a notification (uses service worker if available, otherwise falls back to regular notifications)

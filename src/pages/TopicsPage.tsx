@@ -144,16 +144,20 @@ export default function TopicsPage() {
     
     // Only set up notifications if the user has enabled them in settings
     if (tilePreferences['notifications'] !== true) {
+      console.log('Notifications disabled in settings')
       return
     }
 
+    console.log('Setting up notifications for user:', user.id)
     let unsubscribe: (() => void) | null = null
 
     // Request notification permission and set up calendar event notifications
     requestNotificationPermission().then((granted) => {
+      console.log('Notification permission granted:', granted)
       if (granted) {
         // Set up subscription for new calendar events
         unsubscribe = subscribeToCalendarEvents(user.id, (newEvent) => {
+          console.log('New event received for notification:', newEvent)
           // Find the partner who created the event (reload partners if needed)
           const creator = partners.find(p => p.id === newEvent.created_by)
           let creatorName = 'Someone'
@@ -183,6 +187,8 @@ export default function TopicsPage() {
             body: `${creatorName} added "${newEvent.title}" on ${dateStr}${newEvent.event_time ? ` at ${newEvent.event_time}` : ''}`,
             tag: `event-${newEvent.id}`,
             requireInteraction: false,
+          }).catch((error) => {
+            console.error('Error showing notification:', error)
           })
           
           // Reload events to show the new one

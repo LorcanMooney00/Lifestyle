@@ -54,7 +54,8 @@ export async function showNotification(title: string, options?: NotificationOpti
 // 2. Find the 'events' table and enable replication for it
 export function subscribeToCalendarEvents(
   userId: string,
-  onNewEvent: (event: any) => void
+  onNewEvent: (event: any) => void,
+  onStatusChange?: (status: string) => void
 ) {
   console.log('Setting up calendar event subscription for user:', userId)
   
@@ -93,8 +94,13 @@ export function subscribeToCalendarEvents(
       console.log('Subscription status:', status)
       if (status === 'SUBSCRIBED') {
         console.log('Successfully subscribed to calendar events on this device')
-      } else if (status === 'CHANNEL_ERROR') {
-        console.error('Error subscribing to calendar events')
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        console.error('Subscription error or closed:', status)
+      }
+      
+      // Notify parent about status changes
+      if (onStatusChange) {
+        onStatusChange(status)
       }
     })
 

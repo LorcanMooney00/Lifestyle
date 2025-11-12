@@ -150,54 +150,104 @@ export default function TopicsPage() {
 
     console.log('Setting up notifications for user:', user.id)
     let unsubscribe: (() => void) | null = null
+    let reconnectTimeout: NodeJS.Timeout | null = null
 
-    // Request notification permission and set up calendar event notifications
-    requestNotificationPermission().then((granted) => {
-      console.log('Notification permission granted:', granted)
-      if (granted) {
-        // Set up subscription for new calendar events
-        unsubscribe = subscribeToCalendarEvents(user.id, (newEvent) => {
-          console.log('New event received for notification:', newEvent)
-          // Find the partner who created the event (reload partners if needed)
-          const creator = partners.find(p => p.id === newEvent.created_by)
-          let creatorName = 'Someone'
-          
-          if (creator) {
-            creatorName = creator.username || creator.email || 'Someone'
-          } else {
-            // If partner not found, try to get it from the partners list
-            // This handles the case where partners haven't loaded yet
-            getPartners(user.id).then((partnerList) => {
-              const foundCreator = partnerList.find(p => p.id === newEvent.created_by)
-              if (foundCreator) {
-                creatorName = foundCreator.username || foundCreator.email || 'Someone'
-              }
-            })
-          }
-          
-          // Format the event date
-          const eventDate = new Date(newEvent.event_date)
-          const dateStr = eventDate.toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric' 
-          })
-          
-          // Show notification
-          showNotification('New Calendar Event', {
-            body: `${creatorName} added "${newEvent.title}" on ${dateStr}${newEvent.event_time ? ` at ${newEvent.event_time}` : ''}`,
-            tag: `event-${newEvent.id}`,
-            requireInteraction: false,
-          }).catch((error) => {
-            console.error('Error showing notification:', error)
-          })
-          
-          // Reload events to show the new one
-          loadDashboardData()
-        })
+    const setupSubscription = () => {
+      // Clean up existing subscription
+      if (unsubscribe) {
+        unsubscribe()
+        unsubscribe = null
       }
-    })
+
+      // Request notification permission and set up calendar event notifications
+      requestNotificationPermission().then((granted) => {
+        console.log('Notification permission granted:', granted)
+        if (granted) {
+          // Set up subscription for new calendar events
+          unsubscribe = subscribeToCalendarEvents(user.id, (newEvent) => {
+            console.log('New event received for notification:', newEvent)
+            // Find the partner who created the event (reload partners if needed)
+            const creator = partners.find(p => p.id === newEvent.created_by)
+            let creatorName = 'Someone'
+            
+            if (creator) {
+              creatorName = creator.username || creator.email || 'Someone'
+            } else {
+              // If partner not found, try to get it from the partners list
+              // This handles the case where partners haven't loaded yet
+              getPartners(user.id).then((partnerList) => {
+                const foundCreator = partnerList.find(p => p.id === newEvent.created_by)
+                if (foundCreator) {
+                  creatorName = foundCreator.username || foundCreator.email || 'Someone'
+                }
+              })
+            }
+            
+            // Format the event date
+            const eventDate = new Date(newEvent.event_date)
+            const dateStr = eventDate.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric' 
+            })
+            
+            // Show notification
+            showNotification('New Calendar Event', {
+              body: `${creatorName} added "${newEvent.title}" on ${dateStr}${newEvent.event_time ? ` at ${newEvent.event_time}` : ''}`,
+              tag: `event-${newEvent.id}`,
+              requireInteraction: false,
+            }).catch((error) => {
+              console.error('Error showing notification:', error)
+            })
+            
+            // Reload events to show the new one
+            loadDashboardData()
+          }, (status) => {
+            // Handle subscription status changes
+            console.log('Subscription status changed:', status)
+            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+              console.log('Subscription disconnected, will reconnect on next visibility change')
+              // Mark as disconnected so it will reconnect when page becomes visible
+              unsubscribe = null
+            }
+          })
+        }
+      })
+    }
+
+    // Initial setup
+    setupSubscription()
+
+    // Reconnect when page becomes visible (user returns to app)
+    const handleVisibilityChange = () => {
+      if (!document.hidden && unsubscribe === null) {
+        console.log('Page visible again, reconnecting notifications...')
+        // Small delay to ensure page is fully active
+        reconnectTimeout = setTimeout(() => {
+          setupSubscription()
+        }, 1000)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // Also reconnect on focus (for mobile)
+    const handleFocus = () => {
+      if (unsubscribe === null) {
+        console.log('Window focused, reconnecting notifications...')
+        reconnectTimeout = setTimeout(() => {
+          setupSubscription()
+        }, 1000)
+      }
+    }
+
+    window.addEventListener('focus', handleFocus)
 
     return () => {
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout)
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
       if (unsubscribe) {
         unsubscribe()
       }

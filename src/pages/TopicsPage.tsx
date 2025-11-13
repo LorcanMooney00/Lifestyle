@@ -2149,9 +2149,10 @@ export default function TopicsPage() {
             {(() => {
               const todayRoutines = getRoutinesForToday()
               const routinesToShow = tilePreferences['photo-gallery'] !== false ? todayRoutines.slice(4) : todayRoutines
+              const showCreateSection = tilePreferences['show-create-routine'] !== false
               
-              // Only show empty state if no routines exist at all
-              if (routines.length === 0) {
+              // Only show empty state if no routines exist at all AND show-create-routine is enabled
+              if (routines.length === 0 && showCreateSection) {
                 return (
                   <div className="glass backdrop-blur-xl rounded-xl border border-slate-700/50 p-5 text-center">
                     <p className="text-sm text-slate-400 mb-3">
@@ -2167,15 +2168,19 @@ export default function TopicsPage() {
                 )
               }
               
-              // If routines exist but none scheduled for today, show message but no create button
+              // If routines exist but none scheduled for today, show message but no create button (only if show-create-section is enabled)
               if (routinesToShow.length === 0) {
-                return (
-                  <div className="glass backdrop-blur-xl rounded-xl border border-slate-700/50 p-3 text-center">
-                    <p className="text-xs text-slate-400">
-                      No routines scheduled for {dayNames[new Date().getDay()]}. Edit existing routines to add days.
-                    </p>
-                  </div>
-                )
+                if (showCreateSection && routines.length > 0) {
+                  return (
+                    <div className="glass backdrop-blur-xl rounded-xl border border-slate-700/50 p-3 text-center">
+                      <p className="text-xs text-slate-400">
+                        No routines scheduled for {dayNames[new Date().getDay()]}. Edit existing routines to add days.
+                      </p>
+                    </div>
+                  )
+                }
+                // If show-create-section is disabled and no routines to show, show nothing
+                return null
               }
               
               // Show routines that are scheduled for today

@@ -104,3 +104,62 @@ WHERE EXISTS (
 -- ============================================
 SELECT * FROM pg_stat_user_functions WHERE funcname = 'notify_push_on_event';
 
+-- ============================================
+-- DATABASE SIZE DIAGNOSTICS
+-- ============================================
+-- Use these queries to find what's taking up space
+
+-- Total database size
+SELECT 
+  pg_size_pretty(pg_database_size(current_database())) AS total_database_size;
+
+-- Table sizes (ordered by size - shows what's taking up space)
+SELECT 
+  schemaname,
+  tablename,
+  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS total_size,
+  pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) AS table_size,
+  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) - pg_relation_size(schemaname||'.'||tablename)) AS indexes_size
+FROM pg_tables
+WHERE schemaname = 'public'
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+
+-- Row counts per table
+SELECT 
+  'photos' as table_name, COUNT(*) as rows FROM public.photos
+UNION ALL
+SELECT 'events', COUNT(*) FROM public.events
+UNION ALL
+SELECT 'notes', COUNT(*) FROM public.notes
+UNION ALL
+SELECT 'routine_completions', COUNT(*) FROM public.routine_completions
+UNION ALL
+SELECT 'dog_meals', COUNT(*) FROM public.dog_meals
+UNION ALL
+SELECT 'todos', COUNT(*) FROM public.todos
+UNION ALL
+SELECT 'shopping_items', COUNT(*) FROM public.shopping_items
+ORDER BY rows DESC;
+
+-- Photos table details (likely culprit for large size)
+SELECT 
+  COUNT(*) as total_photos,
+  COUNT(DISTINCT user_id) as unique_users,
+  MIN(created_at) as oldest_photo,
+  MAX(created_at) as newest_photo
+FROM public.photos;
+
+-- Check for duplicate photos
+SELECT 
+  storage_path,
+  COUNT(*) as duplicate_count
+FROM public.photos
+GROUP BY storage_path
+HAVING COUNT(*) > 1
+ORDER BY duplicate_count DESC
+LIMIT 20;
+
+-- IMPORTANT: Storage bucket size is NOT included in database size!
+-- Go to Supabase Dashboard → Storage → photos bucket to check actual file storage size
+-- Large photo files in storage buckets are often the real culprit for high storage usage
+

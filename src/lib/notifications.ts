@@ -60,36 +60,57 @@ async function registerPushSubscription(): Promise<void> {
   try {
     // Wait for OneSignal SDK to load via OneSignalDeferred
     // The SDK initializes in index.html, so we wait for it to be ready
-    let oneSignalReady = false
-    let attempts = 0
-    const maxAttempts = 50 // 5 seconds total
+    console.log('Waiting for OneSignal to initialize...')
     
-    while (!oneSignalReady && attempts < maxAttempts) {
-      // Check if OneSignal is available and has methods
+    // First, wait for the 'onesignal-ready' event or check if it's already ready
+    const waitForOneSignal = new Promise((resolve) => {
+      // Check if already ready
       if (window.OneSignal && 
           typeof window.OneSignal.isPushNotificationsEnabled === 'function' &&
           typeof window.OneSignal.getUserId === 'function') {
-        oneSignalReady = true
-        break
+        console.log('OneSignal already ready!')
+        resolve(true)
+        return
       }
       
-      // Also check if OneSignalDeferred has completed
-      if (window.OneSignalDeferred && window.OneSignalDeferred.length > 0) {
-        // Wait for deferred initialization
-        await new Promise(resolve => setTimeout(resolve, 200))
-      } else {
-        await new Promise(resolve => setTimeout(resolve, 100))
+      // Wait for the custom event
+      const handler = () => {
+        console.log('OneSignal ready event received!')
+        window.removeEventListener('onesignal-ready', handler)
+        resolve(true)
       }
+      window.addEventListener('onesignal-ready', handler)
       
-      attempts++
-    }
+      // Also poll as fallback
+      let attempts = 0
+      const maxAttempts = 100 // 10 seconds
+      const pollInterval = setInterval(() => {
+        if (window.OneSignal && 
+            typeof window.OneSignal.isPushNotificationsEnabled === 'function' &&
+            typeof window.OneSignal.getUserId === 'function') {
+          clearInterval(pollInterval)
+          window.removeEventListener('onesignal-ready', handler)
+          resolve(true)
+        } else if (attempts >= maxAttempts) {
+          clearInterval(pollInterval)
+          window.removeEventListener('onesignal-ready', handler)
+          resolve(false)
+        }
+        attempts++
+      }, 100)
+    })
+    
+    const oneSignalReady = await waitForOneSignal
 
     if (!oneSignalReady || !window.OneSignal) {
-      console.error('OneSignal SDK failed to initialize after waiting')
-      console.log('Falling back to native Web Push (works when app is open)')
+      console.error('❌ OneSignal SDK failed to initialize after waiting')
+      console.log('⚠️ Falling back to native Web Push (works when app is open, but NOT when closed)')
+      console.log('💡 For notifications when app is closed, OneSignal must initialize')
       await registerNativePushSubscription()
       return
     }
+    
+    console.log('✅ OneSignal is ready!')
 
     // Check if already subscribed
     const isEnabled = await window.OneSignal.isPushNotificationsEnabled()

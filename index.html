@@ -15,17 +15,21 @@
     <!-- OneSignal SDK -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
+      console.log('Setting up OneSignal deferred initialization...');
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function (OneSignal) {
+        console.log('OneSignal deferred callback called, initializing...');
         try {
           await OneSignal.init({
             appId: "56a8f812-6bb8-49de-a0ce-528ef87d563d",
           });
-          console.log('OneSignal initialized successfully');
+          console.log('✅ OneSignal initialized successfully');
           // Store reference for our code to use
           window.OneSignal = OneSignal;
+          // Signal that OneSignal is ready
+          window.dispatchEvent(new CustomEvent('onesignal-ready'));
         } catch (error) {
-          console.error('OneSignal initialization error:', error);
+          console.error('❌ OneSignal initialization error:', error);
         }
       });
     </script>

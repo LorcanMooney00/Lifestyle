@@ -565,10 +565,11 @@ export async function uploadProfilePicture(file: File): Promise<{ url: string | 
 
     // Upload to Supabase Storage (using photos bucket, or create a profile-pictures bucket)
     // Use upsert: true to overwrite if file exists
+    // Cache for 7 days (604800 seconds) to match signed URL expiry and drastically reduce egress
     const { error: uploadError } = await supabase.storage
       .from('photos')
       .upload(filePath, compressedFile, {
-        cacheControl: '3600',
+        cacheControl: '604800', // 7 days = 604800 seconds (matches signed URL expiry)
         upsert: true, // Allow overwriting existing files
       })
 
@@ -1505,8 +1506,9 @@ export async function uploadDogPhoto(file: File, userId: string): Promise<{ path
   const fileName = `dog-${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
   const filePath = `${userId}/dogs/${fileName}`
 
+  // Cache for 7 days (604800 seconds) to match signed URL expiry and drastically reduce egress
   const { error } = await supabase.storage.from('photos').upload(filePath, compressedFile, {
-    cacheControl: '3600',
+    cacheControl: '604800', // 7 days = 604800 seconds (matches signed URL expiry)
     upsert: true,
   })
 
@@ -1851,10 +1853,11 @@ export async function uploadPhoto(file: File): Promise<{ photo: Photo | null; er
     const filePath = `${authenticatedUserId}/${fileName}`
 
     // Upload to Supabase Storage
+    // Cache for 7 days (604800 seconds) to match signed URL expiry and drastically reduce egress
     const { error: uploadError } = await supabase.storage
       .from('photos')
       .upload(filePath, file, {
-        cacheControl: '3600',
+        cacheControl: '604800', // 7 days = 604800 seconds (matches signed URL expiry)
         upsert: false,
       })
 

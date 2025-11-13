@@ -554,9 +554,10 @@ export async function uploadProfilePicture(file: File): Promise<{ url: string | 
     const { compressImage } = await import('./imageCompression')
     
     // Compress the image before uploading to reduce storage egress
-    // Profile pictures can be smaller (max 500KB, 800px) since they're displayed small
+    // Profile pictures are displayed at 64px, so 320px (5x) is enough for retina displays
+    // 100KB is sufficient for a 320px image at 60% quality (typically 30-80KB)
     console.log('Compressing profile picture before upload...')
-    const compressedFile = await compressImage(file, 0.5, 800) // Max 500KB, max 800px
+    const compressedFile = await compressImage(file, 0.1, 320) // Max 100KB, max 320px
 
     // Generate a unique filename (always jpg after compression)
     const fileName = `profile-${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`
@@ -748,7 +749,7 @@ export async function getProfilePictureUrl(profilePictureUrl: string | null | un
         const filePath = pathParts.slice(bucketIndex + 1).join('/')
         const { data: signedUrlData, error: signedError } = await supabase.storage
           .from('photos')
-          .createSignedUrl(filePath, 3600)
+          .createSignedUrl(filePath, 604800) // Valid for 7 days to reduce egress
         
         if (!signedError && signedUrlData?.signedUrl) {
           return signedUrlData.signedUrl
@@ -769,7 +770,7 @@ export async function getProfilePictureUrl(profilePictureUrl: string | null | un
     // and the signed URL creation will fail if the file doesn't exist or we don't have permission
     const { data: signedUrlData, error: signedError } = await supabase.storage
       .from('photos')
-      .createSignedUrl(profilePictureUrl, 3600) // Valid for 1 hour
+      .createSignedUrl(profilePictureUrl, 604800) // Valid for 7 days to reduce egress
     
     if (!signedError && signedUrlData?.signedUrl) {
       return signedUrlData.signedUrl
@@ -1456,9 +1457,11 @@ export async function uploadDogPhoto(file: File, userId: string): Promise<{ path
   // Import compression function dynamically to avoid circular dependencies
   const { compressImage } = await import('./imageCompression')
   
-  // Compress the image before uploading to reduce storage egress
-  console.log('Compressing dog photo before upload...')
-  const compressedFile = await compressImage(file, 1, 1920) // Max 1MB, max 1920px
+    // Compress the image before uploading to reduce storage egress
+    // Dog photos are displayed at 64px, so 320px (5x) is enough for retina displays
+    // 100KB is sufficient for a 320px image at 60% quality (typically 30-80KB)
+    console.log('Compressing dog photo before upload...')
+    const compressedFile = await compressImage(file, 0.1, 320) // Max 100KB, max 320px
 
   const fileExt = 'jpg' // Always use jpg after compression
   const fileName = `dog-${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
@@ -1563,7 +1566,7 @@ async function attachDogPhotoSignedUrl(dog: Dog): Promise<Dog> {
 
   const { data: signed, error } = await supabase.storage
     .from('photos')
-    .createSignedUrl(dog.photo_url, 3600)
+    .createSignedUrl(dog.photo_url, 604800) // Valid for 7 days to reduce egress
 
   if (error) {
     console.warn('Could not create signed URL for dog photo:', error)
@@ -1847,10 +1850,10 @@ export async function getUserPhotos(userId: string): Promise<Photo[]> {
   // Generate signed URLs for each photo (works for both public and private buckets)
   const photosWithUrls = await Promise.all(
     (data || []).map(async (photo: Photo) => {
-      // Generate a signed URL that's valid for 1 hour
+      // Generate a signed URL that's valid for 7 days (maximum allowed) to reduce egress
       const { data: signedUrlData } = await supabase.storage
         .from('photos')
-        .createSignedUrl(photo.storage_path, 3600)
+        .createSignedUrl(photo.storage_path, 604800) // 7 days = 604800 seconds
 
       return {
         ...photo,

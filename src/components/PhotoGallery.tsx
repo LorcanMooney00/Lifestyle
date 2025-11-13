@@ -68,8 +68,10 @@ export default function PhotoGallery() {
     setError(null)
 
     // Compress the image before uploading to reduce storage egress
+    // Photo gallery displays full-screen, but we need aggressive compression
+    // 1000px is enough for most displays, 400KB drastically reduces egress
     console.log('Compressing image before upload...')
-    const compressedFile = await compressImage(file, 1, 1920) // Max 1MB, max 1920px
+    const compressedFile = await compressImage(file, 0.4, 1000) // Max 400KB, max 1000px
 
     const { photo, error: uploadError } = await uploadPhoto(compressedFile)
 

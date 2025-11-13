@@ -26,7 +26,7 @@ export async function compressImage(
     maxWidthOrHeight,
     useWebWorker: true, // Use web worker for better performance
     fileType: 'image/jpeg', // Always convert to JPEG for better compression
-    initialQuality: 0.8, // Start with 80% quality
+    initialQuality: 0.6, // Aggressive compression: 60% quality to minimize file size
   }
 
   try {

@@ -20,8 +20,8 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [lastLoadTime, setLastLoadTime] = useState<number>(0)
 
-  // Cache photos for 1 hour (same as signed URL expiry)
-  const CACHE_DURATION = 60 * 60 * 1000 // 1 hour in milliseconds
+  // Cache photos for 7 days (same as signed URL expiry) to reduce egress
+  const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
 
   const loadPhotos = async (force = false) => {
     if (!user) {
@@ -30,10 +30,10 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    // Check cache - signed URLs are valid for 1 hour
+    // Check cache - signed URLs are valid for 7 days
     const now = Date.now()
     if (!force && photos.length > 0 && (now - lastLoadTime) < CACHE_DURATION) {
-      console.log('Using cached photos (signed URLs still valid)')
+      console.log('Using cached photos (signed URLs still valid for 7 days)')
       setLoading(false)
       return
     }

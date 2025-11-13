@@ -134,8 +134,10 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
       })
 
       // Compress the image before uploading to reduce storage egress
+      // Photo widgets are displayed in responsive grids (typically 150-400px wide)
+      // 1000px is enough for 2.5x retina, 300KB drastically reduces egress
       console.log('Compressing image before upload...')
-      const compressedFile = await compressImage(croppedFile, 1, 1920) // Max 1MB, max 1920px
+      const compressedFile = await compressImage(croppedFile, 0.3, 1000) // Max 300KB, max 1000px
       
       const { photo, error: uploadError } = await uploadPhoto(compressedFile)
 

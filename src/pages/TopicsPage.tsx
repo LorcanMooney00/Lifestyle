@@ -1917,6 +1917,8 @@ export default function TopicsPage() {
                             src={partner.profilePictureUrl}
                             alt={partner.username}
                             className="w-full h-full object-cover"
+                            loading="lazy"
+                            decoding="async"
                           />
                         </div>
                       ) : (
@@ -2312,6 +2314,8 @@ export default function TopicsPage() {
                                 src={dog.photo_signed_url || dog.photo_url || ''}
                                 alt={dog.name}
                                 className="h-16 w-16 rounded-xl object-cover border-2 border-indigo-500/40 flex-shrink-0 shadow-md"
+                                loading="lazy"
+                                decoding="async"
                               />
                             ) : (
                               <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-500/20 text-2xl text-indigo-100 font-bold border-2 border-indigo-500/40 shadow-md">

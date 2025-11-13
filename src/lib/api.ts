@@ -727,6 +727,24 @@ export async function uploadProfilePicture(file: File): Promise<{ url: string | 
   }
 }
 
+// Cache for signed URLs to avoid regenerating them unnecessarily
+const signedUrlCache = new Map<string, { url: string; expiresAt: number }>()
+
+function getCachedSignedUrl(storagePath: string): string | null {
+  const cached = signedUrlCache.get(storagePath)
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.url
+  }
+  return null
+}
+
+function setCachedSignedUrl(storagePath: string, url: string, expiresInSeconds: number = 604800) {
+  signedUrlCache.set(storagePath, {
+    url,
+    expiresAt: Date.now() + (expiresInSeconds * 1000) - 60000, // Expire 1 minute before actual expiry
+  })
+}
+
 export async function getProfilePictureUrl(profilePictureUrl: string | null | undefined): Promise<string | null> {
   if (!profilePictureUrl) {
     console.log('getProfilePictureUrl: No URL provided')
@@ -738,8 +756,13 @@ export async function getProfilePictureUrl(profilePictureUrl: string | null | un
     // Try to parse as URL first
     const url = new URL(profilePictureUrl)
     
+    // If it's already a full URL and it's a signed URL, return it as-is
+    if (url.hostname.includes('supabase') && url.searchParams.has('token')) {
+      // Already a signed URL, return as-is
+      return profilePictureUrl
+    }
+    
     // If it's already a full URL, try to extract the path and create signed URL
-    // Or if it's a signed URL, return it as-is
     if (url.hostname.includes('supabase')) {
       // Extract storage path from URL
       const pathParts = url.pathname.split('/')
@@ -747,11 +770,19 @@ export async function getProfilePictureUrl(profilePictureUrl: string | null | un
       
       if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
         const filePath = pathParts.slice(bucketIndex + 1).join('/')
+        
+        // Check cache first
+        const cached = getCachedSignedUrl(filePath)
+        if (cached) {
+          return cached
+        }
+        
         const { data: signedUrlData, error: signedError } = await supabase.storage
           .from('photos')
           .createSignedUrl(filePath, 604800) // Valid for 7 days to reduce egress
         
         if (!signedError && signedUrlData?.signedUrl) {
+          setCachedSignedUrl(filePath, signedUrlData.signedUrl)
           return signedUrlData.signedUrl
         }
       }
@@ -765,6 +796,12 @@ export async function getProfilePictureUrl(profilePictureUrl: string | null | un
   } catch (e) {
     // Not a URL, assume it's a storage path (e.g., "userId/filename.jpg")
     
+    // Check cache first
+    const cached = getCachedSignedUrl(profilePictureUrl)
+    if (cached) {
+      return cached
+    }
+    
     // Try to generate signed URL directly - the storage policy should allow this
     // Note: We skip the list check because listing folders requires different permissions
     // and the signed URL creation will fail if the file doesn't exist or we don't have permission
@@ -773,6 +810,7 @@ export async function getProfilePictureUrl(profilePictureUrl: string | null | un
       .createSignedUrl(profilePictureUrl, 604800) // Valid for 7 days to reduce egress
     
     if (!signedError && signedUrlData?.signedUrl) {
+      setCachedSignedUrl(profilePictureUrl, signedUrlData.signedUrl)
       return signedUrlData.signedUrl
     } else if (signedError) {
       // If file doesn't exist, handle gracefully
@@ -1561,7 +1599,21 @@ async function attachDogPhotoSignedUrl(dog: Dog): Promise<Dog> {
   }
 
   if (dog.photo_url.startsWith('http')) {
-    return { ...dog, photo_signed_url: dog.photo_url }
+    // Check if it's already a signed URL
+    try {
+      const url = new URL(dog.photo_url)
+      if (url.searchParams.has('token')) {
+        return { ...dog, photo_signed_url: dog.photo_url }
+      }
+    } catch {
+      // Not a valid URL, continue to generate signed URL
+    }
+  }
+
+  // Check cache first
+  const cached = getCachedSignedUrl(dog.photo_url)
+  if (cached) {
+    return { ...dog, photo_signed_url: cached }
   }
 
   const { data: signed, error } = await supabase.storage
@@ -1573,7 +1625,12 @@ async function attachDogPhotoSignedUrl(dog: Dog): Promise<Dog> {
     return { ...dog, photo_signed_url: null }
   }
 
-  return { ...dog, photo_signed_url: signed?.signedUrl ?? null }
+  if (signed?.signedUrl) {
+    setCachedSignedUrl(dog.photo_url, signed.signedUrl)
+    return { ...dog, photo_signed_url: signed.signedUrl }
+  }
+
+  return { ...dog, photo_signed_url: null }
 }
 
 // ============================================
@@ -1848,16 +1905,38 @@ export async function getUserPhotos(userId: string): Promise<Photo[]> {
   }
 
   // Generate signed URLs for each photo (works for both public and private buckets)
+  // Use cache to avoid regenerating signed URLs unnecessarily
   const photosWithUrls = await Promise.all(
     (data || []).map(async (photo: Photo) => {
+      // Check if URL is already a signed URL
+      if (photo.url && photo.url.includes('token=')) {
+        return photo
+      }
+
+      // Check cache first
+      const cached = getCachedSignedUrl(photo.storage_path)
+      if (cached) {
+        return {
+          ...photo,
+          url: cached,
+        }
+      }
+
       // Generate a signed URL that's valid for 7 days (maximum allowed) to reduce egress
       const { data: signedUrlData } = await supabase.storage
         .from('photos')
         .createSignedUrl(photo.storage_path, 604800) // 7 days = 604800 seconds
 
+      const signedUrl = signedUrlData?.signedUrl || photo.url
+      
+      // Cache the signed URL
+      if (signedUrlData?.signedUrl) {
+        setCachedSignedUrl(photo.storage_path, signedUrlData.signedUrl)
+      }
+
       return {
         ...photo,
-        url: signedUrlData?.signedUrl || photo.url, // Use signed URL if available, fallback to stored URL
+        url: signedUrl, // Use signed URL if available, fallback to stored URL
       }
     })
   )

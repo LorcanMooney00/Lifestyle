@@ -216,6 +216,8 @@ export default function PhotoGallery() {
             src={photos[currentIndex].url}
             alt={`Photo ${currentIndex + 1}`}
             className="w-full h-full object-cover"
+            loading="eager"
+            decoding="async"
           />
 
           {/* Navigation buttons - only show on hover/active */}

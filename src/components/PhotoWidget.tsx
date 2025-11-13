@@ -523,6 +523,8 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
             alt={`Photo ${photoIndex + 1}`}
             className="w-full h-full object-cover rounded-2xl transition-transform duration-300 group-hover:scale-105"
             style={{ imageRendering: 'auto' }}
+            loading="lazy"
+            decoding="async"
           />
           
           {/* Subtle vignette effect - only on edges */}

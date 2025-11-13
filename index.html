@@ -38,7 +38,9 @@
       });
       console.log('🔵 OneSignalDeferred array set up, loading SDK script...');
     </script>
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer 
+            onload="console.log('✅ OneSignal SDK script loaded successfully')"
+            onerror="console.error('❌ OneSignal SDK script failed to load! Check Network tab.')"></script>
   </head>
   <body>
     <div id="root"></div>

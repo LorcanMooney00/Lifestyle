@@ -199,8 +199,24 @@ export default function TopicsPage() {
               console.error('Error showing notification:', error)
             })
             
-            // Reload events to show the new one
-            loadDashboardData()
+            // Just add the new event to state instead of reloading everything
+            // This dramatically reduces egress usage
+            setEvents(prev => {
+              // Check if event already exists (avoid duplicates)
+              const exists = prev.some(e => e.id === newEvent.id)
+              if (exists) {
+                return prev
+              }
+              // Add new event and sort by date/time
+              const updated = [...prev, newEvent as Event]
+              return updated.sort((a, b) => {
+                const dateCompare = a.event_date.localeCompare(b.event_date)
+                if (dateCompare !== 0) return dateCompare
+                const timeA = a.event_time || '00:00'
+                const timeB = b.event_time || '00:00'
+                return timeA.localeCompare(timeB)
+              })
+            })
           }, (status) => {
             // Handle subscription status changes
             console.log('Subscription status changed:', status)

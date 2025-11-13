@@ -1,8 +1,12 @@
--- Seed Recipes Database
+-- ============================================
+-- SEED DATA
+-- ============================================
 -- Run this AFTER creating the tables (schema.sql or reset.sql)
 -- This populates the database with initial recipes
 
--- Insert Recipes
+-- ============================================
+-- SEED RECIPES
+-- ============================================
 INSERT INTO public.recipes (title, description, instructions, prep_time, cook_time, servings) VALUES
 ('Spaghetti Carbonara', 'Classic Italian pasta dish with eggs, cheese, and bacon', '1. Cook spaghetti according to package directions. 2. In a pan, cook bacon until crispy. 3. Beat eggs with parmesan cheese. 4. Drain pasta and immediately toss with egg mixture and bacon. 5. Serve immediately.', 10, 15, 4),
 ('Chicken Stir Fry', 'Quick and healthy stir fry with vegetables', '1. Cut chicken into strips. 2. Heat oil in a wok or large pan. 3. Cook chicken until done. 4. Add vegetables and stir fry until tender. 5. Add sauce and serve over rice.', 15, 10, 4),
@@ -15,10 +19,6 @@ INSERT INTO public.recipes (title, description, instructions, prep_time, cook_ti
 ('Margherita Pizza', 'Classic Italian pizza', '1. Make or use pizza dough. 2. Top with tomato sauce, mozzarella, and fresh basil. 3. Bake at 450°F for 12-15 minutes.', 20, 15, 4),
 ('Chicken Curry', 'Spicy chicken curry', '1. Brown chicken pieces. 2. Add onions and curry spices. 3. Add coconut milk and simmer. 4. Serve with rice.', 15, 30, 4)
 ON CONFLICT DO NOTHING;
-
--- Get recipe IDs (we'll need these for ingredients)
--- Note: In a real scenario, you'd want to use the actual IDs returned
--- For now, we'll insert ingredients using a subquery
 
 -- Spaghetti Carbonara ingredients
 INSERT INTO public.recipe_ingredients (recipe_id, ingredient_name, amount)

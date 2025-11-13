@@ -4,6 +4,7 @@ import 'react-easy-crop/react-easy-crop.css'
 import { useAuth } from '../lib/auth'
 import { usePhotos } from '../contexts/PhotoContext'
 import { uploadPhoto, deletePhoto, savePhotoAssignment } from '../lib/api'
+import { compressImage } from '../lib/imageCompression'
 import type { Photo } from '../types'
 import type { Area } from 'react-easy-crop'
 
@@ -132,7 +133,11 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
         lastModified: Date.now()
       })
 
-      const { photo, error: uploadError } = await uploadPhoto(croppedFile)
+      // Compress the image before uploading to reduce storage egress
+      console.log('Compressing image before upload...')
+      const compressedFile = await compressImage(croppedFile, 1, 1920) // Max 1MB, max 1920px
+      
+      const { photo, error: uploadError } = await uploadPhoto(compressedFile)
 
       if (uploadError) {
         setError(uploadError)

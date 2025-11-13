@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../lib/auth'
 import { getUserPhotos, uploadPhoto, deletePhoto } from '../lib/api'
+import { compressImage } from '../lib/imageCompression'
 import type { Photo } from '../types'
 
 export default function PhotoGallery() {
@@ -66,7 +67,11 @@ export default function PhotoGallery() {
     setUploading(true)
     setError(null)
 
-    const { photo, error: uploadError } = await uploadPhoto(file)
+    // Compress the image before uploading to reduce storage egress
+    console.log('Compressing image before upload...')
+    const compressedFile = await compressImage(file, 1, 1920) // Max 1MB, max 1920px
+
+    const { photo, error: uploadError } = await uploadPhoto(compressedFile)
 
     if (uploadError) {
       setError(uploadError)

@@ -550,21 +550,23 @@ export async function uploadProfilePicture(file: File): Promise<{ url: string | 
       return { url: null, error: 'Please select an image file' }
     }
 
-    // Validate file size (max 2MB for profile pictures)
-    if (file.size > 2 * 1024 * 1024) {
-      return { url: null, error: 'Profile picture size must be less than 2MB' }
-    }
+    // Import compression function dynamically to avoid circular dependencies
+    const { compressImage } = await import('./imageCompression')
+    
+    // Compress the image before uploading to reduce storage egress
+    // Profile pictures can be smaller (max 500KB, 800px) since they're displayed small
+    console.log('Compressing profile picture before upload...')
+    const compressedFile = await compressImage(file, 0.5, 800) // Max 500KB, max 800px
 
-    // Generate a unique filename
-    const fileExt = file.name.split('.').pop()
-    const fileName = `profile-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+    // Generate a unique filename (always jpg after compression)
+    const fileName = `profile-${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`
     const filePath = `${authenticatedUserId}/${fileName}`
 
     // Upload to Supabase Storage (using photos bucket, or create a profile-pictures bucket)
     // Use upsert: true to overwrite if file exists
     const { error: uploadError } = await supabase.storage
       .from('photos')
-      .upload(filePath, file, {
+      .upload(filePath, compressedFile, {
         cacheControl: '3600',
         upsert: true, // Allow overwriting existing files
       })
@@ -1451,15 +1453,18 @@ export async function uploadDogPhoto(file: File, userId: string): Promise<{ path
     return { path: null, error: 'Please select an image file' }
   }
 
-  if (file.size > 5 * 1024 * 1024) {
-    return { path: null, error: 'Dog photo must be less than 5MB' }
-  }
+  // Import compression function dynamically to avoid circular dependencies
+  const { compressImage } = await import('./imageCompression')
+  
+  // Compress the image before uploading to reduce storage egress
+  console.log('Compressing dog photo before upload...')
+  const compressedFile = await compressImage(file, 1, 1920) // Max 1MB, max 1920px
 
-  const fileExt = file.name.split('.').pop()
+  const fileExt = 'jpg' // Always use jpg after compression
   const fileName = `dog-${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
   const filePath = `${userId}/dogs/${fileName}`
 
-  const { error } = await supabase.storage.from('photos').upload(filePath, file, {
+  const { error } = await supabase.storage.from('photos').upload(filePath, compressedFile, {
     cacheControl: '3600',
     upsert: true,
   })

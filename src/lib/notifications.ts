@@ -5,12 +5,16 @@ import { savePushSubscription, saveOneSignalPlayerId, type PushSubscription } fr
 declare global {
   interface Window {
     OneSignal?: {
-      init: (options: { appId: string }) => void
+      init: (options: { appId: string }) => Promise<void>
       isPushNotificationsEnabled: () => Promise<boolean>
       registerForPushNotifications: () => Promise<void>
       getUserId: () => Promise<string | null>
       setNotificationOpenedHandler: (handler: (result: any) => void) => void
+      Notifications: {
+        requestPermission: () => Promise<NotificationPermission>
+      }
     }
+    OneSignalDeferred?: Array<(OneSignal: any) => void>
   }
 }
 
@@ -54,21 +58,21 @@ async function registerPushSubscription(): Promise<void> {
   }
 
   try {
-    // Wait for OneSignal SDK to load (it's initialized in index.html)
+    // Wait for OneSignal SDK to load and be ready
     if (!window.OneSignal) {
       console.log('Waiting for OneSignal SDK to load...')
       await new Promise((resolve) => {
         const checkOneSignal = setInterval(() => {
-          if (window.OneSignal) {
+          if (window.OneSignal && typeof window.OneSignal.init === 'function') {
             clearInterval(checkOneSignal)
             resolve(true)
           }
         }, 100)
-        // Timeout after 10 seconds
+        // Timeout after 15 seconds
         setTimeout(() => {
           clearInterval(checkOneSignal)
           resolve(false)
-        }, 10000)
+        }, 15000)
       })
     }
 
@@ -78,7 +82,21 @@ async function registerPushSubscription(): Promise<void> {
       return
     }
 
-    // OneSignal is already initialized in index.html, so we just use it
+    // Wait a bit more to ensure OneSignal is fully initialized
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    // Check if methods are available
+    if (typeof window.OneSignal.isPushNotificationsEnabled !== 'function') {
+      console.error('OneSignal methods not available yet, waiting...')
+      // Wait a bit more
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      if (typeof window.OneSignal.isPushNotificationsEnabled !== 'function') {
+        console.error('OneSignal API not ready, falling back to native push')
+        await registerNativePushSubscription()
+        return
+      }
+    }
 
     // Check if already subscribed
     const isEnabled = await window.OneSignal.isPushNotificationsEnabled()
@@ -88,10 +106,17 @@ async function registerPushSubscription(): Promise<void> {
       // Register for push notifications
       await window.OneSignal.registerForPushNotifications()
       console.log('✅ OneSignal push notification permission requested')
+      // Wait a bit for registration to complete
+      await new Promise(resolve => setTimeout(resolve, 1000))
     }
 
-    // Get player ID
-    const playerId = await window.OneSignal.getUserId()
+    // Get player ID (might need to wait a bit)
+    let playerId = await window.OneSignal.getUserId()
+    if (!playerId) {
+      // Wait a bit more and try again
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      playerId = await window.OneSignal.getUserId()
+    }
     console.log('OneSignal Player ID:', playerId)
 
     if (playerId) {

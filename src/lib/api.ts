@@ -2459,6 +2459,7 @@ export interface PushSubscription {
   endpoint: string
   p256dh: string
   auth: string
+  onesignal_player_id?: string
 }
 
 export async function savePushSubscription(subscription: PushSubscription): Promise<{ success: boolean; error: string | null }> {
@@ -2469,6 +2470,7 @@ export async function savePushSubscription(subscription: PushSubscription): Prom
       endpoint: subscription.endpoint,
       p256dh: subscription.p256dh,
       auth: subscription.auth,
+      onesignal_player_id: subscription.onesignal_player_id || null,
     }, {
       onConflict: 'user_id,endpoint'
     })
@@ -2508,5 +2510,46 @@ export async function getPushSubscriptions(userId: string): Promise<PushSubscrip
   }
 
   return (data || []) as PushSubscription[]
+}
+
+// Save OneSignal player ID
+export async function saveOneSignalPlayerId(userId: string, playerId: string): Promise<{ success: boolean; error: string | null }> {
+  // First, try to update existing subscription
+  const { data: existing } = await supabase
+    .from('push_subscriptions')
+    .select('id')
+    .eq('user_id', userId)
+    .limit(1)
+    .single()
+
+  if (existing) {
+    const { error } = await supabase
+      .from('push_subscriptions')
+      .update({ onesignal_player_id: playerId })
+      .eq('id', existing.id)
+
+    if (error) {
+      console.error('Error updating OneSignal player ID:', error)
+      return { success: false, error: error.message }
+    }
+  } else {
+    // Create new entry if none exists
+    const { error } = await supabase
+      .from('push_subscriptions')
+      .insert({
+        user_id: userId,
+        endpoint: `onesignal://${playerId}`, // Placeholder endpoint
+        p256dh: '', // Not needed for OneSignal
+        auth: '', // Not needed for OneSignal
+        onesignal_player_id: playerId,
+      })
+
+    if (error) {
+      console.error('Error creating OneSignal subscription:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  return { success: true, error: null }
 }
 

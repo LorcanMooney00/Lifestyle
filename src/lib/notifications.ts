@@ -1,5 +1,18 @@
 import { supabase } from './supabaseClient'
-import { savePushSubscription, type PushSubscription } from './api'
+import { savePushSubscription, saveOneSignalPlayerId, type PushSubscription } from './api'
+
+// Declare OneSignal types
+declare global {
+  interface Window {
+    OneSignal?: {
+      init: (options: { appId: string }) => void
+      isPushNotificationsEnabled: () => Promise<boolean>
+      registerForPushNotifications: () => Promise<void>
+      getUserId: () => Promise<string | null>
+      setNotificationOpenedHandler: (handler: (result: any) => void) => void
+    }
+  }
+}
 
 // Request notification permission and register for push
 export async function requestNotificationPermission(): Promise<boolean> {
@@ -26,9 +39,94 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return false
 }
 
-// Register for Web Push API
+// Register for push notifications using OneSignal
 async function registerPushSubscription(): Promise<void> {
-  console.log('Starting push subscription registration...')
+  console.log('Starting OneSignal push subscription registration...')
+  
+  const oneSignalAppId = import.meta.env.VITE_ONESIGNAL_APP_ID
+  
+  if (!oneSignalAppId) {
+    console.error('❌ OneSignal App ID not configured!')
+    console.error('Add VITE_ONESIGNAL_APP_ID to your .env file')
+    // Fallback to native Web Push if OneSignal not configured
+    await registerNativePushSubscription()
+    return
+  }
+
+  try {
+    // Wait for OneSignal SDK to load (it's initialized in index.html)
+    if (!window.OneSignal) {
+      console.log('Waiting for OneSignal SDK to load...')
+      await new Promise((resolve) => {
+        const checkOneSignal = setInterval(() => {
+          if (window.OneSignal) {
+            clearInterval(checkOneSignal)
+            resolve(true)
+          }
+        }, 100)
+        // Timeout after 10 seconds
+        setTimeout(() => {
+          clearInterval(checkOneSignal)
+          resolve(false)
+        }, 10000)
+      })
+    }
+
+    if (!window.OneSignal) {
+      console.error('OneSignal SDK failed to load')
+      await registerNativePushSubscription()
+      return
+    }
+
+    // OneSignal is already initialized in index.html, so we just use it
+
+    // Check if already subscribed
+    const isEnabled = await window.OneSignal.isPushNotificationsEnabled()
+    console.log('OneSignal push enabled:', isEnabled)
+
+    if (!isEnabled) {
+      // Register for push notifications
+      await window.OneSignal.registerForPushNotifications()
+      console.log('✅ OneSignal push notification permission requested')
+    }
+
+    // Get player ID
+    const playerId = await window.OneSignal.getUserId()
+    console.log('OneSignal Player ID:', playerId)
+
+    if (playerId) {
+      // Get the current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) {
+        console.error('Error getting user or not logged in')
+        return
+      }
+
+      // Save OneSignal player ID to database
+      const result = await saveOneSignalPlayerId(user.id, playerId)
+      if (result.success) {
+        console.log('✅ OneSignal player ID saved to database!')
+      } else {
+        console.error('❌ Failed to save OneSignal player ID:', result.error)
+      }
+    }
+
+    // Set up notification click handler
+    window.OneSignal.setNotificationOpenedHandler((result) => {
+      console.log('Notification clicked:', result)
+      // You can navigate to a specific page here if needed
+      window.focus()
+    })
+  } catch (error) {
+    console.error('❌ Error registering OneSignal:', error)
+    // Fallback to native Web Push
+    await registerNativePushSubscription()
+  }
+}
+
+// Fallback: Register for native Web Push API (if OneSignal not available)
+async function registerNativePushSubscription(): Promise<void> {
+  console.log('Falling back to native Web Push...')
   
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     console.error('Push notifications are not supported in this browser')
@@ -36,47 +134,25 @@ async function registerPushSubscription(): Promise<void> {
   }
 
   try {
-    console.log('Waiting for service worker...')
     const registration = await navigator.serviceWorker.ready
-    console.log('Service worker ready')
-    
-    // Check if we already have a subscription
     let subscription = await registration.pushManager.getSubscription()
-    console.log('Existing subscription:', subscription ? 'Found' : 'None')
     
     if (!subscription) {
-      // Subscribe to push notifications
       const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY
-      
       if (!vapidPublicKey) {
-        console.error('❌ VAPID public key not configured! Check your .env file.')
-        console.error('Add: VITE_VAPID_PUBLIC_KEY=BK49yP6BmhAxqdqF9UOQaK5YKKVv19A14UZGSbQg--GhY4k1LJEFDQu0wGmPLyBBsroK29G1FTNQKphB7ZMH9c8')
+        console.warn('VAPID key not configured, skipping native push registration')
         return
       }
 
-      console.log('Subscribing to push notifications with VAPID key...')
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
       })
-      console.log('✅ Push subscription created:', subscription.endpoint)
     }
 
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError) {
-      console.error('Error getting user:', userError)
-      return
-    }
-    
-    if (!user) {
-      console.error('No user logged in, cannot save push subscription')
-      return
-    }
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
 
-    console.log('Saving push subscription for user:', user.id)
-    
-    // Extract subscription details
     const subscriptionData: PushSubscription = {
       user_id: user.id,
       endpoint: subscription.endpoint,
@@ -84,16 +160,10 @@ async function registerPushSubscription(): Promise<void> {
       auth: arrayBufferToBase64(subscription.getKey('auth')!),
     }
 
-    // Save to database
-    const result = await savePushSubscription(subscriptionData)
-    if (result.success) {
-      console.log('✅ Push subscription registered and saved to database!')
-    } else {
-      console.error('❌ Failed to save push subscription:', result.error)
-    }
+    await savePushSubscription(subscriptionData)
+    console.log('✅ Native push subscription saved')
   } catch (error) {
-    console.error('❌ Error registering push subscription:', error)
-    console.error('Error details:', error instanceof Error ? error.message : String(error))
+    console.error('Error with native push:', error)
   }
 }
 

@@ -1,12 +1,10 @@
-// Supabase Edge Function to send push notifications
-// This function receives event data and sends push notifications to subscribed users
+// Supabase Edge Function to send push notifications via OneSignal
+// OneSignal handles Web Push Protocol and works perfectly with Deno
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import * as webpush from 'https://deno.land/x/webpush@v1.0.0/mod.ts'
 
-const VAPID_PUBLIC_KEY = Deno.env.get('VAPID_PUBLIC_KEY') || ''
-const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY') || ''
-const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') || 'mailto:your-email@example.com'
+const ONESIGNAL_APP_ID = Deno.env.get('ONESIGNAL_APP_ID') || ''
+const ONESIGNAL_REST_API_KEY = Deno.env.get('ONESIGNAL_REST_API_KEY') || ''
 
 serve(async (req) => {
   try {
@@ -20,6 +18,13 @@ serve(async (req) => {
       )
     }
 
+    if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: 'OneSignal credentials not configured. Add ONESIGNAL_APP_ID and ONESIGNAL_REST_API_KEY to Edge Function secrets.' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Get push subscriptions for the user
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2')
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
@@ -27,10 +32,12 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+    // Get OneSignal player IDs for the user
     const { data: subscriptions, error } = await supabase
       .from('push_subscriptions')
-      .select('endpoint, p256dh, auth')
+      .select('onesignal_player_id')
       .eq('user_id', user_id)
+      .not('onesignal_player_id', 'is', null)
 
     if (error) {
       console.error('Error fetching subscriptions:', error)
@@ -47,55 +54,60 @@ serve(async (req) => {
       )
     }
 
-    // Get creator name (optional - you can fetch this from the database)
+    // Format notification body
     const dateStr = new Date(event_date).toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric' 
     })
-
     const notificationBody = `${title} on ${dateStr}${event_time ? ` at ${event_time}` : ''}`
 
-    // Send push notification to all subscriptions
-    const results = await Promise.allSettled(
-      subscriptions.map(async (sub) => {
-        const subscription = {
-          endpoint: sub.endpoint,
-          keys: {
-            p256dh: sub.p256dh,
-            auth: sub.auth,
-          },
-        }
+    // Extract OneSignal player IDs
+    const playerIds = subscriptions
+      .map(sub => sub.onesignal_player_id)
+      .filter(id => id !== null && id !== undefined) as string[]
 
-        const payload = JSON.stringify({
-          title: 'New Calendar Event',
-          body: notificationBody,
-          icon: '/favicon.svg',
-          badge: '/favicon.svg',
-          tag: `event-${event_id}`,
-          data: {
-            eventId: event_id,
-            url: '/',
-          },
-        })
+    if (playerIds.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          message: 'No OneSignal player IDs found for user. Make sure user has registered with OneSignal SDK.',
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
 
-        await webpush.sendNotification(subscription, payload, {
-          vapidDetails: {
-            subject: VAPID_SUBJECT,
-            publicKey: VAPID_PUBLIC_KEY,
-            privateKey: VAPID_PRIVATE_KEY,
-          },
-        })
-      })
-    )
+    // Send notification via OneSignal API
+    const oneSignalResponse = await fetch('https://onesignal.com/api/v1/notifications', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`,
+      },
+      body: JSON.stringify({
+        app_id: ONESIGNAL_APP_ID,
+        include_player_ids: playerIds,
+        headings: { en: 'New Calendar Event' },
+        contents: { en: notificationBody },
+        data: {
+          eventId: event_id,
+          url: '/',
+        },
+        url: '/', // URL to open when notification is clicked
+      }),
+    })
 
-    const successful = results.filter((r) => r.status === 'fulfilled').length
-    const failed = results.filter((r) => r.status === 'rejected').length
+    if (!oneSignalResponse.ok) {
+      const errorText = await oneSignalResponse.text()
+      console.error('OneSignal API error:', errorText)
+      throw new Error(`OneSignal API error: ${oneSignalResponse.status} - ${errorText}`)
+    }
+
+    const result = await oneSignalResponse.json()
 
     return new Response(
       JSON.stringify({
-        message: `Sent ${successful} notifications, ${failed} failed`,
-        successful,
-        failed,
+        message: 'Notification sent via OneSignal',
+        oneSignalResult: result,
+        playerIdsSent: playerIds.length,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
@@ -107,4 +119,3 @@ serve(async (req) => {
     )
   }
 })
-

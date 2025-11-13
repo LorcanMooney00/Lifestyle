@@ -6,6 +6,7 @@ declare module 'vite/client' {
     readonly VITE_SUPABASE_ANON_KEY: string
     readonly VITE_SITE_URL?: string
     readonly VITE_VAPID_PUBLIC_KEY?: string
+    readonly VITE_ONESIGNAL_APP_ID?: string
   }
   
   interface ImportMeta {

@@ -58,44 +58,37 @@ async function registerPushSubscription(): Promise<void> {
   }
 
   try {
-    // Wait for OneSignal SDK to load and be ready
-    if (!window.OneSignal) {
-      console.log('Waiting for OneSignal SDK to load...')
-      await new Promise((resolve) => {
-        const checkOneSignal = setInterval(() => {
-          if (window.OneSignal && typeof window.OneSignal.init === 'function') {
-            clearInterval(checkOneSignal)
-            resolve(true)
-          }
-        }, 100)
-        // Timeout after 15 seconds
-        setTimeout(() => {
-          clearInterval(checkOneSignal)
-          resolve(false)
-        }, 15000)
-      })
+    // Wait for OneSignal SDK to load via OneSignalDeferred
+    // The SDK initializes in index.html, so we wait for it to be ready
+    let oneSignalReady = false
+    let attempts = 0
+    const maxAttempts = 50 // 5 seconds total
+    
+    while (!oneSignalReady && attempts < maxAttempts) {
+      // Check if OneSignal is available and has methods
+      if (window.OneSignal && 
+          typeof window.OneSignal.isPushNotificationsEnabled === 'function' &&
+          typeof window.OneSignal.getUserId === 'function') {
+        oneSignalReady = true
+        break
+      }
+      
+      // Also check if OneSignalDeferred has completed
+      if (window.OneSignalDeferred && window.OneSignalDeferred.length > 0) {
+        // Wait for deferred initialization
+        await new Promise(resolve => setTimeout(resolve, 200))
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+      
+      attempts++
     }
 
-    if (!window.OneSignal) {
-      console.error('OneSignal SDK failed to load')
+    if (!oneSignalReady || !window.OneSignal) {
+      console.error('OneSignal SDK failed to initialize after waiting')
+      console.log('Falling back to native Web Push (works when app is open)')
       await registerNativePushSubscription()
       return
-    }
-
-    // Wait a bit more to ensure OneSignal is fully initialized
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    // Check if methods are available
-    if (typeof window.OneSignal.isPushNotificationsEnabled !== 'function') {
-      console.error('OneSignal methods not available yet, waiting...')
-      // Wait a bit more
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      if (typeof window.OneSignal.isPushNotificationsEnabled !== 'function') {
-        console.error('OneSignal API not ready, falling back to native push')
-        await registerNativePushSubscription()
-        return
-      }
     }
 
     // Check if already subscribed

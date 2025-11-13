@@ -17,6 +17,15 @@
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function (OneSignal) {
+        // Wait for service worker to be ready before initializing
+        if ('serviceWorker' in navigator) {
+          try {
+            await navigator.serviceWorker.ready;
+          } catch (e) {
+            console.log('Service worker not ready yet, continuing anyway');
+          }
+        }
+        
         await OneSignal.init({
           appId: "56a8f812-6bb8-49de-a0ce-528ef87d563d",
         });

@@ -13,26 +13,32 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
     <title>Lifestyle - Shared Notes</title>
     <!-- OneSignal SDK -->
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
-      console.log('Setting up OneSignal deferred initialization...');
+      console.log('🔵 Step 1: Setting up OneSignal deferred initialization...');
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function (OneSignal) {
-        console.log('OneSignal deferred callback called, initializing...');
+        console.log('🔵 Step 2: OneSignal deferred callback called, initializing...');
+        console.log('OneSignal object:', OneSignal);
         try {
-          await OneSignal.init({
+          const result = await OneSignal.init({
             appId: "56a8f812-6bb8-49de-a0ce-528ef87d563d",
           });
+          console.log('🔵 Step 3: OneSignal.init() completed, result:', result);
           console.log('✅ OneSignal initialized successfully');
           // Store reference for our code to use
           window.OneSignal = OneSignal;
+          console.log('🔵 Step 4: Stored OneSignal in window.OneSignal');
           // Signal that OneSignal is ready
           window.dispatchEvent(new CustomEvent('onesignal-ready'));
+          console.log('🔵 Step 5: Dispatched onesignal-ready event');
         } catch (error) {
           console.error('❌ OneSignal initialization error:', error);
+          console.error('Error details:', error.message, error.stack);
         }
       });
+      console.log('🔵 OneSignalDeferred array set up, loading SDK script...');
     </script>
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
   </head>
   <body>
     <div id="root"></div>

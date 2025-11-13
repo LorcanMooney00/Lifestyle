@@ -13,7 +13,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  edge_function_url TEXT := 'https://tnixwhvzkfupsjzobzzt.supabase.co/functions/v1/send-push-notification';
+  edge_function_url TEXT := 'https://tnixwhvzkfupsjzobzzt.supabase.co/functions/v1/send_push_notifications';
   service_role_key TEXT := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRuaXh3aHZ6a2Z1cHNqem9ienp0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjQ2NDEzMSwiZXhwIjoyMDc4MDQwMTMxfQ.mmiZ27DpW6y9aB8BpLy5OrJHQRwRoKN9PcHQnRSGzyg'; -- ⚠️ REPLACE THIS!
 BEGIN
   -- Only send notification if event has a partner_id and wasn't created by the partner themselves

@@ -19,15 +19,26 @@
       OneSignalDeferred.push(async function (OneSignal) {
         console.log('🔵 Step 2: OneSignal deferred callback called, initializing...');
         console.log('OneSignal object:', OneSignal);
+        console.log('OneSignal methods:', Object.keys(OneSignal));
         try {
           const result = await OneSignal.init({
             appId: "56a8f812-6bb8-49de-a0ce-528ef87d563d",
           });
           console.log('🔵 Step 3: OneSignal.init() completed, result:', result);
           console.log('✅ OneSignal initialized successfully');
+          
+          // Wait a bit for OneSignal to fully initialize
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Check what's available after init
+          console.log('After init - OneSignal methods:', Object.keys(OneSignal));
+          console.log('OneSignal.Notifications:', OneSignal.Notifications);
+          console.log('OneSignal.User:', OneSignal.User);
+          
           // Store reference for our code to use
           window.OneSignal = OneSignal;
           console.log('🔵 Step 4: Stored OneSignal in window.OneSignal');
+          
           // Signal that OneSignal is ready
           window.dispatchEvent(new CustomEvent('onesignal-ready'));
           console.log('🔵 Step 5: Dispatched onesignal-ready event');

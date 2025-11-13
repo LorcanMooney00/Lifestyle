@@ -6,12 +6,18 @@ declare global {
   interface Window {
     OneSignal?: {
       init: (options: { appId: string }) => Promise<void>
-      isPushNotificationsEnabled: () => Promise<boolean>
-      registerForPushNotifications: () => Promise<void>
-      getUserId: () => Promise<string | null>
-      setNotificationOpenedHandler: (handler: (result: any) => void) => void
-      Notifications: {
+      isPushNotificationsEnabled?: () => Promise<boolean>
+      registerForPushNotifications?: () => Promise<void>
+      getUserId?: () => Promise<string | null>
+      setNotificationOpenedHandler?: (handler: (result: any) => void) => void
+      Notifications?: {
         requestPermission: () => Promise<NotificationPermission>
+      }
+      User?: {
+        PushSubscription?: {
+          id?: string | null
+          optedIn?: boolean
+        }
       }
     }
     OneSignalDeferred?: Array<(OneSignal: any) => void>
@@ -63,10 +69,21 @@ async function registerPushSubscription(): Promise<void> {
     console.log('Waiting for OneSignal to initialize...')
     
     // First check if already ready (might have initialized before this code runs)
-    if (window.OneSignal && 
-        typeof window.OneSignal.isPushNotificationsEnabled === 'function' &&
-        typeof window.OneSignal.getUserId === 'function') {
+    // OneSignal v16 API might be different - check multiple ways
+    const isReady = window.OneSignal && (
+      (typeof window.OneSignal.isPushNotificationsEnabled === 'function') ||
+      (window.OneSignal.Notifications && typeof window.OneSignal.Notifications.requestPermission === 'function') ||
+      (window.OneSignal.User && typeof window.OneSignal.User.PushSubscription !== 'undefined')
+    )
+    
+    if (isReady && window.OneSignal) {
       console.log('✅ OneSignal already ready!')
+      console.log('OneSignal structure:', {
+        hasIsPushNotificationsEnabled: typeof window.OneSignal.isPushNotificationsEnabled === 'function',
+        hasNotifications: !!window.OneSignal.Notifications,
+        hasUser: !!window.OneSignal.User,
+        keys: Object.keys(window.OneSignal || {})
+      })
     } else {
       // Wait for the custom event or poll until ready
       const waitForOneSignal = new Promise((resolve) => {
@@ -87,9 +104,13 @@ async function registerPushSubscription(): Promise<void> {
         let attempts = 0
         const maxAttempts = 100 // 10 seconds
         const pollInterval = setInterval(() => {
-          if (window.OneSignal && 
-              typeof window.OneSignal.isPushNotificationsEnabled === 'function' &&
-              typeof window.OneSignal.getUserId === 'function') {
+          const isReady = window.OneSignal && (
+            (typeof window.OneSignal.isPushNotificationsEnabled === 'function') ||
+            (window.OneSignal.Notifications && typeof window.OneSignal.Notifications.requestPermission === 'function') ||
+            (window.OneSignal.User && typeof window.OneSignal.User.PushSubscription !== 'undefined')
+          )
+          
+          if (isReady) {
             if (!resolved) {
               resolved = true
               clearInterval(pollInterval)
@@ -122,36 +143,82 @@ async function registerPushSubscription(): Promise<void> {
     }
     
     console.log('✅ OneSignal is ready!')
+    console.log('OneSignal API structure:', {
+      hasIsPushNotificationsEnabled: typeof window.OneSignal?.isPushNotificationsEnabled === 'function',
+      hasNotifications: !!window.OneSignal?.Notifications,
+      hasUser: !!window.OneSignal?.User,
+      allKeys: Object.keys(window.OneSignal || {})
+    })
 
-    // Check if already subscribed
-    const isEnabled = await window.OneSignal.isPushNotificationsEnabled()
-    console.log('OneSignal push enabled:', isEnabled)
+    // Try different ways to check subscription status and get player ID
+    let isEnabled = false
+    let playerId: string | null = null
 
-    if (!isEnabled) {
-      // Register for push notifications
-      console.log('Requesting push notification permission...')
-      await window.OneSignal.registerForPushNotifications()
-      console.log('✅ OneSignal push notification permission requested')
-      // Wait longer for registration to complete
-      await new Promise(resolve => setTimeout(resolve, 2000))
+    // Method 1: Try direct methods (older API)
+    if (typeof window.OneSignal?.isPushNotificationsEnabled === 'function') {
+      console.log('Using direct API methods...')
+      isEnabled = await window.OneSignal.isPushNotificationsEnabled()
+      console.log('OneSignal push enabled:', isEnabled)
+
+      if (!isEnabled && window.OneSignal.registerForPushNotifications) {
+        console.log('Requesting push notification permission...')
+        await window.OneSignal.registerForPushNotifications()
+        console.log('✅ OneSignal push notification permission requested')
+        await new Promise(resolve => setTimeout(resolve, 2000))
+      }
+
+      if (window.OneSignal.getUserId) {
+        playerId = await window.OneSignal.getUserId()
+      }
+      console.log('Player ID (direct method):', playerId)
+    } 
+    // Method 2: Try v16 API structure
+    else if (window.OneSignal?.User) {
+      console.log('Using OneSignal v16 API structure...')
+      try {
+        // Check subscription status
+        const subscription = window.OneSignal.User.PushSubscription
+        isEnabled = subscription?.optedIn || false
+        console.log('OneSignal push enabled (v16):', isEnabled)
+
+        if (!isEnabled) {
+          console.log('Requesting push notification permission (v16)...')
+          if (window.OneSignal.Notifications) {
+            await window.OneSignal.Notifications.requestPermission()
+          }
+          await new Promise(resolve => setTimeout(resolve, 2000))
+        }
+
+        // Get player ID
+        playerId = window.OneSignal.User.PushSubscription?.id || null
+        console.log('Player ID (v16 method):', playerId)
+      } catch (error) {
+        console.error('Error using v16 API:', error)
+      }
     }
 
-    // Get player ID - try multiple times with delays
-    console.log('Getting OneSignal Player ID...')
-    let playerId = await window.OneSignal.getUserId()
-    console.log('First attempt - Player ID:', playerId)
+    // Get player ID - try multiple times with delays if still null
+    console.log('Getting OneSignal Player ID (final check)...')
+    if (!playerId && window.OneSignal?.getUserId) {
+      playerId = await window.OneSignal.getUserId()
+      console.log('First attempt - Player ID:', playerId)
+    }
     
     if (!playerId) {
       console.log('Player ID not ready, waiting 2 seconds...')
       await new Promise(resolve => setTimeout(resolve, 2000))
-      playerId = await window.OneSignal.getUserId()
+      if (typeof window.OneSignal?.getUserId === 'function') {
+        playerId = await window.OneSignal.getUserId()
+      }
       console.log('Second attempt - Player ID:', playerId)
     }
     
     if (!playerId) {
       console.log('Player ID still not ready, waiting 3 more seconds...')
       await new Promise(resolve => setTimeout(resolve, 3000))
-      playerId = await window.OneSignal.getUserId()
+      if (typeof window.OneSignal?.getUserId === 'function') {
+        playerId = await window.OneSignal.getUserId()
+      }
       console.log('Third attempt - Player ID:', playerId)
     }
     
@@ -179,12 +246,14 @@ async function registerPushSubscription(): Promise<void> {
       }
     }
 
-    // Set up notification click handler
-    window.OneSignal.setNotificationOpenedHandler((result) => {
-      console.log('Notification clicked:', result)
-      // You can navigate to a specific page here if needed
-      window.focus()
-    })
+    // Set up notification click handler (if method exists)
+    if (typeof window.OneSignal?.setNotificationOpenedHandler === 'function') {
+      window.OneSignal.setNotificationOpenedHandler((result) => {
+        console.log('Notification clicked:', result)
+        // You can navigate to a specific page here if needed
+        window.focus()
+      })
+    }
   } catch (error) {
     console.error('❌ Error registering OneSignal:', error)
     // Fallback to native Web Push

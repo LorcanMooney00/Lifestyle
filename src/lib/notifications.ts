@@ -118,20 +118,38 @@ async function registerPushSubscription(): Promise<void> {
 
     if (!isEnabled) {
       // Register for push notifications
+      console.log('Requesting push notification permission...')
       await window.OneSignal.registerForPushNotifications()
       console.log('✅ OneSignal push notification permission requested')
-      // Wait a bit for registration to complete
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Wait longer for registration to complete
+      await new Promise(resolve => setTimeout(resolve, 2000))
     }
 
-    // Get player ID (might need to wait a bit)
+    // Get player ID - try multiple times with delays
+    console.log('Getting OneSignal Player ID...')
     let playerId = await window.OneSignal.getUserId()
+    console.log('First attempt - Player ID:', playerId)
+    
     if (!playerId) {
-      // Wait a bit more and try again
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      console.log('Player ID not ready, waiting 2 seconds...')
+      await new Promise(resolve => setTimeout(resolve, 2000))
       playerId = await window.OneSignal.getUserId()
+      console.log('Second attempt - Player ID:', playerId)
     }
-    console.log('OneSignal Player ID:', playerId)
+    
+    if (!playerId) {
+      console.log('Player ID still not ready, waiting 3 more seconds...')
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      playerId = await window.OneSignal.getUserId()
+      console.log('Third attempt - Player ID:', playerId)
+    }
+    
+    console.log('Final OneSignal Player ID:', playerId)
+    
+    if (!playerId) {
+      console.warn('⚠️ OneSignal Player ID is null. User may need to accept push permission or wait longer.')
+      console.warn('💡 Try refreshing the page and accepting push permission again.')
+    }
 
     if (playerId) {
       // Get the current user

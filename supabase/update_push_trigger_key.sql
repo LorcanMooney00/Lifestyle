@@ -9,7 +9,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  edge_function_url TEXT := 'https://tnixwhvzkfupsjzobzzt.supabase.co/functions/v1/send_push_notification';
+  edge_function_url TEXT := 'https://tnixwhvzkfupsjzobzzt.supabase.co/functions/v1/send_push_notifications';
   service_role_key TEXT := 'NEW_SERVICE_ROLE_KEY_HERE'; -- ⚠️ REPLACE THIS with your new rotated key!
 BEGIN
   -- Only send notification if event has a partner_id and wasn't created by the partner themselves

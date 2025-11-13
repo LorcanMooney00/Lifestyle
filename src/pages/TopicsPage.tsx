@@ -2119,8 +2119,8 @@ export default function TopicsPage() {
                               </div>
         )}
 
-        {/* Daily Routines Section - Only show if photo gallery is disabled or there are more than 4 routines */}
-        {!loading && tilePreferences['routines'] !== false && (tilePreferences['photo-gallery'] === false || getRoutinesForToday().length > 4) && (
+        {/* Daily Routines Section */}
+        {!loading && tilePreferences['routines'] !== false && (
           <div className={`${contentWidth} mb-4`}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">

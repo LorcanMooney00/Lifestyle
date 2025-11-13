@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import Cropper from 'react-easy-crop'
 import 'react-easy-crop/react-easy-crop.css'
 import { useAuth } from '../lib/auth'
-import { getUserPhotos, uploadPhoto, deletePhoto, savePhotoAssignment, getPhotoAssignments } from '../lib/api'
+import { usePhotos } from '../contexts/PhotoContext'
+import { uploadPhoto, deletePhoto, savePhotoAssignment } from '../lib/api'
 import type { Photo } from '../types'
 import type { Area } from 'react-easy-crop'
 
@@ -16,8 +17,7 @@ interface PhotoWidgetProps {
 
 export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight = false, wide = false, mediumWide = false }: PhotoWidgetProps) {
   const { user } = useAuth()
-  const [photos, setPhotos] = useState<Photo[]>([])
-  const [photoAssignments, setPhotoAssignments] = useState<Record<number, string>>({})
+  const { photos, photoAssignments, refreshPhotos, refreshAssignments } = usePhotos()
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showUpload, setShowUpload] = useState(false)
@@ -29,30 +29,8 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    if (user) {
-      loadPhotos()
-      loadAssignments()
-    }
-  }, [user])
-
-  const loadAssignments = async () => {
-    if (!user) return
-    const assignments = await getPhotoAssignments(user.id)
-    console.log(`Widget ${photoIndex}: Loaded assignments from database:`, assignments)
-    setPhotoAssignments(assignments)
-  }
-
-  // Don't manipulate body styles - let the modal overlay handle scroll blocking
-  // This prevents issues with stuck scroll-lock states
-
-  const loadPhotos = async () => {
-    if (!user) return
-    console.log(`Widget ${photoIndex}: Loading photos...`)
-    const photosData = await getUserPhotos(user.id)
-    console.log(`Widget ${photoIndex}: Loaded ${photosData.length} photos`, photosData.map(p => p.id))
-    setPhotos(photosData)
-  }
+  // Photos and assignments are now loaded once via PhotoContext and shared between all widgets
+  // This dramatically reduces storage egress by avoiding duplicate photo loads
 
   const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
     setCroppedAreaPixels(croppedAreaPixels)
@@ -162,8 +140,9 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
         // Store which photo is assigned to this widget in the database
         console.log(`Saving photo assignment to database: widget ${photoIndex} = ${photo.id}`)
         await savePhotoAssignment(user.id, photoIndex, photo.id)
-        await loadPhotos()
-        await loadAssignments()
+        // Refresh photos and assignments from shared context
+        await refreshPhotos()
+        await refreshAssignments()
         console.log('Closing cropper modal...')
         setShowCropper(false)
         setImageSrc(null)
@@ -199,8 +178,9 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
     if (deleteError) {
       setError(deleteError)
     } else {
-      await loadPhotos()
-      await loadAssignments()
+      // Refresh photos and assignments from shared context
+      await refreshPhotos()
+      await refreshAssignments()
     }
   }
 

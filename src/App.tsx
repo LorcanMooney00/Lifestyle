@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './lib/auth'
+import { PhotoProvider } from './contexts/PhotoContext'
 import LoginPage from './pages/LoginPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import PartnerDashboardPage from './pages/PartnerDashboardPage'
@@ -47,8 +48,9 @@ function App() {
   }, [])
 
   return (
-    <BrowserRouter>
-      <Routes>
+    <PhotoProvider>
+      <BrowserRouter>
+        <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route
@@ -164,8 +166,9 @@ function App() {
           }
         />
         <Route path="/" element={<Navigate to="/app/topics" replace />} />
-      </Routes>
-    </BrowserRouter>
+        </Routes>
+      </BrowserRouter>
+    </PhotoProvider>
   )
 }
 

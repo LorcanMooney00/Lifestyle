@@ -8,12 +8,26 @@ const ONESIGNAL_REST_API_KEY = Deno.env.get('ONESIGNAL_REST_API_KEY') || ''
 
 serve(async (req) => {
   try {
-    // Get the event data from the request
-    const { event_id, user_id, title, event_date, event_time, created_by } = await req.json()
+    // Get the notification data from the request
+    const body = await req.json()
+    const { 
+      type = 'event', // 'event', 'todo', 'note', 'shopping'
+      event_id, 
+      todo_id,
+      note_id,
+      shopping_id,
+      user_id, 
+      title, 
+      content,
+      item_name,
+      event_date, 
+      event_time, 
+      created_by 
+    } = body
 
-    if (!user_id || !title) {
+    if (!user_id) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
+        JSON.stringify({ error: 'Missing required field: user_id' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       )
     }
@@ -54,12 +68,44 @@ serve(async (req) => {
       )
     }
 
-    // Format notification body
-    const dateStr = new Date(event_date).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
-    })
-    const notificationBody = `${title} on ${dateStr}${event_time ? ` at ${event_time}` : ''}`
+    // Format notification based on type
+    let notificationHeading = 'New Notification'
+    let notificationBody = ''
+    let notificationData: any = { url: '/' }
+
+    switch (type) {
+      case 'event':
+        const dateStr = event_date ? new Date(event_date).toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric' 
+        }) : ''
+        notificationHeading = 'New Calendar Event'
+        notificationBody = title ? `${title}${dateStr ? ` on ${dateStr}` : ''}${event_time ? ` at ${event_time}` : ''}` : 'New calendar event'
+        notificationData = { eventId: event_id, url: '/app/calendar' }
+        break
+      
+      case 'todo':
+        notificationHeading = 'New To-Do'
+        notificationBody = content || 'New to-do item'
+        notificationData = { todoId: todo_id, url: '/app/todos' }
+        break
+      
+      case 'note':
+        notificationHeading = 'New Note'
+        notificationBody = title || 'New note shared with you'
+        notificationData = { noteId: note_id, url: '/app/notes' }
+        break
+      
+      case 'shopping':
+        notificationHeading = 'New Shopping Item'
+        notificationBody = item_name || 'New item added to shopping list'
+        notificationData = { shoppingId: shopping_id, url: '/app/shopping' }
+        break
+      
+      default:
+        notificationHeading = 'New Update'
+        notificationBody = title || content || item_name || 'You have a new update'
+    }
 
     // Extract OneSignal player IDs
     const playerIds = subscriptions
@@ -85,13 +131,10 @@ serve(async (req) => {
       body: JSON.stringify({
         app_id: ONESIGNAL_APP_ID,
         include_player_ids: playerIds,
-        headings: { en: 'New Calendar Event' },
+        headings: { en: notificationHeading },
         contents: { en: notificationBody },
-        data: {
-          eventId: event_id,
-          url: '/',
-        },
-        url: '/', // URL to open when notification is clicked
+        data: notificationData,
+        url: notificationData.url, // URL to open when notification is clicked
       }),
     })
 

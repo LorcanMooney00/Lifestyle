@@ -12,28 +12,31 @@ export async function compressImage(
   maxSizeMB: number = 1,
   maxWidthOrHeight: number = 1920
 ): Promise<File> {
-  // Only compress if file is larger than target size
-  const targetSizeBytes = maxSizeMB * 1024 * 1024
-  if (file.size <= targetSizeBytes) {
-    console.log('Image already small enough, skipping compression')
-    return file
+  const fileSizeKB = file.size / 1024
+  
+  // If file is over 300KB, aggressively compress down to 100KB max
+  if (fileSizeKB > 300) {
+    console.log(`⚠️ Large file detected: ${fileSizeKB.toFixed(0)}KB -> compressing down to 100KB max`)
+    maxSizeMB = 0.1 // 100KB
+    maxWidthOrHeight = 800 // Smaller dimension for large files
+  } else {
+    console.log(`Compressing image: ${fileSizeKB.toFixed(0)}KB -> target: ${maxSizeMB}MB, max dimension: ${maxWidthOrHeight}px`)
   }
-
-  console.log(`Compressing image: ${(file.size / 1024 / 1024).toFixed(2)}MB -> target: ${maxSizeMB}MB`)
 
   const options = {
     maxSizeMB,
     maxWidthOrHeight,
     useWebWorker: true, // Use web worker for better performance
     fileType: 'image/jpeg', // Always convert to JPEG for better compression
-    initialQuality: 0.6, // Aggressive compression: 60% quality to minimize file size
+    initialQuality: 0.5, // Aggressive compression: 50% quality to minimize file size
   }
 
   try {
     const compressedFile = await imageCompression(file, options)
     const compressionRatio = ((1 - compressedFile.size / file.size) * 100).toFixed(1)
+    const finalSizeKB = compressedFile.size / 1024
     console.log(
-      `Compression complete: ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB (${compressionRatio}% reduction)`
+      `Compression complete: ${finalSizeKB.toFixed(0)}KB (${compressionRatio}% reduction)`
     )
     return compressedFile
   } catch (error) {

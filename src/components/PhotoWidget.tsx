@@ -70,7 +70,7 @@ export default function PhotoWidget({ photoIndex = 0, tall = false, fillHeight =
         } else {
           reject(new Error('Canvas is empty'))
         }
-      }, 'image/jpeg', 0.95)
+      }, 'image/jpeg', 0.85) // Lower quality (85%) - compression will optimize further
     })
   }
 

@@ -17,6 +17,14 @@
       console.log('🔵 Step 1: Setting up OneSignal deferred initialization...');
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function (OneSignal) {
+        // Skip OneSignal initialization on localhost (development)
+        // OneSignal is configured for production domain only
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          console.log('⚠️ OneSignal skipped on localhost (development mode)');
+          console.log('💡 OneSignal will work on production: https://lifestyleapp.vercel.app');
+          return;
+        }
+        
         console.log('🔵 Step 2: OneSignal deferred callback called, initializing...');
         console.log('OneSignal object:', OneSignal);
         console.log('OneSignal methods:', Object.keys(OneSignal));

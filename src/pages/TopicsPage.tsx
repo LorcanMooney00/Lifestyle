@@ -201,22 +201,30 @@ export default function TopicsPage() {
             
             // Just add the new event to state instead of reloading everything
             // This dramatically reduces egress usage
-            setEvents(prev => {
-              // Check if event already exists (avoid duplicates)
-              const exists = prev.some(e => e.id === newEvent.id)
-              if (exists) {
-                return prev
-              }
-              // Add new event and sort by date/time
-              const updated = [...prev, newEvent as Event]
-              return updated.sort((a, b) => {
-                const dateCompare = a.event_date.localeCompare(b.event_date)
-                if (dateCompare !== 0) return dateCompare
-                const timeA = a.event_time || '00:00'
-                const timeB = b.event_time || '00:00'
-                return timeA.localeCompare(timeB)
+            // SECURITY: Double-check the event is meant for this user (already filtered by Realtime, but extra safety)
+            // Events can be for partners (partner_id) or groups (group_id), so check both
+            const isForThisUser = 
+              (newEvent.partner_id === user.id && newEvent.created_by !== user.id) ||
+              (newEvent.group_id && groups.some(g => g.id === newEvent.group_id))
+            
+            if (isForThisUser) {
+              setEvents(prev => {
+                // Check if event already exists (avoid duplicates)
+                const exists = prev.some(e => e.id === newEvent.id)
+                if (exists) {
+                  return prev
+                }
+                // Add new event and sort by date/time
+                const updated = [...prev, newEvent as Event]
+                return updated.sort((a, b) => {
+                  const dateCompare = a.event_date.localeCompare(b.event_date)
+                  if (dateCompare !== 0) return dateCompare
+                  const timeA = a.event_time || '00:00'
+                  const timeB = b.event_time || '00:00'
+                  return timeA.localeCompare(timeB)
+                })
               })
-            })
+            }
           }, (status) => {
             // Handle subscription status changes
             console.log('Subscription status changed:', status)
@@ -724,8 +732,11 @@ export default function TopicsPage() {
     if (newGroup) {
       setGroupName('')
       setGroupDescription('')
-      // Just add the new group to state instead of reloading everything
-      setGroups(prev => [...prev, newGroup])
+      // SECURITY: Verify the group was created by the current user before adding to state
+      if (newGroup.created_by === user.id) {
+        // Just add the new group to state instead of reloading everything
+        setGroups(prev => [...prev, newGroup])
+      }
       setShowAddGroupModal(false)
     } else {
       setGroupError('Failed to create group. Please try again.')
@@ -844,8 +855,11 @@ export default function TopicsPage() {
       if (error || !routine) {
         setRoutineError(error || 'Failed to create routine.')
       } else {
-        // Just add the new routine to state instead of reloading everything
-        setRoutines(prev => [...prev, routine])
+        // SECURITY: Verify the routine belongs to the current user before adding to state
+        if (routine.user_id === user.id) {
+          // Just add the new routine to state instead of reloading everything
+          setRoutines(prev => [...prev, routine])
+        }
         handleCloseRoutineModal()
       }
     } else {
@@ -866,8 +880,11 @@ export default function TopicsPage() {
       if (error || !routine) {
         setRoutineError(error || 'Failed to update routine.')
       } else {
-        // Just update the routine in state instead of reloading everything
-        setRoutines(prev => prev.map(r => r.id === routine.id ? routine : r))
+        // SECURITY: Verify the routine belongs to the current user before updating state
+        if (routine.user_id === user.id) {
+          // Just update the routine in state instead of reloading everything
+          setRoutines(prev => prev.map(r => r.id === routine.id ? routine : r))
+        }
         handleCloseRoutineModal()
       }
     }

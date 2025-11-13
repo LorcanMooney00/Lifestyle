@@ -2149,21 +2149,37 @@ export default function TopicsPage() {
             {(() => {
               const todayRoutines = getRoutinesForToday()
               const routinesToShow = tilePreferences['photo-gallery'] !== false ? todayRoutines.slice(4) : todayRoutines
-              return routinesToShow.length === 0 ? (
-                <div className="glass backdrop-blur-xl rounded-xl border border-slate-700/50 p-5 text-center">
-                  <p className="text-sm text-slate-400 mb-3">
-                    {routines.length === 0
-                      ? 'No routines yet. Create one to start tracking your daily habits!'
-                      : `No routines scheduled for ${dayNames[new Date().getDay()]}. Create one or edit existing routines to add days.`}
-                  </p>
-                  <button
-                    onClick={handleOpenAddRoutine}
-                    className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-500 hover:to-teal-500 transition-all shadow-lg hover:shadow-xl active:scale-95 text-sm font-medium"
-                  >
-                    + Create Routine
-                  </button>
-                </div>
-              ) : (
+              
+              // Only show empty state if no routines exist at all
+              if (routines.length === 0) {
+                return (
+                  <div className="glass backdrop-blur-xl rounded-xl border border-slate-700/50 p-5 text-center">
+                    <p className="text-sm text-slate-400 mb-3">
+                      No routines yet. Create one to start tracking your daily habits!
+                    </p>
+                    <button
+                      onClick={handleOpenAddRoutine}
+                      className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-500 hover:to-teal-500 transition-all shadow-lg hover:shadow-xl active:scale-95 text-sm font-medium"
+                    >
+                      + Create Routine
+                    </button>
+                  </div>
+                )
+              }
+              
+              // If routines exist but none scheduled for today, show message but no create button
+              if (routinesToShow.length === 0) {
+                return (
+                  <div className="glass backdrop-blur-xl rounded-xl border border-slate-700/50 p-3 text-center">
+                    <p className="text-xs text-slate-400">
+                      No routines scheduled for {dayNames[new Date().getDay()]}. Edit existing routines to add days.
+                    </p>
+                  </div>
+                )
+              }
+              
+              // Show routines that are scheduled for today
+              return (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {routinesToShow.map((routine) => {
                     const completion = routineCompletions[routine.id]
@@ -2241,8 +2257,8 @@ export default function TopicsPage() {
               </div>
               )
             })()}
-                </div>
-              )}
+          </div>
+        )}
 
         {/* Family Dogs Section */}
         {!loading && tilePreferences['dog-feeding'] !== false && (

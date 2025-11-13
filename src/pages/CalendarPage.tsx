@@ -28,6 +28,14 @@ export default function CalendarPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [tilePreferences, setTilePreferences] = useState<Record<string, boolean>>({})
 
+  // Memoize month/year to avoid unnecessary reloads when only the day changes
+  const monthYearKey = useMemo(() => {
+    if (!currentDate) return ''
+    const year = currentDate.getFullYear()
+    const month = currentDate.getMonth()
+    return `${year}-${month}`
+  }, [currentDate])
+
   useEffect(() => {
     if (user) {
       loadEvents()
@@ -37,7 +45,8 @@ export default function CalendarPage() {
         loadTilePreferences()
       }
     }
-  }, [user, currentDate, partnerId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, monthYearKey, partnerId])
 
   const loadTilePreferences = async () => {
     if (!user) return

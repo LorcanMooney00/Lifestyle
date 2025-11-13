@@ -163,3 +163,32 @@ LIMIT 20;
 -- Go to Supabase Dashboard → Storage → photos bucket to check actual file storage size
 -- Large photo files in storage buckets are often the real culprit for high storage usage
 
+-- ============================================
+-- REDUCE EGRESS (DATA TRANSFER) TIPS
+-- ============================================
+-- If you're seeing high Egress usage (data transfer out):
+-- 
+-- 1. Check for large queries fetching all data:
+--    - Use pagination (LIMIT/OFFSET or cursor-based)
+--    - Only SELECT columns you need
+--    - Use COUNT(*) separately instead of fetching all rows
+--
+-- 2. Optimize Realtime subscriptions:
+--    - Only subscribe to tables/channels you need
+--    - Use filters to reduce data sent
+--    - Unsubscribe when not needed
+--
+-- 3. Check for large JSONB columns being fetched:
+--    - routine_completions.completed_items
+--    - user_profiles.tile_preferences
+--    - Only fetch these when needed
+--
+-- 4. Photo URLs:
+--    - Don't fetch full photo URLs unless displaying
+--    - Consider image optimization/thumbnails
+--
+-- 5. Check Supabase Dashboard → Logs for high-traffic queries
+--
+-- Example: Instead of fetching all events, use pagination:
+-- SELECT * FROM events ORDER BY event_date DESC LIMIT 50 OFFSET 0;
+

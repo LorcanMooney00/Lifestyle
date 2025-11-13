@@ -699,7 +699,9 @@ export default function TopicsPage() {
     if (success) {
       setLinkSuccess('Partner linked successfully!')
       setPartnerEmail('')
-      await loadDashboardData()
+      // Reload partners only, not all dashboard data
+      const partnersData = await getPartners(user.id)
+      setPartners(partnersData)
       setTimeout(() => {
         setShowAddPartnerModal(false)
         setLinkSuccess(null)
@@ -722,7 +724,8 @@ export default function TopicsPage() {
     if (newGroup) {
       setGroupName('')
       setGroupDescription('')
-      await loadDashboardData()
+      // Just add the new group to state instead of reloading everything
+      setGroups(prev => [...prev, newGroup])
       setShowAddGroupModal(false)
     } else {
       setGroupError('Failed to create group. Please try again.')
@@ -736,7 +739,8 @@ export default function TopicsPage() {
 
     const success = await deleteGroup(groupId)
     if (success) {
-      await loadDashboardData()
+      // Just remove the group from state instead of reloading everything
+      setGroups(prev => prev.filter(g => g.id !== groupId))
     }
   }
 
@@ -840,7 +844,8 @@ export default function TopicsPage() {
       if (error || !routine) {
         setRoutineError(error || 'Failed to create routine.')
       } else {
-        await loadDashboardData()
+        // Just add the new routine to state instead of reloading everything
+        setRoutines(prev => [...prev, routine])
         handleCloseRoutineModal()
       }
     } else {
@@ -861,7 +866,8 @@ export default function TopicsPage() {
       if (error || !routine) {
         setRoutineError(error || 'Failed to update routine.')
       } else {
-        await loadDashboardData()
+        // Just update the routine in state instead of reloading everything
+        setRoutines(prev => prev.map(r => r.id === routine.id ? routine : r))
         handleCloseRoutineModal()
       }
     }
@@ -874,7 +880,13 @@ export default function TopicsPage() {
 
     const { success, error } = await deleteRoutine(routineId)
     if (success) {
-      await loadDashboardData()
+      // Just remove the routine from state instead of reloading everything
+      setRoutines(prev => prev.filter(r => r.id !== routineId))
+      setRoutineCompletions(prev => {
+        const updated = { ...prev }
+        delete updated[routineId]
+        return updated
+      })
     } else {
       alert(error || 'Failed to delete routine.')
     }

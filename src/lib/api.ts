@@ -2522,26 +2522,58 @@ export async function getPushSubscriptions(userId: string): Promise<PushSubscrip
 
 // Save OneSignal player ID
 export async function saveOneSignalPlayerId(userId: string, playerId: string): Promise<{ success: boolean; error: string | null }> {
-  // First, try to update existing subscription
-  const { data: existing } = await supabase
+  // First, check if a record with this player_id already exists for this user
+  const { data: existingWithPlayerId } = await supabase
     .from('push_subscriptions')
     .select('id')
     .eq('user_id', userId)
+    .eq('onesignal_player_id', playerId)
     .limit(1)
-    .single()
+    .maybeSingle()
 
-  if (existing) {
+  // If it already exists with this player_id, we're done
+  if (existingWithPlayerId) {
+    return { success: true, error: null }
+  }
+
+  // Check if there's an existing record without a player_id (or with a different one)
+  const { data: existingWithoutPlayerId } = await supabase
+    .from('push_subscriptions')
+    .select('id')
+    .eq('user_id', userId)
+    .is('onesignal_player_id', null)
+    .limit(1)
+    .maybeSingle()
+
+  if (existingWithoutPlayerId) {
+    // Update the existing record that has no player_id
     const { error } = await supabase
       .from('push_subscriptions')
       .update({ onesignal_player_id: playerId })
-      .eq('id', existing.id)
+      .eq('id', existingWithoutPlayerId.id)
 
     if (error) {
       console.error('Error updating OneSignal player ID:', error)
       return { success: false, error: error.message }
     }
   } else {
-    // Create new entry if none exists
+    // Check if there's any existing record for this user (with a different player_id)
+    const { data: anyExisting } = await supabase
+      .from('push_subscriptions')
+      .select('id')
+      .eq('user_id', userId)
+      .limit(1)
+      .maybeSingle()
+
+    if (anyExisting) {
+      // Delete the old record first to avoid unique constraint violation
+      await supabase
+        .from('push_subscriptions')
+        .delete()
+        .eq('id', anyExisting.id)
+    }
+
+    // Create new entry
     const { error } = await supabase
       .from('push_subscriptions')
       .insert({

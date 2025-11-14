@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { signOut } from '../lib/auth'
@@ -27,6 +27,7 @@ export default function CalendarPage() {
   const [error, setError] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [tilePreferences, setTilePreferences] = useState<Record<string, boolean>>({})
+  const selectedDayDetailsRef = useRef<HTMLDivElement | null>(null)
 
   // Memoize month/year to avoid unnecessary reloads when only the day changes
   const monthYearKey = useMemo(() => {
@@ -159,6 +160,15 @@ export default function CalendarPage() {
     // Select the day to show its events
     setSelectedDay(day)
   }
+
+  useEffect(() => {
+    if (selectedDay !== null && selectedDayDetailsRef.current) {
+      selectedDayDetailsRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    }
+  }, [selectedDay])
   
   const handleAddEventForDay = () => {
     // Allow creating events from "View All" calendar or partner-specific calendar
@@ -466,7 +476,7 @@ export default function CalendarPage() {
           
           {/* Selected Day Details */}
           {selectedDay !== null && (
-            <div className="p-3 sm:p-6 border-t border-slate-700/50">
+            <div ref={selectedDayDetailsRef} className="p-3 sm:p-6 border-t border-slate-700/50">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   <span className="text-xl">📅</span>

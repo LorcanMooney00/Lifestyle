@@ -27,3 +27,6 @@ dist-ssr
 *.sln
 *.sw?
 
+# Supabase SQL files (run directly in Supabase SQL Editor, not needed in repo)
+supabase/*.sql
+supabase/**/*.sql
